@@ -1,0 +1,15 @@
+version: v2
+lint:
+  use:
+    - STANDARD
+  ignore:
+    - nanopb.proto
+  except:
+    # Preserve the slice's enum value identifiers and their generated API names.
+    - ENUM_VALUE_PREFIX
+    # Keep the approved root-level events.proto and imported vendor file in place.
+    - DIRECTORY_SAME_PACKAGE
+    - PACKAGE_DIRECTORY_MATCH
+breaking:
+  use:
+    - FILE

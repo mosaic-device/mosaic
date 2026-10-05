@@ -1,0 +1,65 @@
+/**
+ * Do not edit directly, this file was auto-generated.
+ */
+
+:root, [data-theme="dark"] {
+  --font-family-sans: Manrope, ui-sans-serif, system-ui, sans-serif;
+  --font-family-display: Fraunces, ui-serif, Georgia, serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+  --border-width-none: 0px;
+  --border-width-default: 1px;
+  --shadow-sm: 0px 1px 2px 0px rgb(0 0 0 / 0.1);
+  --shadow-md: 0px 4px 6px 0px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0px 10px 15px 0px rgb(0 0 0 / 0.1);
+  --color-background: #050505;
+  --color-foreground: #fafafa;
+  --color-surface: rgba(18, 18, 20, 0.94);
+  --color-surface-foreground: #fafafa;
+  --color-surface-muted: rgba(24, 24, 27, 0.78);
+  --color-surface-raised: rgba(39, 39, 42, 0.9);
+  --color-surface-sunken: rgba(9, 9, 11, 0.78);
+  --color-primary: #60a5fa;
+  --color-primary-foreground: #09090b;
+  --color-secondary: rgba(96, 165, 250, 0.14);
+  --color-secondary-foreground: #60a5fa;
+  --color-muted: rgba(24, 24, 27, 0.78);
+  --color-muted-foreground: #a1a1aa;
+  --color-accent: rgba(39, 39, 42, 0.9);
+  --color-accent-foreground: #fafafa;
+  --color-border: rgba(212, 212, 216, 0.14);
+  --color-field: rgba(212, 212, 216, 0.14);
+  --color-focus: #3b82f6;
+  --color-info: #60a5fa;
+  --color-info-foreground: #09090b;
+  --color-success: #4ade80;
+  --color-success-foreground: #09090b;
+  --color-warning: #facc15;
+  --color-warning-foreground: #09090b;
+  --color-danger: #f87171;
+  --color-danger-foreground: #09090b;
+}

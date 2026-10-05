@@ -1,0 +1,69 @@
+{
+  "color": {
+    "background": {
+      "$type": "color",
+      "$value": "{primitive.color.base.light}"
+    },
+    "foreground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.950}"
+    },
+    "surface": { "$type": "color", "$value": "rgba(255, 255, 255, 0.94)" },
+    "surfaceForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.950}"
+    },
+    "surfaceMuted": { "$type": "color", "$value": "rgba(244, 244, 245, 0.88)" },
+    "surfaceRaised": {
+      "$type": "color",
+      "$value": "rgba(255, 255, 255, 0.96)"
+    },
+    "surfaceSunken": {
+      "$type": "color",
+      "$value": "rgba(228, 228, 231, 0.72)"
+    },
+    "primary": { "$type": "color", "$value": "{primitive.color.blue.600}" },
+    "primaryForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.0}"
+    },
+    "secondary": { "$type": "color", "$value": "rgba(37, 99, 235, 0.12)" },
+    "secondaryForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.blue.600}"
+    },
+    "muted": { "$type": "color", "$value": "rgba(244, 244, 245, 0.88)" },
+    "mutedForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.500}"
+    },
+    "accent": { "$type": "color", "$value": "rgba(228, 228, 231, 0.88)" },
+    "accentForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.950}"
+    },
+    "border": { "$type": "color", "$value": "rgba(63, 63, 70, 0.14)" },
+    "field": { "$type": "color", "$value": "rgba(63, 63, 70, 0.14)" },
+    "focus": { "$type": "color", "$value": "{primitive.color.blue.500}" },
+    "info": { "$type": "color", "$value": "{primitive.color.blue.600}" },
+    "infoForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.0}"
+    },
+    "success": { "$type": "color", "$value": "{primitive.color.green.600}" },
+    "successForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.0}"
+    },
+    "warning": { "$type": "color", "$value": "{primitive.color.amber.600}" },
+    "warningForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.950}"
+    },
+    "danger": { "$type": "color", "$value": "{primitive.color.red.600}" },
+    "dangerForeground": {
+      "$type": "color",
+      "$value": "{primitive.color.neutral.0}"
+    }
+  }
+}

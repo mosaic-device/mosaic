@@ -1,0 +1,31 @@
+{
+  "name": "mosaic",
+  "private": true,
+  "packageManager": "pnpm@12.8.1",
+  "scripts": {
+    "dev:web": "turbo run dev",
+    "build:web": "turbo run build",
+    "lint:web": "turbo run lint",
+    "typecheck:web": "turbo run typecheck",
+    "web:format": "prettier --write .",
+    "web:format:check": "prettier --check .",
+    "web:check": "pnpm lint:web && pnpm typecheck:web && pnpm build:web",
+    "server:format": "dotnet format platform/Mosaic.slnx",
+    "server:format:check": "dotnet format platform/Mosaic.slnx --verify-no-changes",
+    "server:build": "dotnet build platform/Mosaic.slnx",
+    "fw:format": "node scripts/format-firmware.mjs --write",
+    "fw:format:check": "node scripts/format-firmware.mjs --check",
+    "fw:build": "idf.py -C firmware build",
+    "fw:flash": "idf.py -C firmware flash",
+    "fw:monitor": "idf.py -C firmware monitor",
+    "companion:check": "cargo fmt --check --manifest-path platform/apps/companion/src-tauri/Cargo.toml && cargo clippy --manifest-path platform/apps/companion/src-tauri/Cargo.toml -- -D warnings",
+    "generate-tokens": "pnpm --filter @mosaic/tokens build",
+    "generate-protos": "pnpm --filter @mosaic/protocols generate",
+    "build:admin-assets": "pnpm --filter @mosaic/admin build && node scripts/copy-admin-assets.mjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "prettier-plugin-tailwindcss": "^0.7.1",
+    "turbo": "^2.5.0"
+  }
+}

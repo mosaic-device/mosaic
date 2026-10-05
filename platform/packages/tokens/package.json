@@ -1,0 +1,16 @@
+{
+  "name": "@mosaic/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./css/tokens.css": "./dist/css/tokens.css",
+    "./css/dark.css": "./dist/css/dark.css",
+    "./css/light.css": "./dist/css/light.css",
+    "./css/tailwind-theme.css": "./dist/css/tailwind-theme.css",
+    "./eslint": "./dist/js/eslint-restricted.js"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}

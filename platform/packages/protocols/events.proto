@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package mosaic.device.v1;
+
+import "nanopb.proto";
+
+enum NotificationPriority {
+  NOTIFICATION_PRIORITY_UNSPECIFIED = 0;
+  NOTIFICATION_PRIORITY_NORMAL = 1;
+  NOTIFICATION_PRIORITY_HIGH = 2;
+}
+
+enum DaemonActionId {
+  DAEMON_ACTION_UNSPECIFIED = 0;
+  OPEN_URL = 1;
+  TOGGLE_MUTE = 2;
+  OPEN_IDE = 3;
+  LOCK_SCREEN = 4;
+}
+
+message DeviceConnect {
+  string mac_address = 1 [(nanopb).max_size = 18];
+  string auth_secret = 2 [(nanopb).max_size = 64];
+}
+
+message NotificationAction {
+  string id = 1 [(nanopb).max_size = 96];
+  string label = 2 [(nanopb).max_size = 48];
+  bool requires_confirmation = 3;
+  bool destructive = 4;
+}
+
+message AiSummaryNotification {
+  string title = 1 [(nanopb).max_size = 64];
+  string summary_text = 2 [(nanopb).max_size = 512];
+  NotificationPriority priority = 3;
+  string notification_id = 4 [(nanopb).max_size = 64];
+  repeated NotificationAction actions = 5 [(nanopb).max_count = 4];
+}
+
+message DeviceTelemetry {
+  float lux = 1;
+  int32 encoder_count = 2;
+  bool button_pressed = 3;
+}
+
+message DeviceActionTrigger {
+  DaemonActionId action_id = 1;
+  string payload = 2 [(nanopb).max_size = 256];
+}
+
+message IntegrationActionTrigger {
+  string notification_id = 1 [(nanopb).max_size = 64];
+  string action_id = 2 [(nanopb).max_size = 96];
+}
+
+message IntegrationActionResult {
+  string notification_id = 1 [(nanopb).max_size = 64];
+  string action_id = 2 [(nanopb).max_size = 96];
+  bool success = 3;
+  string message = 4 [(nanopb).max_size = 128];
+}
+
+message DeviceToBackendEnvelope {
+  string request_id = 1 [(nanopb).max_size = 64];
+
+  oneof payload {
+    DeviceTelemetry telemetry = 2;
+    DeviceActionTrigger daemon_action = 3;
+    IntegrationActionTrigger integration_action = 4;
+  }
+}
+
+message BackendToDeviceEnvelope {
+  string request_id = 1 [(nanopb).max_size = 64];
+
+  oneof payload {
+    AiSummaryNotification notification = 2;
+    IntegrationActionResult action_result = 3;
+  }
+}

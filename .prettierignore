@@ -1,0 +1,14 @@
+node_modules/
+.turbo/
+**/dist/
+**/target/
+**/build/
+**/managed_components/
+**/Generated/
+**/generated/
+**/src-tauri/gen/
+**/Cargo.lock
+pnpm-lock.yaml
+platform/Mosaic.slnx
+firmware/
+platform/apps/backend/

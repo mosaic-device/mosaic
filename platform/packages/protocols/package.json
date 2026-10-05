@@ -1,0 +1,12 @@
+{
+  "name": "@mosaic/protocols",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "generate": "buf generate events.proto",
+    "lint": "buf lint"
+  },
+  "devDependencies": {
+    "@bufbuild/buf": "1.71.0"
+  }
+}

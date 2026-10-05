@@ -1,0 +1,16 @@
+[package]
+name = "mosaic-companion"
+version = "0.0.0"
+description = "Mosaic desktop companion shell"
+authors = ["Mosaic contributors"]
+edition = "2021"
+
+[lib]
+name = "mosaic_companion_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }

@@ -1,0 +1,6 @@
+# ESP-IDF 5.5.4; Waveshare ESP32-P4-WIFI6-Touch-LCD-5 (32 MB flash).
+CONFIG_IDF_TARGET="esp32p4"
+CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+# Keep C++ exception handling and RTTI at their IDF defaults (disabled).

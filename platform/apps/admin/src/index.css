@@ -1,0 +1,4 @@
+@import 'tailwindcss';
+@import '@mosaic/tokens/css/tailwind-theme.css';
+@import '@mosaic/tokens/css/light.css';
+@import '@mosaic/tokens/css/dark.css';
