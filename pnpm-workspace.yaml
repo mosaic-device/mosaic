@@ -5,3 +5,4 @@ packages:
   - 'platform/packages/*'
 allowBuilds:
   '@bufbuild/buf': true
+engineStrict: true

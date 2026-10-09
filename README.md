@@ -8,7 +8,7 @@ Run the commands below from **this directory** (`mosaic/`) unless noted otherwis
 
 You need:
 
-- Node 26.10.0 and pnpm 12.8.1 (see `package.json`)
+- Node 24 LTS (24.19.0, see `.nvmrc`; `engines` in `package.json` accepts 24.11+) and pnpm 12.8.1. With fnm or nvm, run `fnm use` / `nvm use` in the repo root.
 - .NET SDK 10.0.401 (see `global.json`)
 - For the desktop shell: Rust/Cargo and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS
 - For firmware: ESP-IDF 5.5.4 with the ESP32-P4 toolchain, activated in your shell; see [`firmware/README.md`](firmware/README.md)

@@ -1,0 +1,8 @@
+# Normalize line endings: LF in the repo and working tree on every OS, so Windows
+# checkouts match generator output (tokens, protos) and don't show phantom diffs.
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.ico binary
+*.bin binary
