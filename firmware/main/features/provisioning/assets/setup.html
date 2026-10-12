@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mosaic setup</title>
+    <style>
+      body {
+        font: 18px system-ui;
+        max-width: 32rem;
+        margin: 2rem auto;
+        padding: 1rem;
+        background: #161b22;
+        color: white;
+      }
+      label {
+        display: block;
+        margin: 1.2rem 0;
+      }
+      input {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 0.8rem;
+        font: inherit;
+      }
+      button {
+        padding: 0.8rem 1.5rem;
+        font: inherit;
+      }
+      a {
+        color: #9dd;
+      }
+      #progress {
+        min-height: 3rem;
+      }
+    </style>
+    <script src="/setup.js" defer></script>
+  </head>
+  <body>
+    <h1>Set up Mosaic</h1>
+    <p>Save Wi-Fi settings and a secure server URL. Mosaic tests the Wi-Fi connection only after reboot. This does not pair your device.</p>
+    <form action="/save" method="post" id="setup-form">
+      <label>Wi-Fi name<input name="ssid" maxlength="32" required /></label>
+      <label>Wi-Fi password (optional for open networks)<input name="pass" type="password" maxlength="63" autocomplete="off" /></label>
+      <label
+        >Server WSS URL<input
+          name="ws_url"
+          type="url"
+          maxlength="192"
+          placeholder="wss://example.com/device"
+          required
+      /></label>
+      <button type="submit">Save and reboot</button>
+    </form>
+    <p id="progress" role="status" aria-live="polite">Settings are saved without testing Wi-Fi. After saving, Mosaic waits about six seconds, then reboots and tries connecting.</p>
+    <p>If the Wi-Fi settings are wrong, Mosaic shows an offline screen after reboot; setup does not reopen automatically. Tap Enter setup mode twice on the device to try again. The server URL is checked for format only. Public Wi-Fi that requires a web sign-in is not supported.</p>
+    <noscript><p>After submitting, return to this page and <a href="/status">check status</a>. The device display also shows the result.</p></noscript>
+  </body>
+</html>
