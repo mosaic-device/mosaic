@@ -1,6 +1,6 @@
 # Mosaic
 
-This is the standalone Mosaic project scaffold. The apps build, but authentication, persistence, device transport, and real firmware UI are not implemented yet.
+Mosaic is a standalone project in progress. The ESP32-P4 firmware has a minimal on-device setup/status UI and ESP32-C6-hosted Wi-Fi portal. Setup now uses AP-only save-and-reboot: credentials are persisted without a connection test, and the next boot tries STA. **This new flow is not yet board/phone verified.** Earlier display, phone-join, captive-portal, and station-IP results are historical tests of the previous AP+STA flow. The display acknowledgement gate remains required before opening setup. Pairing, backend device transport, the production dashboard, and broader hardware/security validation remain open; see [`firmware/README.md`](firmware/README.md) and the [provisioning decision](docs/adr/0001-softap-provisioning.md).
 
 Run the commands below from **this directory** (`mosaic/`) unless noted otherwise.
 
