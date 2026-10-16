@@ -1,0 +1,21 @@
+# Generated; explicit sources, no build-time generator.
+set(MOSAIC_ASSET_SOURCES
+    "ui/generated/assets/mosaic_manrope_28_400.c"
+    "ui/generated/assets/mosaic_manrope_32_400.c"
+    "ui/generated/assets/mosaic_manrope_36_400.c"
+    "ui/generated/assets/mosaic_manrope_48_400.c"
+    "ui/generated/assets/mosaic_manrope_60_400.c"
+    "ui/generated/assets/mosaic_manrope_28_500.c"
+    "ui/generated/assets/mosaic_manrope_32_500.c"
+    "ui/generated/assets/mosaic_manrope_36_500.c"
+    "ui/generated/assets/mosaic_manrope_48_500.c"
+    "ui/generated/assets/mosaic_manrope_60_500.c"
+    "ui/generated/assets/mosaic_manrope_28_600.c"
+    "ui/generated/assets/mosaic_manrope_32_600.c"
+    "ui/generated/assets/mosaic_manrope_36_600.c"
+    "ui/generated/assets/mosaic_manrope_48_600.c"
+    "ui/generated/assets/mosaic_manrope_60_600.c"
+    "ui/generated/assets/mosaic_icon_settings_40.c"
+    "ui/generated/assets/mosaic_wordmark_40.c"
+    "ui/generated/assets/mosaic_wordmark_60.c"
+)

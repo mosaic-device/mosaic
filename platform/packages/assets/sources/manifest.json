@@ -1,0 +1,37 @@
+{
+  "googleFontsRevision": "67bc647ce1910e92f461bcc82aae30f21d21a9cc",
+  "lucideVersion": "0.468.0",
+  "catalog": "https://lucide.dev/icons/settings",
+  "sources": [
+    {
+      "file": "sources/Manrope.ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/67bc647ce1910e92f461bcc82aae30f21d21a9cc/ofl/manrope/Manrope%5Bwght%5D.ttf",
+      "sha256": "3ae11c49db0455a3cc33e37d380f20fdb8c7f8b41dc07625c177e3d87a9d6ae6"
+    },
+    {
+      "file": "sources/Outfit.ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/67bc647ce1910e92f461bcc82aae30f21d21a9cc/ofl/outfit/Outfit%5Bwght%5D.ttf",
+      "sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade"
+    },
+    {
+      "file": "sources/Manrope-OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/67bc647ce1910e92f461bcc82aae30f21d21a9cc/ofl/manrope/OFL.txt",
+      "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"
+    },
+    {
+      "file": "sources/Outfit-OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/67bc647ce1910e92f461bcc82aae30f21d21a9cc/ofl/outfit/OFL.txt",
+      "sha256": "c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416"
+    },
+    {
+      "file": "sources/settings.svg",
+      "url": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/icons/settings.svg",
+      "sha256": "3c7bee2696ce0c2d48d34e813f4fcda31f0ad21ab9309aee3751cde4280ad737"
+    },
+    {
+      "file": "sources/Lucide-LICENSE",
+      "url": "https://raw.githubusercontent.com/lucide-icons/lucide/0.468.0/LICENSE",
+      "sha256": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc"
+    }
+  ]
+}

@@ -49,7 +49,7 @@ Run these separately; use the URL printed by Vite. The server currently serves s
 
 `web:format` also covers root docs/config and excludes .NET, firmware, and Rust via `.prettierignore`. Firmware formatting covers owned source under `firmware/main/`, not vendor or generated files. For hardware, first run `idf.py -C firmware set-target esp32p4` in an activated ESP-IDF shell; `pnpm fw:flash` and `pnpm fw:monitor` are separate, opt-in commands. Do not flash without a connected device and reviewed configuration.
 
-## Generate files only when inputs change
+## Generated files
 
 ```sh
 pnpm generate-tokens              # token CSS, lint restrictions, firmware header
@@ -57,7 +57,7 @@ pnpm --filter @mosaic/protocols lint  # check Protobuf schema
 pnpm generate-protos              # firmware C and server C# bindings; needs buf.build
 ```
 
-Generated outputs are committed, so normal builds do **not** need regeneration or access to `buf.build`. Do not hand-edit them. Review source and generated changes together; after regenerating, check both `git diff` and `git status --short` (new files do not appear in `git diff`).
+Protocol bindings remain committed, so normal builds do not need access to `buf.build`. Token sources and `platform/packages/tokens/build.mjs` remain committed, but `platform/packages/tokens/dist/` and `firmware/main/ui/generated/design_tokens.h` are ignored build outputs. Web build/typecheck/lint/dev commands (including direct package scripts) regenerate tokens offline with Node.js before consumption. Turbo deliberately does not cache token generation because it also writes the firmware header outside the package. ESP-IDF configure regenerates tokens with Node.js and reconfigures when token inputs/generator change or the header is missing. No pnpm install is required for firmware token generation. Do not hand-edit generated files; review token source/generator changes and their tests instead.
 
 ## Optional: test server publishing
 
@@ -68,3 +68,11 @@ python3 scripts/smoke-server.py publish/local/Mosaic.Server
 ```
 
 Build admin assets **before** publishing: the server serves the copied SPA without Node at runtime. For a clean republish, remove stale files from `publish/local/` first. Linux x64 Native AOT publishing remains **unverified**; a local macOS publish does not prove that target.
+
+### Asset outputs and generation
+
+Web fonts, firmware assets, sources and licenses are committed alongside their
+pinned generation tooling in `platform/packages/assets`. Normal builds validate
+or consume the converted assets without Python or converters. Regeneration is
+an explicit maintenance operation: see [asset generation instructions](platform/packages/assets/README.md#regenerate)
+for Python environment setup and `pnpm generate-assets`. Token output policy is unchanged.
