@@ -8,9 +8,11 @@
     "./css/dark.css": "./dist/css/dark.css",
     "./css/light.css": "./dist/css/light.css",
     "./css/tailwind-theme.css": "./dist/css/tailwind-theme.css",
-    "./eslint": "./dist/js/eslint-restricted.js"
+    "./eslint": "./dist/js/eslint-restricted.js",
+    "./css/shadcn.css": "./dist/css/shadcn.css"
   },
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs && node --test",
+    "test": "node build.mjs && node --test"
   }
 }

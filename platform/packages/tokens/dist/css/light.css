@@ -4,8 +4,9 @@
 
 [data-theme="light"] {
   --font-family-sans: Manrope, ui-sans-serif, system-ui, sans-serif;
-  --font-family-display: Fraunces, ui-serif, Georgia, serif;
+  --font-family-display: Manrope, ui-sans-serif, system-ui, sans-serif;
   --font-family-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-family-brand: Outfit, ui-sans-serif, system-ui, sans-serif;
   --font-weight-normal: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
@@ -36,6 +37,32 @@
   --shadow-sm: 0px 1px 2px 0px rgb(0 0 0 / 0.1);
   --shadow-md: 0px 4px 6px 0px rgb(0 0 0 / 0.1);
   --shadow-lg: 0px 10px 15px 0px rgb(0 0 0 / 0.1);
+  --focus-width: 2px;
+  --focus-offset: 4px;
+  --control-sm: 32px;
+  --control-md: 40px;
+  --control-lg: 48px;
+  --control-touch-target: 48px;
+  --typography-caption: 12px;
+  --typography-label: 14px;
+  --typography-body: 16px;
+  --typography-heading: 20px;
+  --typography-title: 24px;
+  --typography-weight-heading: 500;
+  --typography-weight-title: 500;
+  --firmware-text-xs: 28px;
+  --firmware-text-sm: 32px;
+  --firmware-text-md: 36px;
+  --firmware-text-lg: 48px;
+  --firmware-text-xl: 60px;
+  --firmware-control-md: 80px;
+  --firmware-space-card: 24px;
+  --firmware-space-control: 20px;
+  --firmware-space-gap: 24px;
+  --firmware-space-screen: 24px;
+  --firmware-icon-md: 40px;
+  --firmware-wordmark-md: 40px;
+  --firmware-wordmark-lg: 60px;
   --color-background: #fafafa;
   --color-foreground: #09090b;
   --color-surface: rgba(255, 255, 255, 0.94);
@@ -45,8 +72,8 @@
   --color-surface-sunken: rgba(228, 228, 231, 0.72);
   --color-primary: #2563eb;
   --color-primary-foreground: #ffffff;
-  --color-secondary: rgba(37, 99, 235, 0.12);
-  --color-secondary-foreground: #2563eb;
+  --color-secondary: rgba(244, 244, 245, 0.88);
+  --color-secondary-foreground: #09090b;
   --color-muted: rgba(244, 244, 245, 0.88);
   --color-muted-foreground: #71717a;
   --color-accent: rgba(228, 228, 231, 0.88);
@@ -62,4 +89,13 @@
   --color-warning-foreground: #09090b;
   --color-danger: #dc2626;
   --color-danger-foreground: #ffffff;
+  --color-primary-hover: #326CEC;
+  --color-primary-pressed: #2157CF;
+  --color-secondary-hover: rgba(228, 228, 231, 0.88);
+  --color-secondary-pressed: rgba(228, 228, 231, 0.72);
+  --color-low-emphasis: #71717A;
+  --color-selected: rgba(117, 64, 181, 0.08);
+  --color-selected-border: rgba(117, 64, 181, 0.33);
+  --color-selected-foreground: #7540B5;
+  --color-interactive-border: #71717A;
 }

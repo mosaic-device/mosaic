@@ -11,10 +11,7 @@ __pycache__/
 .env.*
 !.env.example
 **/dist/
-!platform/packages/tokens/dist/
-platform/packages/tokens/dist/*
-!platform/packages/tokens/dist/css/
-!platform/packages/tokens/dist/js/
+/firmware/main/ui/generated/design_tokens.h
 **/bin/
 **/obj/
 platform/apps/backend/wwwroot/

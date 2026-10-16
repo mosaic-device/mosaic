@@ -9,7 +9,11 @@
     "typecheck": "tsc -b",
     "lint": "eslint .",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "prebuild": "node ../../packages/tokens/build.mjs",
+    "pretypecheck": "node ../../packages/tokens/build.mjs",
+    "predev": "node ../../packages/tokens/build.mjs",
+    "prelint": "node ../../packages/tokens/build.mjs"
   },
   "dependencies": {
     "@mosaic/tokens": "workspace:*",
