@@ -4,16 +4,24 @@
 #include "esp_netif.h"
 #include "nvs_flash.h"
 
+#ifdef MOSAIC_UI_GALLERY
+#include "ui/gallery/gallery.hpp"
+#else
 #include "features/provisioning/service.hpp"
 #include "ui/runtime.hpp"
 #include "features/provisioning/ui/renderer.hpp"
 #include "features/provisioning/presentation/presenter.hpp"
+#endif
 
 namespace {
 constexpr char kTag[] = "mosaic";
 }
 
 extern "C" void app_main() {
+#ifdef MOSAIC_UI_GALLERY
+    ESP_LOGW(kTag, "Development gallery: provisioning and networking are not started");
+    ESP_ERROR_CHECK(mosaic::ui::start(mosaic::ui::gallery::renderer_callbacks()));
+#else
     // Do not erase NVS on initialization errors: it may contain the owner's credentials.
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
@@ -30,4 +38,5 @@ extern "C" void app_main() {
         ESP_LOGE(kTag, "Provisioning service failed: %s", esp_err_to_name(err));
         // The service publishes failure with its current setup session.
     }
+#endif
 }

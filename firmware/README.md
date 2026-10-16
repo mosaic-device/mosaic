@@ -12,7 +12,7 @@ Routine state is coalesced, but actions and credential presentation are not. Cre
 
 ## Build
 
-Install and activate ESP-IDF 5.5.4 with the ESP32-P4 toolchain. From this directory:
+Install and activate ESP-IDF 5.5.4 with the ESP32-P4 toolchain and put Node.js on `PATH`. From this directory:
 
 ```sh
 idf.py --version
@@ -21,7 +21,7 @@ idf.py build
 idf.py -B build/softap -D SDKCONFIG=build/softap/sdkconfig build
 ```
 
-`platform/packages/protocols` owns `components/device_protos/generated/events.pb.c` and `events.pb.h`; those committed outputs must be present. `platform/packages/tokens` generates `main/ui/generated/design_tokens.h`, which the setup screen now consumes. Do not hand-edit either generated directory. The `device_protos` component compiles `events.pb.c` against the included Nanopb runtime. ESP-IDF 5.5.4 builds both the normal firmware (`build/device_firmware.bin`) and isolated builds such as `build/softap/device_firmware.bin`. The normal firmware has been flashed and exercised on the target board; isolated and diagnostic images should not be confused with it. Existing ignored `sdkconfig` values take precedence over changed `sdkconfig.defaults`, so use the isolated build above for a clean config or review the local config explicitly.
+`platform/packages/protocols` owns `components/device_protos/generated/events.pb.c` and `events.pb.h`; those committed outputs must be present. `platform/packages/tokens` retains token JSON and its dependency-free offline generator. CMake runs it during configure to recreate the ignored `main/ui/generated/design_tokens.h` (and web token outputs), including for isolated build directories. Input/generator changes and a missing header trigger reconfiguration. Node.js is required; pnpm and asset generation tools are not. The UI host test runner also generates tokens before compiling. Do not hand-edit either generated directory. The `device_protos` component compiles `events.pb.c` against the included Nanopb runtime. ESP-IDF 5.5.4 builds both the normal firmware (`build/device_firmware.bin`) and isolated builds such as `build/softap/device_firmware.bin`. The normal firmware has been flashed and exercised on the target board; isolated and diagnostic images should not be confused with it. Existing ignored `sdkconfig` values take precedence over changed `sdkconfig.defaults`, so use the isolated build above for a clean config or review the local config explicitly.
 
 The local BSP/display manifests pull in display/touch/LVGL dependencies. `components/esp_driver_ppa` overrides the IDF 5.5.4 PPA driver with Espressif's temporary rotation-stall workaround; see its [provenance and test scope](components/esp_driver_ppa/README.md). Reconfigure after adding this component (`idf.py reconfigure`) and confirm the override is selected before flashing. The owner confirmed the password and URL rendered and the stalled refresh cleared on the target board; retain the fail-closed setup display check and re-test when changing IDF, display geometry, or PPA usage.
 
@@ -30,6 +30,83 @@ The local BSP/display manifests pull in display/touch/LVGL dependencies. `compon
 ### Setup display gate: historical board test result (gate retained)
 
 A temporary diagnostic image withheld the setup request's refresh acknowledgement on the five-inch board. On two on-device setup attempts, serial logs showed the acknowledgement was withheld, the previous `show_setup()` timed out (`ESP_ERR_TIMEOUT`), and portal startup failed; the owner confirmed that no new `Mosaic-` AP appeared in the phone's Wi-Fi list. The device subsequently reconnected to its **previously saved Wi-Fi as a station**, which is expected and does not mean the setup AP opened. **Result: the missing-acknowledgement timeout path kept the setup AP closed on this board.** The temporary fault-injection switch is no longer in source. This did not simulate a physically stalled panel or establish that LVGL's flush/refresh signals always correspond to visible pixels; that remains a separate validation limit.
+
+## Development component gallery (phase 3B)
+
+`MOSAIC_UI_GALLERY` is a **CMake option, OFF by default**, not a production setting.
+The ON branch starts only the existing UI runtime with gallery callbacks. It does
+not initialize NVS/netif/event loop, start provisioning/Wi-Fi/AP, or read saved
+credentials. Credential callbacks reject requests. It shares the existing BSP,
+LVGL worker lock, refresh/backlight lifecycle and timer; no second UI task exists.
+Normal initialization order and provisioning screens are unchanged. Gallery/helper
+sources are gated out of normal builds; phase 4 screen migration remains gated on
+board/phone acceptance.
+
+From `firmware/`:
+
+```sh
+. /Users/blakealmanza/esp/esp-idf/export.sh
+idf.py -B build/design-system-gallery -D SDKCONFIG=build/design-system-gallery/sdkconfig -D MOSAIC_UI_GALLERY=ON build
+# Explicit hardware operation, only when ready (not run during implementation):
+idf.py -B build/design-system-gallery -D SDKCONFIG=build/design-system-gallery/sdkconfig -D MOSAIC_UI_GALLERY=ON flash monitor
+# Separate normal image; keep gallery configuration out of the production build:
+idf.py -B build/design-system-normal -D SDKCONFIG=build/design-system-normal/sdkconfig -D MOSAIC_UI_GALLERY=OFF build
+```
+
+The device is a 5-inch desk display viewed below a monitor, not a handheld phone.
+Firmware uses a larger scale independent of web: caption 28px, labels/buttons 32px,
+body 36px, headings 48px, and titles 60px. Controls have an 80px minimum height;
+settings icons are 40px and wordmark ink heights are 40/60px. Card/screen padding
+and section gaps are 24px. These are desk-distance starting values requiring
+physical review; larger text intentionally shows less content per viewport.
+
+Swipe vertically through typography (Manrope 400/500/600), special characters and
+clock digits, both wordmark sizes, settings icon, wrapping text, live controls and
+explicitly labeled fixed state samples. Tap the checkbox/list row to request an
+owner-applied value, buttons to increment the update counter, and **Recreate gallery
+controls** to exercise destruction/recreation on the next runtime tick (outside
+the event dispatch). Fixed pressed/focus/selected/disabled/busy examples have no
+click handling. No encoder traversal or keyboard/input editing is implemented.
+
+### Reusing the small visual helpers
+
+- `main/ui/styles/styles.*`: token-backed, dark-only styles initialized once under
+  the UI lock and retained for process lifetime. Do not reset these while referenced.
+- `main/ui/components/controls.*`: text roles, cards, primary/secondary buttons,
+  settings icon button, selectable rows and passive checkbox. Parent screens own
+  objects; deleting them releases callback bindings. Callback contexts must outlive
+  their controls. No generic widget/navigation framework is introduced.
+- Build a screen inside runtime renderer callbacks; create controls, supply typed
+  `Action` callbacks, and call `render(control, State)` from authoritative feature
+  state. Clicks report `activate`, `select` or `toggle`; they do not auto-toggle or
+  invent completion. Busy suppresses actions independently of disabled and uses
+  `LV_STATE_USER_1`; owners supply honest pending labels. Selection uses CHECKED,
+  focus uses FOCUSED, press uses PRESSED. Focus and selection are independent.
+- Text labels wrap to parent width; button labels inherit their control foreground
+  (primary normal/pressed is exact token white). Cards grow with content; screens
+  own scrolling. Controls use the firmware-specific 80-pixel minimum hit height, not a claim
+  about physical target size. Checkbox indicator uses LVGL's built-in check glyph;
+  interface text remains Manrope. No switch is added without a screen use case.
+- Assets remain generated and unchanged: use `generated/assets/assets.h` symbols;
+  masks are recolored explicitly. Unsupported Unicode/emoji and physical tint,
+  sharpness and touch geometry still require asset-policy/device review.
+
+Validation: ESP-IDF 5.5.4 isolated normal/gallery builds, existing UI/provisioning
+host suites and ownership checks pass. The component action contract test is
+included in `python3 main/ui/tests/run.py`.
+
+Measured binaries after the desk-distance scale update: normal **2,911,184 bytes**,
+gallery **2,692,864 bytes** (**−218,320 bytes** versus normal; gallery omits reachable
+production services).
+Compile databases confirm gallery/helper sources are excluded from normal builds.
+Firmware formatting and UI/provisioning host checks pass. No provisioning screen
+migration has been performed.
+
+No flash was performed. Board acceptance remains outstanding: actual orientation,
+scroll/touch behavior, checkbox wrapping, focus ring clipping, exact text/icon tint,
+glyph coverage, repeated recreation/leaks, heap/PSRAM and interaction latency.
+Do not infer those from compilation or host tests. Image-size comparison is between
+two different entry points, not the incremental cost of migrating production screens.
 
 ## Phone setup
 
