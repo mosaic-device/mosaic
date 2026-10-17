@@ -6,6 +6,7 @@ __pycache__/
 .pnpm-store/
 .npm-cache/
 .turbo/
+.vs/
 .env
 .env.*
 !.env.example

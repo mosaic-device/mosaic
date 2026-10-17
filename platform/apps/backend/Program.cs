@@ -14,8 +14,14 @@ if (Directory.Exists(webRoot))
     app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
 }
 
+app.MapGet("/healthz", async context =>
+{
+    context.Response.ContentType = "text/plain";
+    await context.Response.WriteAsync("OK");
+});
+
 // SPA routes are navigation requests; API, WebSocket, and asset misses must remain 404s.
-app.MapFallback((RequestDelegate)(async context =>
+app.MapFallback(async context =>
 {
     var path = context.Request.Path;
     var isNavigation = (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
@@ -37,6 +43,6 @@ app.MapFallback((RequestDelegate)(async context =>
 
     context.Response.ContentType = "text/html";
     await context.Response.SendFileAsync(indexPath);
-}));
+});
 
 app.Run();
