@@ -128,8 +128,20 @@ test('web roles and explicit Manrope firmware mapping preserve existing API', ()
   assert.ok(font.includes('#define GET_FONT_WEIGHT'))
   assert.ok(!font.includes('montserrat'))
   assert.ok(font.includes('default: return &mosaic_manrope_36_400;'))
-  assert.ok(font.includes('default:\n        return ui_tokens_font_weight(36, weight);'))
-  for (const [role, px] of Object.entries({ 'space.card': 24, 'space.control': 20, 'space.gap': 24, 'space.screen': 24, 'icon.md': 40, 'wordmark.md': 40, 'wordmark.lg': 60 }))
+  assert.ok(
+    font.includes(
+      'default:\n        return ui_tokens_font_weight(36, weight);',
+    ),
+  )
+  for (const [role, px] of Object.entries({
+    'space.card': 24,
+    'space.control': 20,
+    'space.gap': 24,
+    'space.screen': 24,
+    'icon.md': 40,
+    'wordmark.md': 40,
+    'wordmark.lg': 60,
+  }))
     assert.equal(value('firmware.' + role), px + 'px')
   assert.equal(value('control.md'), '40px')
   assert.equal(value('firmware.control.md'), '80px')

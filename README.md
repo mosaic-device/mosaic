@@ -42,6 +42,8 @@ Run these separately; use the URL printed by Vite. See the [backend guide](platf
 
 ## Check and build
 
+Every pull request runs web, .NET, Rust, generated-code, firmware host, and firmware build checks. See the [CI guide](docs/ci.md) for tool versions, local commands, and formatting fixes.
+
 | Area                  | Format (changes files)                                                   | Check / build                                                                           |
 | --------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
 | Web apps and tooling  | `pnpm web:format`                                                        | `pnpm web:format:check` and `pnpm web:check` (lint, types, build)                       |
@@ -49,7 +51,7 @@ Run these separately; use the URL printed by Vite. See the [backend guide](platf
 | Tauri Rust shell      | `cargo fmt --manifest-path platform/apps/companion/src-tauri/Cargo.toml` | `pnpm companion:check` (rustfmt, Clippy); `pnpm --filter @mosaic/companion tauri build` |
 | Firmware-owned source | `pnpm fw:format`                                                         | `pnpm fw:format:check` and `pnpm fw:build` (activated ESP-IDF shell)                    |
 
-`web:format` also covers root docs/config and excludes .NET, firmware, and Rust via `.prettierignore`. Firmware formatting covers owned source under `firmware/main/`, not vendor or generated files. For hardware, first run `idf.py -C firmware set-target esp32p4` in an activated ESP-IDF shell; `pnpm fw:flash` and `pnpm fw:monitor` are separate, opt-in commands. Do not flash without a connected device and reviewed configuration.
+`web:format` also covers root docs/config and excludes .NET, firmware, and Rust via `.prettierignore`. Firmware formatting covers owned source under `firmware/main/`, not vendor or generated files. For hardware, first run `python3 scripts/firmware.py set-target esp32p4` in an activated ESP-IDF shell; `pnpm fw:flash` and `pnpm fw:monitor` are separate, opt-in commands. Do not flash without a connected device and reviewed configuration.
 
 ## Generated files
 

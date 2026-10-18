@@ -10,7 +10,8 @@ about: A focused change with a clear result
 ## Done when
 
 <!-- List outcomes someone can check. Include a test, board check, or reviewable document where it helps. -->
-- [ ] 
+
+- [ ]
 
 ## Notes
 

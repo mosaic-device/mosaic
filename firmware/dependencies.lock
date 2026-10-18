@@ -2,7 +2,7 @@ dependencies:
   esp_lcd_hx8394:
     dependencies: []
     source:
-      path: /Users/blakealmanza/dev/capstone/mosaic/firmware/components/esp_lcd_hx8394
+      path: ${MOSAIC_FIRMWARE_DIR}/components/esp_lcd_hx8394
       type: local
     version: 1.0.3
   espressif/button:
