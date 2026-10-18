@@ -2,6 +2,10 @@
   "name": "mosaic",
   "private": true,
   "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=24.11.0 <25",
+    "pnpm": ">=12.8.1 <13"
+  },
   "scripts": {
     "dev:web": "turbo run dev",
     "build:web": "turbo run build",
@@ -20,8 +24,10 @@
     "fw:monitor": "idf.py -C firmware monitor",
     "companion:check": "cargo fmt --check --manifest-path platform/apps/companion/src-tauri/Cargo.toml && cargo clippy --manifest-path platform/apps/companion/src-tauri/Cargo.toml -- -D warnings",
     "generate-tokens": "pnpm --filter @mosaic/tokens build",
+    "design:check": "pnpm --filter @mosaic/assets test && pnpm --filter @mosaic/tokens test && pnpm --filter @mosaic/admin test",
     "generate-protos": "pnpm --filter @mosaic/protocols generate",
-    "build:admin-assets": "pnpm --filter @mosaic/admin build && node scripts/copy-admin-assets.mjs"
+    "build:admin-assets": "pnpm --filter @mosaic/admin build && node scripts/copy-admin-assets.mjs",
+    "generate-assets": "pnpm --filter @mosaic/assets generate"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

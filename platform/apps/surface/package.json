@@ -8,7 +8,11 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "prebuild": "node ../../packages/tokens/build.mjs",
+    "pretypecheck": "node ../../packages/tokens/build.mjs",
+    "predev": "node ../../packages/tokens/build.mjs",
+    "prelint": "node ../../packages/tokens/build.mjs"
   },
   "dependencies": {
     "@mosaic/tokens": "workspace:*",

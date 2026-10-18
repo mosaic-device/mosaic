@@ -1,0 +1,22 @@
+# Normalize line endings: LF in the repo and working tree on every OS, so Windows
+# checkouts match generator output (tokens, protos) and don't show phantom diffs.
+* text=auto eol=lf
+
+# Binary assets
+*.png binary
+*.ico binary
+*.bin binary
+
+# Protocol bindings generated from the shared schemas.
+firmware/components/device_protos/generated/*.pb.c linguist-generated=true
+firmware/components/device_protos/generated/*.pb.h linguist-generated=true
+platform/apps/backend/Generated/DeviceProtocol/*.cs linguist-generated=true
+
+# Prepared font/image data and declarations are generated, not handwritten code.
+firmware/main/ui/generated/assets/*.c linguist-generated=true
+firmware/main/ui/generated/assets/assets.h linguist-generated=true
+firmware/main/ui/generated/assets/sources.cmake linguist-generated=true
+
+# Generated asset reports and outlined web artwork.
+platform/packages/assets/metadata/*.json linguist-generated=true
+platform/packages/assets/web/mosaic-wordmark.svg linguist-generated=true

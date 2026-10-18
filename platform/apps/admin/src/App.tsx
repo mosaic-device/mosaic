@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import {
   createRootRoute,
   createRoute,
@@ -12,15 +13,33 @@ const indexRoute = createRoute({
   path: '/',
   component: () => (
     <main className="bg-background text-foreground min-h-screen px-8 py-12">
-      <h1 className="text-2xl font-semibold">Admin</h1>
-      <p className="mt-3 text-sm">
+      <h1 className="text-title leading-8">Admin</h1>
+      <p className="text-sm">
         Administration shell. No API requests or authentication yet.
       </p>
     </main>
   ),
 })
 
-const router = createRouter({ routeTree: rootRoute.addChildren([indexRoute]) })
+const previewRoutes = import.meta.env.DEV
+  ? [
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path: '/dev/components',
+        component: () => (
+          <Suspense fallback={<p>Loading preview…</p>}>
+            <ComponentPreview />
+          </Suspense>
+        ),
+      }),
+    ]
+  : []
+const ComponentPreview = import.meta.env.DEV
+  ? lazy(() => import('./ComponentPreview.js'))
+  : () => null
+const router = createRouter({
+  routeTree: rootRoute.addChildren([indexRoute, ...previewRoutes]),
+})
 
 declare module '@tanstack/react-router' {
   interface Register {

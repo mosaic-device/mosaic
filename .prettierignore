@@ -12,3 +12,5 @@ pnpm-lock.yaml
 platform/Mosaic.slnx
 firmware/
 platform/apps/backend/
+# Generator-owned JSON formatting; checksums are validated by asset tests.
+platform/packages/assets/metadata/coverage.json
