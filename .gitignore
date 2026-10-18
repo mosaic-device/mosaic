@@ -19,6 +19,7 @@ platform/apps/companion/src-tauri/target/
 firmware/build/
 firmware/managed_components/
 firmware/sdkconfig
+firmware/.mosaic-idf.lock
 firmware/sdkconfig.secrets.defaults
 
 publish/

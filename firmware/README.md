@@ -7,14 +7,14 @@ Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 using ESP-IDF **5.5.4** an
 Activate ESP-IDF with the ESP32-P4 toolchain and put Node.js on `PATH`. From `firmware/`:
 
 ```sh
-idf.py build
-idf.py flash monitor
+python3 ../scripts/firmware.py build
+python3 ../scripts/firmware.py flash monitor
 ```
 
 To use current defaults without changing a local `sdkconfig`:
 
 ```sh
-idf.py -B build/softap -D SDKCONFIG=build/softap/sdkconfig build
+python3 ../scripts/firmware.py -B build/softap -D SDKCONFIG=build/softap/sdkconfig build
 ```
 
 Existing `sdkconfig` values override `sdkconfig.defaults`. Review configuration before flashing. The board has 32 MiB flash and an 8 MiB factory partition; no filesystem image is needed.
@@ -23,7 +23,9 @@ Existing `sdkconfig` values override `sdkconfig.defaults`. Review configuration 
 - CMake regenerates token outputs offline using Node.js. Firmware builds do not require pnpm or asset converters.
 - Finished fonts/icons and licenses are committed; see [asset maintenance](../platform/packages/assets/README.md).
 - The [local PPA override](components/esp_driver_ppa/README.md) fixes a rotation stall. Reconfigure after changing components and re-test display startup when changing IDF, geometry or PPA usage.
-- `dependencies.lock` is currently ignored; a reviewed clean dependency resolution is still needed for reproducible builds.
+- `dependencies.lock` is committed. Use the wrapper above (or root `pnpm fw:*` commands), not raw `idf.py`: component manager 2.x writes machine-specific local paths. The wrapper expands the committed `${MOSAIC_FIRMWARE_DIR}` placeholder before IDF runs and restores it afterward, preserving dependency updates. It always runs from `firmware/`; paths passed to IDF are relative to that directory. CI must use the same wrapper.
+- Do not run firmware commands concurrently. After a forced termination or machine crash, inspect the lockfile, restore only the local driver path to the placeholder, and remove `.mosaic-idf.lock` before retrying. Do not discard genuine dependency updates. Component manager 3.x supports relative paths but requires ESP-IDF 6+.
+- Test lock portability without hardware: `python3 ../scripts/firmware_test.py`. These tests simulate IDF in relocated directories; they do not prove a clean ESP-IDF build or physical provisioning.
 
 ## Phone setup
 
@@ -41,8 +43,8 @@ Setup credentials must receive display acknowledgement before the AP opens; fail
 The gallery exercises typography, assets and passive controls without starting provisioning, Wi-Fi or reading saved credentials. Keep its configuration separate from normal firmware:
 
 ```sh
-idf.py -B build/design-system-gallery -D SDKCONFIG=build/design-system-gallery/sdkconfig -D MOSAIC_UI_GALLERY=ON build
-idf.py -B build/design-system-gallery flash monitor
+python3 ../scripts/firmware.py -B build/design-system-gallery -D SDKCONFIG=build/design-system-gallery/sdkconfig -D MOSAIC_UI_GALLERY=ON build
+python3 ../scripts/firmware.py -B build/design-system-gallery flash monitor
 ```
 
 Swipe to browse; interactive controls update the gallery state. **Recreate gallery controls** exercises destruction/recreation. Fixed state samples are not interactive; keyboard navigation and text editing are not implemented. Gallery layout, tint, touch geometry and performance require their own physical review.
@@ -75,8 +77,8 @@ Run analysis only on owned source, not vendor/generated code. Configure clangd w
 Use a separate image to distinguish a blocking PPA rotation from a frame-buffer wait:
 
 ```sh
-idf.py -B build/display-diagnostics -D SDKCONFIG=build/display-diagnostics/sdkconfig -D MOSAIC_DISPLAY_DIAGNOSTICS=ON build
-idf.py -B build/display-diagnostics flash monitor
+python3 ../scripts/firmware.py -B build/display-diagnostics -D SDKCONFIG=build/display-diagnostics/sdkconfig -D MOSAIC_DISPLAY_DIAGNOSTICS=ON build
+python3 ../scripts/firmware.py -B build/display-diagnostics flash monitor
 ```
 
 On refresh timeout, `mosaic_display` logs entry/return counters. More entries than returns identify the blocked operation. Diagnostics are off in normal builds. Startup waits for refresh, a 100 ms settling window and redraw before lighting the panel; reboot blanks and holds the backlight low.
