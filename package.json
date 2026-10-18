@@ -2,6 +2,10 @@
   "name": "mosaic",
   "private": true,
   "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=24.11.0 <25",
+    "pnpm": ">=12.8.1 <13"
+  },
   "scripts": {
     "dev:web": "turbo run dev",
     "build:web": "turbo run build",
