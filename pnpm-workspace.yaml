@@ -5,4 +5,5 @@ packages:
   - 'platform/packages/*'
 allowBuilds:
   '@bufbuild/buf': true
+  sharp: false
 engineStrict: true
