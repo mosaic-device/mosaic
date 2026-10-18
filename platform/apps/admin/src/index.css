@@ -1,4 +1,75 @@
 @import 'tailwindcss';
-@import '@mosaic/tokens/css/tailwind-theme.css';
-@import '@mosaic/tokens/css/light.css';
-@import '@mosaic/tokens/css/dark.css';
+@import '@mosaic/assets/fonts.css';
+@import '@mosaic/tokens/css/tokens.css';
+@import '@mosaic/tokens/css/shadcn.css';
+
+@theme inline {
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-destructive: var(--destructive);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --text-title: var(--typography-title);
+  --text-title--font-weight: var(--typography-weight-title);
+  --text-heading: var(--typography-heading);
+  --text-heading--font-weight: var(--typography-weight-heading);
+  --text-heading--line-height: var(--line-height-tight);
+  --text-body: var(--typography-body);
+  --text-caption: var(--typography-caption);
+  --spacing-control-md: var(--control-md);
+  --spacing-control-touch: var(--control-touch-target);
+}
+
+:root {
+  color-scheme: dark;
+}
+@layer base {
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: var(--typography-body);
+    line-height: var(--line-height-normal);
+  }
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+  h1 {
+    font-size: var(--typography-title);
+    font-weight: var(--typography-weight-title);
+  }
+  h2,
+  h3 {
+    font-size: var(--typography-heading);
+    font-weight: var(--typography-weight-heading);
+    line-height: var(--line-height-tight);
+  }
+}
+:where(button, input, a, [tabindex]):focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+  box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+@media (forced-colors: active) {
+  [data-state='checked'] {
+    outline: 2px solid Highlight;
+    outline-offset: -3px;
+  }
+  :where(button, input, [tabindex]):focus-visible {
+    outline-color: Highlight;
+  }
+}

@@ -8,12 +8,18 @@
       "$type": "color",
       "$value": "{primitive.color.neutral.950}"
     },
-    "surface": { "$type": "color", "$value": "rgba(255, 255, 255, 0.94)" },
+    "surface": {
+      "$type": "color",
+      "$value": "rgba(255, 255, 255, 0.94)"
+    },
     "surfaceForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.950}"
     },
-    "surfaceMuted": { "$type": "color", "$value": "rgba(244, 244, 245, 0.88)" },
+    "surfaceMuted": {
+      "$type": "color",
+      "$value": "rgba(244, 244, 245, 0.88)"
+    },
     "surfaceRaised": {
       "$type": "color",
       "$value": "rgba(255, 255, 255, 0.96)"
@@ -22,48 +28,117 @@
       "$type": "color",
       "$value": "rgba(228, 228, 231, 0.72)"
     },
-    "primary": { "$type": "color", "$value": "{primitive.color.blue.600}" },
+    "primary": {
+      "$type": "color",
+      "$value": "{primitive.color.blue.600}"
+    },
     "primaryForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.0}"
     },
-    "secondary": { "$type": "color", "$value": "rgba(37, 99, 235, 0.12)" },
+    "secondary": {
+      "$type": "color",
+      "$value": "{color.surfaceMuted}"
+    },
     "secondaryForeground": {
       "$type": "color",
-      "$value": "{primitive.color.blue.600}"
+      "$value": "{color.foreground}"
     },
-    "muted": { "$type": "color", "$value": "rgba(244, 244, 245, 0.88)" },
+    "muted": {
+      "$type": "color",
+      "$value": "rgba(244, 244, 245, 0.88)"
+    },
     "mutedForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.500}"
     },
-    "accent": { "$type": "color", "$value": "rgba(228, 228, 231, 0.88)" },
+    "accent": {
+      "$type": "color",
+      "$value": "rgba(228, 228, 231, 0.88)"
+    },
     "accentForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.950}"
     },
-    "border": { "$type": "color", "$value": "rgba(63, 63, 70, 0.14)" },
-    "field": { "$type": "color", "$value": "rgba(63, 63, 70, 0.14)" },
-    "focus": { "$type": "color", "$value": "{primitive.color.blue.500}" },
-    "info": { "$type": "color", "$value": "{primitive.color.blue.600}" },
+    "border": {
+      "$type": "color",
+      "$value": "rgba(63, 63, 70, 0.14)"
+    },
+    "field": {
+      "$type": "color",
+      "$value": "rgba(63, 63, 70, 0.14)"
+    },
+    "focus": {
+      "$type": "color",
+      "$value": "{primitive.color.blue.500}"
+    },
+    "info": {
+      "$type": "color",
+      "$value": "{primitive.color.blue.600}"
+    },
     "infoForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.0}"
     },
-    "success": { "$type": "color", "$value": "{primitive.color.green.600}" },
+    "success": {
+      "$type": "color",
+      "$value": "{primitive.color.green.600}"
+    },
     "successForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.0}"
     },
-    "warning": { "$type": "color", "$value": "{primitive.color.amber.600}" },
+    "warning": {
+      "$type": "color",
+      "$value": "{primitive.color.amber.600}"
+    },
     "warningForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.950}"
     },
-    "danger": { "$type": "color", "$value": "{primitive.color.red.600}" },
+    "danger": {
+      "$type": "color",
+      "$value": "{primitive.color.red.600}"
+    },
     "dangerForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.0}"
+    },
+    "primaryHover": {
+      "$type": "color",
+      "$value": "mix({color.primary}, #FFFFFF, 0.06)"
+    },
+    "primaryPressed": {
+      "$type": "color",
+      "$value": "mix({color.primary}, #000000, 0.12)"
+    },
+    "secondaryHover": {
+      "$type": "color",
+      "$value": "{color.accent}"
+    },
+    "secondaryPressed": {
+      "$type": "color",
+      "$value": "{color.surfaceSunken}"
+    },
+    "lowEmphasis": {
+      "$type": "color",
+      "$value": "#71717A"
+    },
+    "selected": {
+      "$type": "color",
+      "$value": "rgba(117, 64, 181, 0.08)"
+    },
+    "selectedBorder": {
+      "$type": "color",
+      "$value": "rgba(117, 64, 181, 0.33)"
+    },
+    "selectedForeground": {
+      "$type": "color",
+      "$value": "#7540B5"
+    },
+    "interactiveBorder": {
+      "$type": "color",
+      "$value": "#71717A"
     }
   }
 }

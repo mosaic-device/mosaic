@@ -25,12 +25,8 @@ inline void lv_screen_load(lv_obj_t*) { }
 lv_timer_t* lv_timer_create(void (*callback)(lv_timer_t*), unsigned, void*);
 void lv_display_add_event_cb(lv_display_t*, void (*callback)(lv_event_t*), int event, void*);
 struct lv_font_t { };
-inline lv_font_t lv_font_montserrat_20;
-inline lv_font_t lv_font_montserrat_22;
-inline lv_font_t lv_font_montserrat_24;
-inline lv_font_t lv_font_montserrat_32;
-inline lv_font_t lv_font_montserrat_40;
-inline lv_font_t lv_font_montserrat_48;
+#define LV_FONT_DECLARE(name) inline const lv_font_t name = { }
+#define LV_IMAGE_DECLARE(name) extern const int name
 inline lv_obj_t* lv_display_get_screen_active(lv_display_t*) {
     return lv_obj_create(nullptr);
 }

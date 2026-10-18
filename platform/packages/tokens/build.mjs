@@ -24,6 +24,10 @@ const PUBLIC_ROOTS = new Set([
   'radius',
   'border',
   'shadow',
+  'focus',
+  'control',
+  'typography',
+  'firmware',
 ])
 const FIRMWARE_GLOBAL_ROOTS = new Set([
   'font',
@@ -33,6 +37,10 @@ const FIRMWARE_GLOBAL_ROOTS = new Set([
   'radius',
   'border',
   'shadow',
+  'focus',
+  'control',
+  'typography',
+  'firmware',
 ])
 
 const readJson = (relativePath) =>
@@ -113,7 +121,38 @@ function resolveTokenValue(token, tokenMap, stack = []) {
   if (typeof raw !== 'string') return raw
 
   const reference = raw.match(TOKEN_REFERENCE_PATTERN)
-  if (!reference) return raw
+  if (!reference) {
+    const mix = raw.match(/^mix\((\{[^}]+\}), (#[0-9a-fA-F]{6}), (0?\.\d+)\)$/)
+    if (mix) {
+      const base = resolveTokenValue(
+        { ...token, rawValue: mix[1] },
+        tokenMap,
+        stack,
+      )
+      const a = parseColor(base, token.name)
+      const b = parseColor(mix[2], token.name)
+      if (a.opacity !== 255)
+        throw new Error(`Mix base must be opaque: ${token.name}`)
+      const amount = Number(mix[3])
+      if (amount > 1) throw new Error(`Invalid mix amount: ${token.name}`)
+      const channels = [16, 8, 0].map((shift) =>
+        Math.round(
+          ((Number(a.hex) >> shift) & 255) * (1 - amount) +
+            ((Number(b.hex) >> shift) & 255) * amount,
+        ),
+      )
+      return (
+        '#' +
+        channels
+          .map((c) => c.toString(16).padStart(2, '0'))
+          .join('')
+          .toUpperCase()
+      )
+    }
+    if (/[{}]/.test(raw))
+      throw new Error(`Unresolved token reference: ${token.name}: ${raw}`)
+    return raw
+  }
 
   const referencedName = reference[1]
     .replace(/\.value$/, '')
@@ -368,8 +407,58 @@ function firmwareColorDefines(tokens, themeSuffix) {
     .join('\n')
 }
 
-function firmwareFontApi() {
-  return `#define GET_FONT(text_token) ui_tokens_get_font(text_token)\n\nstatic inline const lv_font_t* ui_tokens_get_font(uint16_t text_token) {\n    switch (text_token) {\n    case TOKEN_TEXT_XS:\n        return &lv_font_montserrat_20;\n    case TOKEN_TEXT_SM:\n        return &lv_font_montserrat_22;\n    case TOKEN_TEXT_MD:\n        return &lv_font_montserrat_24;\n    case TOKEN_TEXT_LG:\n        return &lv_font_montserrat_32;\n    case TOKEN_TEXT_XL:\n        return &lv_font_montserrat_40;\n    default:\n        return &lv_font_montserrat_24;\n    }\n}\n`
+function firmwareFontApi(tokens) {
+  const sizes = tokens.filter(
+    (t) => t.path[0] === 'firmware' && t.path[1] === 'text',
+  )
+  const cases = sizes
+    .map(
+      (t) =>
+        `    case TOKEN_TEXT_${t.path[2].toUpperCase()}:\n        return ui_tokens_font_weight(${parseDimensionPx(t.value, t.name)}, weight);`,
+    )
+    .join('\n')
+  const fallback = sizes.find((t) => t.path[2] === 'md')
+  const deviceCases = sizes
+    .map((t) => {
+      const size = parseDimensionPx(t.value, t.name)
+      return `    case ${size}:\n        return weight == 600 ? &mosaic_manrope_${size}_600 : weight == 500 ? &mosaic_manrope_${size}_500 : &mosaic_manrope_${size}_400;`
+    })
+    .join('\n')
+  return `/* Manrope: unsupported weights use 400; unknown sizes use body ${parseDimensionPx(fallback.value, fallback.name)}/400. */\n#include "assets/assets.h"\n#define GET_FONT(text_token) ui_tokens_get_font(text_token)\n#define GET_FONT_WEIGHT(text_token, weight) ui_tokens_get_font_weight(text_token, weight)\n\nstatic inline const lv_font_t* ui_tokens_font_weight(uint16_t pixels, uint16_t weight) {\n    switch (pixels) {\n${deviceCases}\n    default: return &mosaic_manrope_${parseDimensionPx(fallback.value, fallback.name)}_400;\n    }\n}\n\nstatic inline const lv_font_t* ui_tokens_get_font_weight(uint16_t text_token, uint16_t weight) {\n    switch (text_token) {\n${cases}\n    default:\n        return ui_tokens_font_weight(${parseDimensionPx(fallback.value, fallback.name)}, weight);\n    }\n}\n\nstatic inline const lv_font_t* ui_tokens_get_font(uint16_t text_token) {\n    return ui_tokens_get_font_weight(text_token, 400);\n}\n`
+}
+
+const SHADCN_ROLES = {
+  background: 'background',
+  foreground: 'foreground',
+  card: 'surface',
+  'card-foreground': 'surfaceForeground',
+  popover: 'surfaceRaised',
+  'popover-foreground': 'surfaceForeground',
+  primary: 'primary',
+  'primary-foreground': 'primaryForeground',
+  secondary: 'secondary',
+  'secondary-foreground': 'secondaryForeground',
+  muted: 'muted',
+  'muted-foreground': 'mutedForeground',
+  accent: 'accent',
+  'accent-foreground': 'accentForeground',
+  destructive: 'danger',
+  'destructive-foreground': 'dangerForeground',
+  border: 'border',
+  input: 'field',
+  ring: 'focus',
+}
+function shadcnCss() {
+  return (
+    GENERATED_HEADER +
+    ':root, [data-theme] {\n' +
+    Object.entries(SHADCN_ROLES)
+      .map(
+        ([role, semantic]) => `  --${role}: var(--color-${toKebab(semantic)});`,
+      )
+      .join('\n') +
+    '\n}\n'
+  )
 }
 
 function firmwareThemeApi(lightTokens) {
@@ -464,6 +553,7 @@ function build() {
     path.join(distCssDir, 'tailwind-theme.css'),
     tailwindThemeCss(lightTokens),
   )
+  fs.writeFileSync(path.join(distCssDir, 'shadcn.css'), shadcnCss())
   fs.writeFileSync(
     path.join(distCssDir, 'tokens.css'),
     '@import "./dark.css";\n@import "./light.css";\n@import "./tailwind-theme.css";\n',
@@ -482,7 +572,7 @@ function build() {
     [
       FIRMWARE_HEADER.trimEnd(),
       firmwareGlobalDefines(lightTokens),
-      firmwareFontApi(),
+      firmwareFontApi(lightTokens),
       firmwareColorDefines(darkTokens, 'DARK'),
       firmwareColorDefines(lightTokens, 'LIGHT'),
       firmwareThemeApi(lightTokens),
@@ -495,9 +585,27 @@ function build() {
   console.log('Built C header -> firmware/main/ui/generated/design_tokens.h')
 }
 
-try {
-  build()
-} catch (error) {
-  console.error(`❌ Token build failed: ${error.message}`)
-  process.exit(1)
+export {
+  resolveTokens,
+  deepMerge,
+  compareThemePaths,
+  parseColor,
+  themeCss,
+  firmwareColorDefines,
+  firmwareGlobalDefines,
+  firmwareFontApi,
+  shadcnCss,
+  tailwindThemeCss,
+  validateTokenValues,
 }
+
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+)
+  try {
+    build()
+  } catch (error) {
+    console.error(`❌ Token build failed: ${error.message}`)
+    process.exit(1)
+  }

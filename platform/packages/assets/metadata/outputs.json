@@ -1,0 +1,182 @@
+[
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_28_400.c",
+    "bytes": 353625,
+    "sha256": "d1a9133ecf8b2eda1c688537ab9044f9197a30bab3defc080dea3fc987530a30"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_32_400.c",
+    "bytes": 428556,
+    "sha256": "50c2abda36db6c4d63287c32c13626cb5633a74fb03f23507199a6b095a5d336"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_36_400.c",
+    "bytes": 524444,
+    "sha256": "a81fbe16930a8217468cc5d932ea9f31aa1f0ae9e7e6a01e2cbac44264d9e6e5"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_48_400.c",
+    "bytes": 880794,
+    "sha256": "d5e9bf24ad58817bce2b8f89623a053fbaedc6d37d59ec747dbd0da2462b12ad"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_60_400.c",
+    "bytes": 1289175,
+    "sha256": "f5e84de0a7d4ef8ff0b04a4651da370e7edce8227b2909883325dd8825014ebc"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_28_500.c",
+    "bytes": 363528,
+    "sha256": "2dfe899ab2b55ead0cd0adce1fec423280beb505e95655720dcd2def0151813e"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_32_500.c",
+    "bytes": 442074,
+    "sha256": "f0d4b690084dfbfb00d030d9e55efd54ac27d5fe4b22a8f9dbafa7aa76207613"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_36_500.c",
+    "bytes": 540433,
+    "sha256": "1e192a924aa06b17fab697e62ef7104c1a8cb8d8b44ce07db2a9a7e7de408ec3"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_48_500.c",
+    "bytes": 911491,
+    "sha256": "e0f9edf02f0f4039ac70593463e74b5c4f01dd10e7d1f212e3aadc1536d41a4f"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_60_500.c",
+    "bytes": 1334097,
+    "sha256": "7f1a8c6f1a171e6363b97bbf8c256e8b8646052cd83e9d03573f7176dd362108"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_28_600.c",
+    "bytes": 375032,
+    "sha256": "a1112fb4ca827d21f587ef32de08ebb69040e389de93679ce289da29d2fa1f6a"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_32_600.c",
+    "bytes": 454351,
+    "sha256": "2e6f88934f1de202ce5f8335ac3f1d0705a5f49763c56e766b577b3560804e53"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_36_600.c",
+    "bytes": 555740,
+    "sha256": "3382640bf38b8dd114ea809843ee1273ebfec02fb9df3749927d53b254a2e655"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_48_600.c",
+    "bytes": 937546,
+    "sha256": "2680985b44878d1bc33bdcdf5481eef24302728437fb3f3840e1792bb63c9982"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_manrope_60_600.c",
+    "bytes": 1372823,
+    "sha256": "3ef43934912e0fcb7345e00bb919d41605222a21121ea26689921804357718a1"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_icon_settings_40.c",
+    "bytes": 4950,
+    "sha256": "208d969b58d2f467cb5902717956f3639f285967aaa9571bd5de511b1abeb11f"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_wordmark_40.c",
+    "bytes": 30294,
+    "sha256": "1ed0b0d45f9c13077d8a9418776edbdd3ccea05fe1f3dc9e85f0b9d6237301f4"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_wordmark_60.c",
+    "bytes": 66562,
+    "sha256": "ca17014fffeebfa3d439d0cd10547ba078bb44a010444d866fb6e303eab7da38"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/assets.h",
+    "bytes": 852,
+    "sha256": "171e2ddea19b5a8b6b552ec30a972978318f356874974c166f2063d535b3003a"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/sources.cmake",
+    "bytes": 979,
+    "sha256": "ed6377b76e1f6c4d0435ae288a4a50519252e61bccfc5e6df7b44c0cdaa6aa22"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/README.md",
+    "bytes": 1497,
+    "sha256": "f90e2a89686605c08d2efbee45a7176efbae81ec399fd436e379fc38f8a30752"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/licenses/Manrope-OFL.txt",
+    "bytes": 4387,
+    "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/licenses/Outfit-OFL.txt",
+    "bytes": 4389,
+    "sha256": "c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416"
+  },
+  {
+    "file": "../../../firmware/main/ui/generated/assets/licenses/Lucide-LICENSE",
+    "bytes": 880,
+    "sha256": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc"
+  },
+  {
+    "file": "licenses/Manrope-OFL.txt",
+    "bytes": 4387,
+    "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"
+  },
+  {
+    "file": "licenses/Outfit-OFL.txt",
+    "bytes": 4389,
+    "sha256": "c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416"
+  },
+  {
+    "file": "licenses/Lucide-LICENSE",
+    "bytes": 880,
+    "sha256": "1e7290b35280a048667bbf0ebabac1c7fd52a75300e8b2946ac165715997f2bc"
+  },
+  {
+    "file": "../../apps/admin/public/licenses/Manrope-OFL.txt",
+    "bytes": 4387,
+    "sha256": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b"
+  },
+  {
+    "file": "../../apps/admin/public/licenses/Outfit-OFL.txt",
+    "bytes": 4389,
+    "sha256": "c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416"
+  },
+  {
+    "file": "web/fonts.css",
+    "bytes": 574,
+    "sha256": "6236d715a72b809062a5c3425679e515d0c5f4a36ea0df053ca465fa214653a9"
+  },
+  {
+    "file": "web/manrope-400.woff2",
+    "bytes": 17940,
+    "sha256": "550594320d83c2f6a96114d19ef1642f843ec7e4604dd75ff9bc9a8201d5b526"
+  },
+  {
+    "file": "web/manrope-500.woff2",
+    "bytes": 17880,
+    "sha256": "1fb606d03ab593a21776080a992d8855e96714cb47f9b403534319ccab48b3d6"
+  },
+  {
+    "file": "web/manrope-600.woff2",
+    "bytes": 18064,
+    "sha256": "9d0aab20e96b2534daf53e4171aeda36bac6a9410c520f8913f52db7f3fb8a91"
+  },
+  {
+    "file": "web/mosaic-wordmark.svg",
+    "bytes": 2139,
+    "sha256": "829ee38749554e5ec951913b2ad84fdd6f327ee8e18f768347006595fce33e7d"
+  },
+  {
+    "file": "web/outfit-500.woff2",
+    "bytes": 15896,
+    "sha256": "cea328acf60d114cb35e27e7999b7ebc74bcd0c0642a3547a1817aa7daa630b8"
+  },
+  {
+    "file": "metadata/coverage.json",
+    "bytes": 16230,
+    "sha256": "8905aeef79725af18d638c7340bde185cb9afd18a4d08092ac4a48b1cc788c21"
+  }
+]

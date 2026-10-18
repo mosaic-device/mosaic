@@ -11,10 +11,7 @@ __pycache__/
 .env.*
 !.env.example
 **/dist/
-!platform/packages/tokens/dist/
-platform/packages/tokens/dist/*
-!platform/packages/tokens/dist/css/
-!platform/packages/tokens/dist/js/
+/firmware/main/ui/generated/design_tokens.h
 **/bin/
 **/obj/
 platform/apps/backend/wwwroot/
@@ -23,7 +20,7 @@ firmware/build/
 firmware/managed_components/
 firmware/sdkconfig
 firmware/sdkconfig.secrets.defaults
-firmware/dependencies.lock
+
 publish/
 *.db
 *.sqlite

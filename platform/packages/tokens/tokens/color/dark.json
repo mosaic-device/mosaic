@@ -1,60 +1,144 @@
 {
   "color": {
-    "background": { "$type": "color", "$value": "{primitive.color.base.dark}" },
+    "background": {
+      "$type": "color",
+      "$value": "#090A0A"
+    },
     "foreground": {
       "$type": "color",
-      "$value": "{primitive.color.neutral.50}"
+      "$value": "#F2F2EF"
     },
-    "surface": { "$type": "color", "$value": "rgba(18, 18, 20, 0.94)" },
+    "surface": {
+      "$type": "color",
+      "$value": "#141516"
+    },
     "surfaceForeground": {
       "$type": "color",
-      "$value": "{primitive.color.neutral.50}"
+      "$value": "{color.foreground}"
     },
-    "surfaceMuted": { "$type": "color", "$value": "rgba(24, 24, 27, 0.78)" },
-    "surfaceRaised": { "$type": "color", "$value": "rgba(39, 39, 42, 0.9)" },
-    "surfaceSunken": { "$type": "color", "$value": "rgba(9, 9, 11, 0.78)" },
-    "primary": { "$type": "color", "$value": "{primitive.color.blue.400}" },
+    "surfaceMuted": {
+      "$type": "color",
+      "$value": "{color.surface}"
+    },
+    "surfaceRaised": {
+      "$type": "color",
+      "$value": "#222426"
+    },
+    "surfaceSunken": {
+      "$type": "color",
+      "$value": "{color.background}"
+    },
+    "primary": {
+      "$type": "color",
+      "$value": "#7540B5"
+    },
     "primaryForeground": {
       "$type": "color",
-      "$value": "{primitive.color.neutral.950}"
+      "$value": "#FFFFFF"
     },
-    "secondary": { "$type": "color", "$value": "rgba(96, 165, 250, 0.14)" },
+    "secondary": {
+      "$type": "color",
+      "$value": "{color.surface}"
+    },
     "secondaryForeground": {
+      "$type": "color",
+      "$value": "{color.foreground}"
+    },
+    "muted": {
+      "$type": "color",
+      "$value": "{color.surface}"
+    },
+    "mutedForeground": {
+      "$type": "color",
+      "$value": "#92979B"
+    },
+    "accent": {
+      "$type": "color",
+      "$value": "{color.surfaceRaised}"
+    },
+    "accentForeground": {
+      "$type": "color",
+      "$value": "{color.foreground}"
+    },
+    "border": {
+      "$type": "color",
+      "$value": "#303335"
+    },
+    "field": {
+      "$type": "color",
+      "$value": "{color.border}"
+    },
+    "focus": {
+      "$type": "color",
+      "$value": "#B0A3CF"
+    },
+    "info": {
       "$type": "color",
       "$value": "{primitive.color.blue.400}"
     },
-    "muted": { "$type": "color", "$value": "rgba(24, 24, 27, 0.78)" },
-    "mutedForeground": {
-      "$type": "color",
-      "$value": "{primitive.color.neutral.400}"
-    },
-    "accent": { "$type": "color", "$value": "rgba(39, 39, 42, 0.9)" },
-    "accentForeground": {
-      "$type": "color",
-      "$value": "{primitive.color.neutral.50}"
-    },
-    "border": { "$type": "color", "$value": "rgba(212, 212, 216, 0.14)" },
-    "field": { "$type": "color", "$value": "rgba(212, 212, 216, 0.14)" },
-    "focus": { "$type": "color", "$value": "{primitive.color.blue.500}" },
-    "info": { "$type": "color", "$value": "{primitive.color.blue.400}" },
     "infoForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.950}"
     },
-    "success": { "$type": "color", "$value": "{primitive.color.green.400}" },
+    "success": {
+      "$type": "color",
+      "$value": "{primitive.color.green.400}"
+    },
     "successForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.950}"
     },
-    "warning": { "$type": "color", "$value": "{primitive.color.amber.400}" },
+    "warning": {
+      "$type": "color",
+      "$value": "{primitive.color.amber.400}"
+    },
     "warningForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.950}"
     },
-    "danger": { "$type": "color", "$value": "{primitive.color.red.400}" },
+    "danger": {
+      "$type": "color",
+      "$value": "{primitive.color.red.400}"
+    },
     "dangerForeground": {
       "$type": "color",
       "$value": "{primitive.color.neutral.950}"
+    },
+    "lowEmphasis": {
+      "$type": "color",
+      "$value": "#666B70"
+    },
+    "primaryHover": {
+      "$type": "color",
+      "$value": "mix({color.primary}, #FFFFFF, 0.06)"
+    },
+    "primaryPressed": {
+      "$type": "color",
+      "$value": "mix({color.primary}, #000000, 0.12)"
+    },
+    "secondaryHover": {
+      "$type": "color",
+      "$value": "{color.surfaceRaised}"
+    },
+    "secondaryPressed": {
+      "$type": "color",
+      "$value": "{color.border}"
+    },
+    "selected": {
+      "$type": "color",
+      "$value": "rgba(176, 163, 207, 0.08)"
+    },
+    "selectedBorder": {
+      "$type": "color",
+      "$value": "rgba(176, 163, 207, 0.33)"
+    },
+    "selectedForeground": {
+      "$type": "color",
+      "$value": "{color.focus}"
+    },
+    "interactiveBorder": {
+      "$type": "color",
+      "$value": "{color.mutedForeground}"
     }
   }
 }
