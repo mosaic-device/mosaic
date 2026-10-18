@@ -1,80 +1,57 @@
 # @mosaic/admin
 
-Vite / React 19 / Tailwind 4 admin foundation. Production retains the neutral
-administration scaffold; no API, authentication, or product screens are implemented.
-Run workspace commands from `mosaic/`:
+Vite/React/Tailwind admin scaffold. No API integration, authentication, or product
+screens are implemented. `/dev/components` is development-only and excluded from
+production. `dist/` supplies the backend's static assets; local `/api` and `/ws`
+proxies target `http://localhost:5000`.
+
+Run from the repository root:
 
 ```sh
 pnpm --filter @mosaic/admin dev
-# Open /dev/components (development only)
 pnpm --filter @mosaic/admin test
 pnpm web:check
 ```
 
-`test` builds production, then uses Node's test runner to check that preview routes,
-copy, and chunks are absent, fonts ship locally, semantic CSS states remain, and
-both production OFL notices exactly match the assets source files.
-`public/licenses/Manrope-OFL.txt` and `public/licenses/Outfit-OFL.txt` are verbatim
-copies from `platform/packages/assets/licenses/`, copied by Vite to `dist/licenses/`.
-Keep their copyright and license text unchanged when redistributing the fonts.
-No browser test dependency is required. `dist/` is the backend's static copy input.
-The local `/api` and `/ws` proxies still target `http://localhost:5000`.
+`test` builds production and checks preview exclusion, local fonts, semantic CSS
+states, and font notices. After changing primitives, manually check keyboard focus,
+dialog trapping/restoration, pending/disabled states, field errors, mobile layout,
+forced colors, and reduced motion at `/dev/components`.
 
-## Foundation
+## UI constraints
 
-- `src/components/ui/` contains CLI-generated shadcn primitives, adapted locally.
-  React primitives consistently use the `radix-ui` backend; do not replace them
-  with handmade dialog, checkbox, or switch behavior.
-- `src/index.css` imports `@mosaic/assets/fonts.css`, shared token CSS, then the
-  explicit shadcn adapter. Adapter colors are complete CSS colors, not HSL tuples.
-  Semantic state rules override CLI preset utilities without changing shared tokens.
-- Approved dark appearance only; no light-mode control. Manrope 400 body / 500
-  labels, headings, and titles. Outfit 500 is reserved for the MOSAIC wordmark.
-- `Button` supports default primary, neutral secondary/outline, ghost, destructive,
-  and icon sizes. Icon-only actions require `aria-label`. `pending` sets native
-  disabled and `aria-busy`; callers supply stable, meaningful pending text.
-  Keep pending/disabled actions as native buttons rather than `asChild` links.
-- Compose fields with `Label htmlFor`, an input `id`, and `aria-describedby` pointing
-  to help/error text. Add `aria-invalid` when invalid. Use native `required`, `name`,
-  and form submission semantics. The preview's error is intentionally static.
-- `.list-row` uses `aria-pressed` for independent selectable buttons. Selection
-  persists independently of focus; it is not a listbox or radio-group substitute.
+- `src/components/ui/` uses locally adapted shadcn primitives backed by `radix-ui`.
+  Keep accessible dialog, checkbox, and switch behavior rather than replacing it
+  with handmade interactions.
+- `src/index.css` imports assets, tokens, then the opt-in shadcn adapter. Adapter
+  values are full CSS colors, not HSL tuples. Keep semantic state overrides local;
+  do not replace shared tokens with a CLI preset theme.
+- Dark appearance only. Use Manrope 400 for body and 500 for labels, headings, and
+  titles; Outfit 500 is reserved for the MOSAIC wordmark.
+- Icon-only buttons need `aria-label`. `pending` sets native disabled and
+  `aria-busy`; supply meaningful pending text. Pending/disabled actions must remain
+  native buttons, not `asChild` links.
+- Associate labels with input IDs and help/errors with `aria-describedby`. Use
+  `aria-invalid`, native `required`, `name`, and form submission semantics.
+- `.list-row` uses `aria-pressed` for independent selections, not listbox or radio
+  behavior. Status text must convey meaning without color alone.
 - Text helpers: `.text-title`, `.text-heading`, `.text-caption`, `.supporting`.
-  `.empty-state` is a small layout pattern; status text must communicate meaning
-  without color alone. Touch controls, reduced motion, and forced colors are covered
-  in the local stylesheet. No decorative animation dependency was added.
+  `.empty-state` supplies a small layout pattern.
 
-## CLI provenance
+## Maintaining primitives
 
-Stable registry version checked during implementation: **shadcn 4.21.5**.
-Components were generated with:
+`components.json` uses `new-york` Radix style and Tailwind 4's empty config path.
+TypeScript and Vite resolve `@/` to `src/`. To regenerate the current primitive set:
 
 ```sh
 pnpm dlx shadcn@4.21.5 add button label input checkbox switch card separator dialog -c platform/apps/admin -y
 ```
 
-`components.json` uses the supported `new-york` Radix style and Tailwind 4's empty
-config path. Both TypeScript and Vite resolve `@/` to `src/`. Inspect every future
-CLI diff; never replace Mosaic's tokens with a preset theme. The first CLI install
-reported pnpm's blocked assets `sharp` build script; a retry successfully generated
-all eight components without approving that build script.
+Review every CLI diff for local adaptations and token overrides. Dependency versions
+are recorded in the workspace lockfile.
 
-Installed versions: `radix-ui` 1.8.1, `lucide-react` 1.56.0,
-`class-variance-authority` 0.7.1, `cn` 0.4.0. Exact dependency resolution is in the
-workspace lockfile. Fonts use the existing assets workspace package export.
+## Font licenses
 
-## Browser acceptance
-
-Checked using the available Chrome browser tooling (no extra framework installed):
-semantic primary/secondary/destructive colors, Manrope title weight 500, Outfit
-wordmark, local-only font requests, pending/disabled attributes, error association,
-checkbox click, switch Space-key toggle, Tab focus and lavender outline, dialog
-initial focus, reverse-Tab trap, Escape, and trigger focus restoration. Desktop and
-390px phone checks found no horizontal overflow; phone controls meet 48px height.
-Enlarged body text also remained within the viewport. Repeat these interactions
-at `/dev/components` after changing primitive behavior. Forced-colors and
-reduced-motion CSS are provided; OS-level visual acceptance remains manual.
-
-Preview code is conditionally imported only under `import.meta.env.DEV`; production
-contains no gallery JS chunk or preview route. Shared primitive CSS and fonts remain
-part of the foundation intentionally.
+`public/licenses/Manrope-OFL.txt` and `public/licenses/Outfit-OFL.txt` are verbatim
+copies from `platform/packages/assets/licenses/`, shipped in `dist/licenses/`.
+Keep their copyright and license text unchanged when redistributing fonts.

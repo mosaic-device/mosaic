@@ -1,14 +1,26 @@
 # Device protocol bindings
 
-`events.proto` is the device-frame source of truth. The copied `nanopb.proto` defines the inline field-size options; there is no `events.options` file. The `mosaic.device.v1` package separates owned messages from the unmodified vendor import. Field numbers and Nanopb limits are preserved; renaming the package changes generated identifiers and descriptor names, not the field encoding.
+`events.proto` is the device-frame source of truth. Vendor `nanopb.proto` defines
+inline field-size options; keep it unmodified. Owned messages use `mosaic.device.v1`.
+Preserve field numbers and Nanopb limits for wire compatibility.
 
-After the root workspace installs `@bufbuild/buf` from the pinned package dependency, run from the repository root:
+After `pnpm install`, run from the repository root:
 
 ```sh
 pnpm --filter @mosaic/protocols lint
 pnpm generate-protos
 ```
 
-The root `generate-protos` script should run `pnpm --filter @mosaic/protocols generate`. Generation uses pinned remote Buf plugins and requires access to `buf.build`; ordinary .NET and firmware builds use the committed `Events.cs`, `Nanopb.cs`, and `events.pb.c/.h` without running Buf. The generated C# `Nanopb.cs` is required because `Events.cs` references its imported custom-options descriptor.
+Generation uses pinned remote Buf plugins and requires `buf.build`. Ordinary .NET
+and firmware builds use committed `Events.cs`, `Nanopb.cs`, and `events.pb.c/.h`
+without running Buf. Keep `Nanopb.cs`: `Events.cs` references its options descriptor.
 
-To check drift after regeneration, inspect `git status --short` and `git diff --exit-code -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/backend/Generated/DeviceProtocol`. Also check for new/untracked files in those paths; `git diff` alone does not detect them. Review and commit schema, config, and generated files together. Do not hand-edit generated bindings.
+Check regenerated outputs, including untracked files:
+
+```sh
+git status --short -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/backend/Generated/DeviceProtocol
+git diff --exit-code -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/backend/Generated/DeviceProtocol
+```
+
+Review and commit schema, configuration, and generated bindings together.
+Do not hand-edit generated bindings.

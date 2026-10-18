@@ -1,5 +1,18 @@
 # @mosaic/companion
 
-Minimal Tauri v2 native shell with a Vite/React/TypeScript webview. From the root workspace, run `pnpm --filter @mosaic/companion tauri dev` or `pnpm --filter @mosaic/companion tauri build`; web-only checks are `lint`, `typecheck`, and `build`. From `src-tauri/`, run `cargo fmt --check` and `cargo clippy`. Native builds require the platform-specific Tauri prerequisites and Rust toolchain. Bundling is disabled for the scaffold (`bundle.active: false`); no installer or privileged system actions exist yet.
+Tauri v2 shell with a Vite/React/TypeScript webview. No installer or privileged
+system actions are implemented; bundling is disabled (`bundle.active: false`).
+Native builds require Rust and the platform-specific Tauri prerequisites.
 
-**Parent workspace contract:** provide `@mosaic/tokens` CSS exports `./css/tailwind-theme.css`, `./css/light.css`, `./css/dark.css`; `@mosaic/typescript-config/base.json`; and a default flat-config export at `@mosaic/eslint-config/react`. Add this app to the root workspace and run a single root `pnpm install` for its web dependencies and one lockfile. Commit the app-local `src-tauri/Cargo.lock` for repeatable native builds. The native shell was authored directly because network permission for the upstream Tauri generator was unavailable.
+Run from the repository root after `pnpm install`:
+
+```sh
+pnpm --filter @mosaic/companion tauri dev
+pnpm --filter @mosaic/companion tauri build
+pnpm companion:check
+```
+
+Web-only commands: `pnpm --filter @mosaic/companion dev`, `lint`, `typecheck`,
+or `build`. Token outputs generate automatically. Shared TypeScript and ESLint
+configuration comes from workspace packages. Keep `src-tauri/Cargo.lock` committed
+for repeatable native builds.
