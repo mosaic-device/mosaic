@@ -42,6 +42,8 @@ Run these separately; use the URL printed by Vite. See the [backend guide](platf
 
 ## Check and build
 
+Every pull request runs web, .NET, Rust, generated-code, firmware host, and firmware build checks. See the [CI guide](docs/ci.md) for tool versions, local commands, and formatting fixes.
+
 | Area                  | Format (changes files)                                                   | Check / build                                                                           |
 | --------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
 | Web apps and tooling  | `pnpm web:format`                                                        | `pnpm web:format:check` and `pnpm web:check` (lint, types, build)                       |
