@@ -63,9 +63,17 @@ An empty submitted password selects an open home network, not an open setup AP. 
 
 ## Validation status
 
-**The new AP-only save-and-reboot flow is not yet board/phone verified.** Earlier results are historical: the owner observed rendered credentials, QR phone join, automatic captive opening on one phone, station IP and wrong-SSID retry in the old AP+STA flow. A temporary withheld-setup-acknowledgement image kept the AP closed on two attempts; saved STA later reconnected. This validates that historical timeout path, not normal recovery, physical display completion or the new reboot flow.
+### Integrated board/phone acceptance — owner report, 2026-10-18
 
-Run host tests with `python3 main/features/provisioning/tests/run.py`, `python3 main/ui/tests/run.py`, and `python3 main/support/tests/run.py` from `firmware/`, and browser tests with `node --test firmware/main/features/provisioning/tests/setup_ui.test.mjs` from `mosaic/`. These do not prove SDK event order or hardware behavior. Before shipping, test power-cycle persistence, six-second saved/reboot behavior, wrong credentials without automatic AP, recovery flag persistence and clearing, storage failure, open Wi-Fi, display acknowledgement failure, repeated recovery, DNS/HTTP shutdown, normal-LAN isolation and additional iOS/Android captive behavior. Do not reuse previous build or smoke-test results as validation of this changed flow.
+The owner confirmed that everything in the integrated provisioning flow described for [#54](https://github.com/mosaic-device/mosaic/issues/54) works correctly on the physical Waveshare 5-inch ESP32-P4 board with a phone. This supersedes the previous statement that the AP-only save-and-reboot flow was not board/phone verified.
+
+The confirmed scope is display/touch startup, setup AP connection, portal entry, Wi-Fi credential save, reboot, saved Wi-Fi join and recovery. The procedure is documented in the [firmware README](../../../../README.md#phone-setup): start unconfigured, join the setup AP, open the portal, save settings, observe reboot and station connection, then exercise incorrect credentials and explicit two-tap recovery with replacement settings. No failing or intermittent behavior was reported.
+
+This is an owner-reported acceptance result, not a new test run performed by the documentation author. The exact flashed firmware revision/build configuration, board revision and phone/OS/browser were not supplied. Those details and per-step observations still need to be recorded to complete #54's evidence requirements; the current repository HEAD must not be assumed to be the tested image.
+
+Broader coverage remains separate: storage-failure injection, open Wi-Fi, display-acknowledgement failure, repeated recovery stress, DNS/HTTP shutdown, normal-LAN isolation and additional iOS/Android captive behavior are not individually documented by this report. Historical AP+STA and withheld-acknowledgement results remain historical, not evidence of these checks on the current flow.
+
+Run host tests with `python3 main/features/provisioning/tests/run.py`, `python3 main/ui/tests/run.py`, and `python3 main/support/tests/run.py` from `firmware/`, and browser tests with `node --test firmware/main/features/provisioning/tests/setup_ui.test.mjs` from `mosaic/`. These complement, rather than replace, board/phone acceptance.
 
 ### Refactor validation — 2026-10-12
 

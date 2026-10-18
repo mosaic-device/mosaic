@@ -1,7 +1,7 @@
 # ADR 0001: SoftAP captive-portal provisioning
 
 - Date: 2026-10-12
-- Status: Selected and implemented; current save-and-reboot flow awaits board/phone validation
+- Status: Selected and implemented; integrated setup and recovery flow owner-verified on board/phone
 - Related issue: [#47 — Provisioning approach](https://github.com/mosaic-device/mosaic/issues/47)
 
 ## Context
@@ -35,13 +35,13 @@ After a failed STA connection, retry with backoff rather than automatically open
 - The backend URL is syntax-checked only. Setup performs no TLS or backend connection test.
 - Setup is plain HTTP inside a temporary WPA2 AP. Knowledge of its displayed key is not proof of physical presence.
 - NVS/flash encryption and factory-reset policy remain production decisions.
-- Phone captive behavior, persistence, recovery, shutdown, and LAN isolation need hardware validation.
-- Historical AP+STA tests do not validate the current AP-only save-and-reboot flow.
+- The owner has verified the integrated AP-only save-and-reboot and recovery flow on the physical board with a phone; see the [acceptance record](../../firmware/main/features/provisioning/INTEGRATION.md#validation-status).
+- Broader phone compatibility, fault injection, shutdown and LAN-isolation coverage are not established by this acceptance report.
 
 ## Follow-up work
 
-- Create an implementation/acceptance story for SoftAP provisioning and recovery; #47 is a decision spike, not that implementation story.
-- Validate the board/phone behaviors described in [integration notes](../../firmware/main/features/provisioning/INTEGRATION.md#validation-status), tracking acceptance results in GitHub issues and the implementation PR.
+- Track integrated provisioning acceptance under [#54](https://github.com/mosaic-device/mosaic/issues/54); #47 records the provisioning decision. The owner reports the flow works correctly; exact test-environment metadata remains to be recorded.
+- Keep broader validation separate from the completed owner-reported setup/recovery check; see [integration notes](../../firmware/main/features/provisioning/INTEGRATION.md#validation-status).
 - Finish Wi-Fi clock sync under [#35](https://github.com/mosaic-device/mosaic/issues/35).
 - Keep pairing separate from credential provisioning; see [#46](https://github.com/mosaic-device/mosaic/issues/46).
 
