@@ -1,0 +1,213 @@
+name: PR checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CI: 'true'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  web:
+    name: Web
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Formatting
+        run: pnpm web:format:check
+      - name: Lint, types, and builds
+        run: pnpm web:check
+      - name: Design and production tests
+        run: pnpm design:check
+
+  server:
+    name: .NET
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - name: Native AOT prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang zlib1g-dev
+      - run: pnpm install --frozen-lockfile
+      - run: dotnet restore platform/Mosaic.slnx
+      - name: Formatting
+        run: dotnet format platform/Mosaic.slnx --verify-no-changes --no-restore
+      - run: dotnet build platform/Mosaic.slnx --configuration Release --no-restore
+      - run: dotnet test platform/Mosaic.slnx --configuration Release --no-build --no-restore
+      - name: Build admin assets
+        run: pnpm build:admin-assets
+      - name: Publish Linux Native AOT server
+        run: dotnet publish platform/apps/backend/Mosaic.Server.csproj --configuration Release --runtime linux-x64 -p:PublishAot=true -p:ILLinkTreatWarningsAsErrors=true -p:IlcTreatWarningsAsErrors=true --output publish/ci
+      - name: Published server smoke test
+        run: python3 scripts/smoke-server.py publish/ci/Mosaic.Server
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install pinned Rust toolchain
+        run: |
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+      - name: Tauri Linux prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            platform/apps/companion/src-tauri/target
+          key: rust-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('rust-toolchain.toml', 'platform/apps/companion/src-tauri/Cargo.lock') }}
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mosaic/companion build
+      - name: Formatting
+        run: cargo fmt --check --manifest-path platform/apps/companion/src-tauri/Cargo.toml
+      - name: Clippy
+        run: cargo clippy --locked --all-targets --manifest-path platform/apps/companion/src-tauri/Cargo.toml -- -D warnings
+      - name: Tests
+        run: cargo test --locked --all-targets --manifest-path platform/apps/companion/src-tauri/Cargo.toml
+
+  generated:
+    name: Generated code
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @mosaic/protocols lint
+      - name: Remove previous bindings to detect obsolete generated files
+        run: |
+          python3 - <<'PY'
+          import shutil
+          for path in [
+              'firmware/components/device_protos/generated',
+              'platform/apps/backend/Generated/DeviceProtocol',
+          ]:
+              shutil.rmtree(path)
+          PY
+      - run: pnpm generate-protos
+      - name: Check committed bindings, including new files
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          paths = [
+              'platform/packages/protocols',
+              'firmware/components/device_protos/generated',
+              'platform/apps/backend/Generated/DeviceProtocol',
+          ]
+          subprocess.run(['git', '--no-pager', 'diff', '--exit-code', '--', *paths], check=True)
+          changes = subprocess.check_output([
+              'git', 'status', '--porcelain', '--untracked-files=all', '--', *paths,
+          ], text=True)
+          if changes:
+              raise SystemExit('Generated bindings are not committed:\n' + changes)
+          PY
+      - name: Offline token generator tests
+        run: pnpm --filter @mosaic/tokens test
+
+  firmware-host:
+    name: Firmware host checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      CXX: g++-14
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-14
+          python -m pip install clang-format==23.1.2
+          g++-14 --version
+          clang-format --version
+      - name: Firmware formatting
+        run: node scripts/format-firmware.mjs --check
+      - name: Lock portability tests
+        run: python3 scripts/firmware_test.py
+      - name: Provisioning host tests
+        run: python3 firmware/main/features/provisioning/tests/run.py
+      - name: Setup portal tests
+        run: node --test firmware/main/features/provisioning/tests/setup_ui.test.mjs
+      - name: Support host tests
+        run: python3 firmware/main/support/tests/run.py
+      - name: UI host tests
+        run: python3 firmware/main/ui/tests/run.py
+
+  firmware-build:
+    name: Firmware build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      # Official espressif/idf:v5.5.4, pinned to its multi-platform image digest.
+      image: espressif/idf@sha256:b9f2d6ea1c19e0c9f7959bdb74a9e3c775642f9d0f3b841937c5fa3363db892b
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Trust the mounted checkout in the container
+        # Checkout configures a temporary HOME; run steps need their own trust entry.
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: .nvmrc
+      - name: Build ESP32-P4 firmware
+        run: |
+          source /opt/esp/idf/export.sh
+          python -m pip install idf-component-manager==2.5.2
+          idf.py --version
+          node --version
+          python3 scripts/firmware.py -B build/ci -D SDKCONFIG=build/ci/sdkconfig build
+      - name: Check dependency lock stayed pinned and portable
+        run: git --no-pager diff --exit-code -- firmware/dependencies.lock

@@ -6,7 +6,9 @@ ASP.NET Core on .NET 10, with Native AOT publishing enabled. The server exposes
 unimplemented `/api` and `/ws` paths return 404.
 
 Authentication, persistence, pairing, integrations, and device transport are not
-implemented yet. The admin page is currently a placeholder.
+implemented yet. The admin page is currently a placeholder. Keep the server
+Native-AOT-compatible: [PR checks](../../../docs/ci.md) publish it for Linux x64 with
+AOT/trimming warnings as errors and run the smoke test against the result.
 
 Run all commands below from the **repository root**. Unless a block is labeled
 otherwise, commands work unchanged in PowerShell on Windows and in a macOS or Linux
@@ -175,7 +177,8 @@ docker scout cves local://mosaic-server:aot --only-severity critical,high
 A warning on the Node build image is distinct from findings in the final runtime
 image. Review findings in both; a scan is not proof that application code is secure.
 
-Build and formatting checks for the backend:
+Build and formatting checks for the backend (or `pnpm server:build` and
+`pnpm server:format:check`):
 
 ```sh
 dotnet build platform/Mosaic.slnx
@@ -187,13 +190,5 @@ publish. Keep local `wwwroot`, publish outputs, and IDE files out of commits.
 
 ## Generated device protocol
 
-`Generated/DeviceProtocol/` contains committed C# bindings generated from
-`platform/packages/protocols/events.proto`. Do not edit them directly. When the
-schema changes, regenerate from the repository root (requires `buf.build`):
-
-```sh
-pnpm generate-protos
-```
-
-Ordinary builds use the committed bindings and do not require regeneration or
-access to `buf.build`. The bindings are not connected to a device transport yet.
+`Generated/DeviceProtocol/` contains committed C# bindings, not yet connected to a
+device transport. Do not hand-edit them; see [protocol generation](../../packages/protocols/README.md).

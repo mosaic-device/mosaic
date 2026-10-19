@@ -1,6 +1,8 @@
 # Mosaic
 
-Mosaic is a standalone project in progress. The ESP32-P4 firmware has a minimal on-device setup/status UI and ESP32-C6-hosted Wi-Fi portal. Setup now uses AP-only save-and-reboot: credentials are persisted without a connection test, and the next boot tries STA. **This new flow is not yet board/phone verified.** Earlier display, phone-join, captive-portal, and station-IP results are historical tests of the previous AP+STA flow. The display acknowledgement gate remains required before opening setup. Pairing, backend device transport, the production dashboard, and broader hardware/security validation remain open; see [`firmware/README.md`](firmware/README.md) and the [provisioning decision](docs/adr/0001-softap-provisioning.md).
+Mosaic is a connected desk-display project: ESP32-P4 firmware, web apps, a .NET server and a Tauri companion.
+
+See the [firmware guide](firmware/README.md) for board setup and hardware status.
 
 Run the commands below from **this directory** (`mosaic/`) unless noted otherwise.
 
@@ -36,9 +38,11 @@ pnpm --filter @mosaic/surface dev     # browser prototype, not firmware UI
 pnpm --filter @mosaic/companion tauri dev  # desktop app; requires Rust/Tauri setup
 ```
 
-Run these separately; use the URL printed by Vite. The server currently serves static assets but has no API or WebSocket routes, so the apps do not have end-to-end behavior yet.
+Run these separately; use the URL printed by Vite. See the [backend guide](platform/apps/backend/README.md) for supported server behavior.
 
 ## Check and build
+
+Every pull request runs web, .NET, Rust, generated-code, firmware host, and firmware build checks. See the [CI guide](docs/ci.md) for tool versions, local commands, and formatting fixes.
 
 | Area                  | Format (changes files)                                                   | Check / build                                                                           |
 | --------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
@@ -47,7 +51,7 @@ Run these separately; use the URL printed by Vite. The server currently serves s
 | Tauri Rust shell      | `cargo fmt --manifest-path platform/apps/companion/src-tauri/Cargo.toml` | `pnpm companion:check` (rustfmt, Clippy); `pnpm --filter @mosaic/companion tauri build` |
 | Firmware-owned source | `pnpm fw:format`                                                         | `pnpm fw:format:check` and `pnpm fw:build` (activated ESP-IDF shell)                    |
 
-`web:format` also covers root docs/config and excludes .NET, firmware, and Rust via `.prettierignore`. Firmware formatting covers owned source under `firmware/main/`, not vendor or generated files. For hardware, first run `idf.py -C firmware set-target esp32p4` in an activated ESP-IDF shell; `pnpm fw:flash` and `pnpm fw:monitor` are separate, opt-in commands. Do not flash without a connected device and reviewed configuration.
+`web:format` also covers root docs/config and excludes .NET, firmware, and Rust via `.prettierignore`. Firmware formatting covers owned source under `firmware/main/`, not vendor or generated files. For hardware, first run `python3 scripts/firmware.py set-target esp32p4` in an activated ESP-IDF shell; `pnpm fw:flash` and `pnpm fw:monitor` are separate, opt-in commands. Do not flash without a connected device and reviewed configuration.
 
 ## Generated files
 
@@ -57,7 +61,7 @@ pnpm --filter @mosaic/protocols lint  # check Protobuf schema
 pnpm generate-protos              # firmware C and server C# bindings; needs buf.build
 ```
 
-Protocol bindings remain committed, so normal builds do not need access to `buf.build`. Token sources and `platform/packages/tokens/build.mjs` remain committed, but `platform/packages/tokens/dist/` and `firmware/main/ui/generated/design_tokens.h` are ignored build outputs. Web build/typecheck/lint/dev commands (including direct package scripts) regenerate tokens offline with Node.js before consumption. Turbo deliberately does not cache token generation because it also writes the firmware header outside the package. ESP-IDF configure regenerates tokens with Node.js and reconfigures when token inputs/generator change or the header is missing. No pnpm install is required for firmware token generation. Do not hand-edit generated files; review token source/generator changes and their tests instead.
+Protocol bindings are committed; ordinary builds do not need `buf.build`. Token JSON and the offline generator are committed; generated token outputs are ignored and regenerated automatically by web commands and ESP-IDF configure. Firmware token generation needs Node.js, not pnpm. Do not hand-edit generated files.
 
 ## Optional: test server publishing
 
@@ -69,10 +73,6 @@ python3 scripts/smoke-server.py publish/local/Mosaic.Server
 
 Build admin assets **before** publishing: the server serves the copied SPA without Node at runtime. For a clean republish, remove stale files from `publish/local/` first. Linux x64 Native AOT publishing remains **unverified**; a local macOS publish does not prove that target.
 
-### Asset outputs and generation
+## Assets
 
-Web fonts, firmware assets, sources and licenses are committed alongside their
-pinned generation tooling in `platform/packages/assets`. Normal builds validate
-or consume the converted assets without Python or converters. Regeneration is
-an explicit maintenance operation: see [asset generation instructions](platform/packages/assets/README.md#regenerate)
-for Python environment setup and `pnpm generate-assets`. Token output policy is unchanged.
+Finished fonts/icons, licenses and pinned generation tooling live in `platform/packages/assets`. Normal builds consume committed assets without converters. Regeneration is explicit maintenance; see the [asset guide](platform/packages/assets/README.md#regenerate).
