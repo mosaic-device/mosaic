@@ -1,0 +1,14 @@
+.git
+**/.vs
+**/bin
+**/obj
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+publish
+**/.turbo
+**/*.tsbuildinfo
+platform/apps/*/dist
+platform/apps/backend/wwwroot
+platform/apps/companion/src-tauri/target

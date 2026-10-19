@@ -1,0 +1,54 @@
+# Build the React admin assets.
+FROM node:24.19.0-bookworm-slim AS admin
+
+RUN npm install --global pnpm@12.8.1
+
+WORKDIR /src
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY platform/ platform/
+COPY scripts/copy-admin-assets.mjs scripts/copy-admin-assets.mjs
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm build:admin-assets
+
+# Build the native Linux executable.
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble AS build
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends clang zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY global.json ./
+COPY platform/apps/backend/ platform/apps/backend/
+COPY --from=admin /src/platform/apps/backend/wwwroot/ platform/apps/backend/wwwroot/
+
+RUN dotnet publish platform/apps/backend/Mosaic.Server.csproj \
+    -c Release \
+    -r linux-x64 \
+    --self-contained true \
+    -o /out
+
+# Verify the published native executable and admin hosting.
+FROM build AS verify
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY scripts/smoke-server.py /checks/smoke-server.py
+
+RUN python3 /checks/smoke-server.py /out/Mosaic.Server
+
+# Run it without an installed .NET runtime.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble AS runtime
+
+WORKDIR /app
+COPY --from=build /out/ ./
+
+ENV ASPNETCORE_HTTP_PORTS=8080
+ENV ASPNETCORE_CONTENTROOT=/app
+
+USER app
+EXPOSE 8080
+ENTRYPOINT ["./Mosaic.Server"]

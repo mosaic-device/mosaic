@@ -33,6 +33,7 @@ try:
             time.sleep(0.2)
 
     for path, expected, accept in [
+        ("/healthz", 200, "text/plain"),
         ("/", 200, "text/html"),
         (asset.group(), 200, "*/*"),
         ("/client-route", 200, "text/html"),

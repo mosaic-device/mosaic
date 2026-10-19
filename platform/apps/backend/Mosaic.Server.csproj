@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
     <IsAotCompatible>true</IsAotCompatible>
+    <PublishAot>true</PublishAot>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
