@@ -45,6 +45,8 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:10.0-noble AS runtime
 
 WORKDIR /app
 COPY --from=build /out/ ./
+# The default database path (data/mosaic.db under the content root) must be writable by `app`.
+RUN install -d -o app -g app /app/data
 
 ENV ASPNETCORE_HTTP_PORTS=8080
 ENV ASPNETCORE_CONTENTROOT=/app
