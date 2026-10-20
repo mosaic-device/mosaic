@@ -1,7 +1,17 @@
 using Microsoft.Extensions.FileProviders;
+using Mosaic.Server.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+var database = MosaicDatabase.FromConfiguration(builder.Configuration, builder.Environment.ContentRootPath);
+builder.Services.AddSingleton(database);
 var app = builder.Build();
+
+var appliedMigrations = database.Migrate();
+app.Logger.LogInformation(
+    "Database {Path} at schema version {Version}; applied {Applied} migration(s) at startup",
+    database.Path,
+    MosaicDatabase.LatestVersion,
+    appliedMigrations.Count);
 
 var publishedWebRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
 var webRoot = Directory.Exists(publishedWebRoot)

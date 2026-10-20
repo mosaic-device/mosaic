@@ -3,4 +3,7 @@
   <Folder Name="/apps/backend/">
     <Project Path="apps/backend/Mosaic.Server.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Mosaic.Server.Tests/Mosaic.Server.Tests.csproj" />
+  </Folder>
 </Solution>

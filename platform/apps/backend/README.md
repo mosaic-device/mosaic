@@ -5,8 +5,9 @@ ASP.NET Core on .NET 10, with Native AOT publishing enabled. The server exposes
 `wwwroot/`. Browser navigation falls back to `index.html`; missing assets and
 unimplemented `/api` and `/ws` paths return 404.
 
-Authentication, persistence, pairing, integrations, and device transport are not
-implemented yet. The admin page is currently a placeholder. Keep the server
+At startup the server opens its SQLite database and applies any pending schema
+migrations (see [Database](#database)). Authentication, pairing, integrations, and
+device transport are not implemented yet. The admin page is currently a placeholder. Keep the server
 Native-AOT-compatible: [PR checks](../../../docs/ci.md) publish it for Linux x64 with
 AOT/trimming warnings as errors and run the smoke test against the result.
 
@@ -65,6 +66,18 @@ pnpm build:admin-assets
 
 This copies the admin build into `platform/apps/backend/wwwroot/`. Without those
 assets, `/` may return 404 while `/healthz` still works.
+
+## Database
+
+The server stores the single admin and its settings in SQLite. Set the file with
+`Database:Path` in appsettings or the `Database__Path` environment variable. A
+relative path resolves against the content root. The default is `data/mosaic.db`,
+which is `/app/data/mosaic.db` in the runtime container. The server creates the
+file and its directory if they are missing. To keep data when a container is
+replaced, mount a volume there, for example `-v mosaic-data:/app/data`.
+Migrations live in [`Data/MosaicDatabase.cs`](Data/MosaicDatabase.cs). Each one
+runs once inside a transaction and is recorded in `schema_migrations`. Append new
+migrations; never edit one that has shipped.
 
 ## Build and run the Linux Native AOT container
 
@@ -129,10 +142,13 @@ docker build --platform linux/amd64 --progress=plain --target verify -f Dockerfi
 
 This builds the assets and native server, then executes
 [`scripts/smoke-server.py`](../../../scripts/smoke-server.py) inside Linux against
-`/out/Mosaic.Server`. The script starts the server on `127.0.0.1:55881`, checks it,
-and stops it. An unexpected response or startup failure fails the build.
+`/out/Mosaic.Server`. The script starts the server on `127.0.0.1:55881` against a
+new temporary database, checks it, and stops it. It then confirms the schema
+exists, saves an admin row and a settings row, restarts the server, and confirms
+the rows remain and no migration ran twice. An unexpected response, startup
+failure, or database mismatch fails the build.
 
-The seven expected responses are:
+On each start the seven expected responses are:
 
 - `/healthz`: 200.
 - `/`: 200 with an HTML navigation request.
@@ -157,8 +173,7 @@ The normal runtime build skips this independent stage. Do not deploy or run the
 
 The smoke test deliberately sets `ASPNETCORE_URLS` for its private test port. A log
 warning that it overrides inherited `HTTP_PORTS=8080` is expected in this stage.
-Successful verification of this scaffold does not establish database, login,
-pairing, or device behavior, or support for ARM64 and other deployment targets.
+Successful verification does not establish login, pairing, or device behavior, or support for ARM64 and other deployment targets.
 
 ## Maintenance and contributor checks
 
