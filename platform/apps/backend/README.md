@@ -97,7 +97,9 @@ forward (never past the 30-day one) and reissues the cookie; the cookie's `Max-A
 always ends with the session. Protected endpoints opt in with
 `.RequireAdminSession()` (see [`Auth/AdminSessionRequirement.cs`](Auth/AdminSessionRequirement.cs)),
 which answers a missing, malformed, unknown, expired, or logged-out session with
-the same `401 unauthenticated` and clears the cookie if one was sent. Any unexpected failure returns
+the same `401 unauthenticated` and clears the cookie if one was sent. It runs as
+middleware (`UseAdminSessions()`), before the endpoint reads any request body, and
+marks every response from a protected endpoint `Cache-Control: no-store`. Any unexpected failure returns
 `500 internal_error` with only a trace ID; the exception itself goes to the log.
 
 | Setting | Environment variable | Purpose |

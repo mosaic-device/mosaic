@@ -6,7 +6,7 @@ namespace Mosaic.Server.Auth;
 /// Protects admin endpoints (Admin API Contract, sections 2 and 4). Every request without a valid
 /// session gets the same <c>401 unauthenticated</c>, so the response never reveals whether a
 /// token was missing, malformed, unknown, expired, or logged out. When a session cookie was
-/// sent, the 401 also clears it, whatever the reason.
+/// sent, the 401 also clears it, whatever the reason. Responses carry <c>Cache-Control: no-store</c>.
 /// </summary>
 /// <remarks>
 /// Endpoints opt in with <see cref="RequireAdminSession"/>, and <see cref="UseAdminSessions"/>
@@ -40,6 +40,9 @@ public static class AdminSessionRequirement
                 await next(context);
                 return;
             }
+
+            // Admin data and session answers (200 or 401) are per-session and go stale on logout or expiry.
+            context.Response.Headers.CacheControl = "no-store";
 
             var sent = SessionCookie.TryRead(context.Request, out var token);
             var session = auth.Authenticate(sent ? token : null);

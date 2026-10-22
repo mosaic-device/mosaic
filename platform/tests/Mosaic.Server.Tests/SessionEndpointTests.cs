@@ -28,6 +28,7 @@ public sealed class SessionEndpointTests : IDisposable
         Assert.Equal("application/json", response.MediaType());
         Assert.Equal("""{"admin":{"username":"Bridger"},"expiresAt":"2026-10-28T12:00:00Z"}""", await Text(response));
         Assert.False(response.Headers.Contains("Set-Cookie"));
+        Assert.True(response.Headers.CacheControl?.NoStore);
     }
 
     [Fact]
@@ -89,6 +90,7 @@ public sealed class SessionEndpointTests : IDisposable
         Assert.Equal("unauthenticated", body.GetProperty("code").GetString());
         Assert.Equal("Log in to continue.", body.GetProperty("title").GetString());
         Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("traceId").GetString()));
+        Assert.True(response.Headers.CacheControl?.NoStore);
         if (string.IsNullOrEmpty(token))
         {
             Assert.False(response.Headers.Contains("Set-Cookie"));
@@ -154,6 +156,7 @@ public sealed class SessionEndpointTests : IDisposable
             Assert.Equal(token, value);
             Assert.Equal(["httponly", "max-age=604800", "path=/", "samesite=strict", "secure"], attributes);
             Assert.Equal("2026-10-29T12:00:00Z", (await Json(renewed)).GetProperty("expiresAt").GetString());
+            Assert.True(renewed.Headers.CacheControl?.NoStore);
         }
 
         _factory.Time.Advance(TimeSpan.FromHours(23));

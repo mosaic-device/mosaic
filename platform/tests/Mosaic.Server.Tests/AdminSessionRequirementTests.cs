@@ -98,6 +98,7 @@ public sealed class AdminSessionRequirementTests : IAsyncDisposable
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.False(response.Headers.Contains("Set-Cookie"));
+        Assert.Null(response.Headers.CacheControl);
     }
 
     [Fact]
