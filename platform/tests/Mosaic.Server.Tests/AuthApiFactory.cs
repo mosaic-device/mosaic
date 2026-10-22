@@ -144,10 +144,20 @@ internal sealed class PeerAddressFilter : IStartupFilter
 public sealed class ManualTimeProvider(DateTimeOffset start) : TimeProvider
 {
     private DateTimeOffset _now = start;
+    private Action? _onNextRead;
 
-    public override DateTimeOffset GetUtcNow() => _now;
+    public override DateTimeOffset GetUtcNow()
+    {
+        var action = _onNextRead;
+        _onNextRead = null;
+        action?.Invoke();
+        return _now;
+    }
 
     public void Advance(TimeSpan by) => _now += by;
+
+    /// <summary>Runs <paramref name="action"/> the next time the clock is read, to interleave work deterministically.</summary>
+    public void OnNextRead(Action action) => _onNextRead = action;
 }
 
 internal static class ResponseExtensions

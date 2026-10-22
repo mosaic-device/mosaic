@@ -64,14 +64,23 @@ public sealed class SessionStore(TimeProvider time)
     /// deleted and reported as missing. At most once per <see cref="RenewalInterval"/>, the idle
     /// expiry moves to <see cref="IdleLifetime"/> from now, never past the absolute expiry.
     /// </summary>
-    public ActiveSession? FindActive(SqliteConnection connection, string token)
+    /// <remarks>
+    /// Another request can renew or delete the session between this lookup's read and its write,
+    /// so each write applies only if the row is still as it was read. When it isn't, one more read
+    /// settles the outcome: a session just renewed isn't due again, and a deleted one is gone.
+    /// </remarks>
+    public ActiveSession? FindActive(SqliteConnection connection, string token) =>
+        FindActive(connection, token, HashToken(token), rereadIfChanged: true);
+
+    private ActiveSession? FindActive(SqliteConnection connection, string token, byte[] tokenHash, bool rereadIfChanged)
     {
         long adminId;
+        string storedIdleExpiresAt;
         DateTimeOffset idleExpiresAt, absoluteExpiresAt;
         using (var command = connection.CreateCommand(
             "SELECT admin_id, idle_expires_at, absolute_expires_at FROM sessions WHERE token_hash = $tokenHash"))
         {
-            command.Parameters.AddWithValue("$tokenHash", HashToken(token));
+            command.Parameters.AddWithValue("$tokenHash", tokenHash);
             using var reader = command.ExecuteReader();
             if (!reader.Read())
             {
@@ -79,7 +88,8 @@ public sealed class SessionStore(TimeProvider time)
             }
 
             adminId = reader.GetInt64(0);
-            idleExpiresAt = Timestamps.Parse(reader.GetString(1));
+            storedIdleExpiresAt = reader.GetString(1);
+            idleExpiresAt = Timestamps.Parse(storedIdleExpiresAt);
             absoluteExpiresAt = Timestamps.Parse(reader.GetString(2));
         }
 
@@ -87,8 +97,13 @@ public sealed class SessionStore(TimeProvider time)
         var expiresAt = IssuedSession.Earlier(idleExpiresAt, absoluteExpiresAt);
         if (now >= expiresAt)
         {
-            Delete(connection, token);
-            return null;
+            using var delete = connection.CreateCommand(
+                "DELETE FROM sessions WHERE token_hash = $tokenHash AND idle_expires_at = $readIdleExpiresAt");
+            delete.Parameters.AddWithValue("$tokenHash", tokenHash);
+            delete.Parameters.AddWithValue("$readIdleExpiresAt", storedIdleExpiresAt);
+            return delete.ExecuteNonQuery() == 0 && rereadIfChanged
+                ? FindActive(connection, token, tokenHash, rereadIfChanged: false)
+                : null;
         }
 
         // Each renewal puts the idle expiry a full IdleLifetime ahead, so more than
@@ -100,15 +115,19 @@ public sealed class SessionStore(TimeProvider time)
         }
 
         var renewal = new IssuedSession(token, now, IssuedSession.Earlier(now + IdleLifetime, absoluteExpiresAt), absoluteExpiresAt);
-        using (var command = connection.CreateCommand(
-            "UPDATE sessions SET idle_expires_at = $idleExpiresAt WHERE token_hash = $tokenHash"))
+        using var update = connection.CreateCommand(
+            "UPDATE sessions SET idle_expires_at = $idleExpiresAt WHERE token_hash = $tokenHash AND idle_expires_at = $readIdleExpiresAt");
+        update.Parameters.AddWithValue("$idleExpiresAt", Timestamps.Format(renewal.IdleExpiresAt));
+        update.Parameters.AddWithValue("$tokenHash", tokenHash);
+        update.Parameters.AddWithValue("$readIdleExpiresAt", storedIdleExpiresAt);
+        if (update.ExecuteNonQuery() > 0)
         {
-            command.Parameters.AddWithValue("$idleExpiresAt", Timestamps.Format(renewal.IdleExpiresAt));
-            command.Parameters.AddWithValue("$tokenHash", HashToken(token));
-            command.ExecuteNonQuery();
+            return new ActiveSession(adminId, renewal.ExpiresAt, renewal);
         }
 
-        return new ActiveSession(adminId, renewal.ExpiresAt, renewal);
+        // Another request renewed or deleted the session first. If it changes again during the
+        // re-read, the lookup fails safe and reports it missing.
+        return rereadIfChanged ? FindActive(connection, token, tokenHash, rereadIfChanged: false) : null;
     }
 
     public void Delete(SqliteConnection connection, string token)

@@ -12,16 +12,17 @@ public sealed class SessionStoreTests : IDisposable
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "mosaic-tests", Guid.NewGuid().ToString("N"));
     private readonly ManualTimeProvider _time = new(Start);
+    private readonly MosaicDatabase _database;
     private readonly SessionStore _sessions;
     private readonly SqliteConnection _connection;
     private readonly IssuedSession _issued;
 
     public SessionStoreTests()
     {
-        var database = new MosaicDatabase(Path.Combine(_directory, "mosaic.db"));
-        database.Migrate();
+        _database = new MosaicDatabase(Path.Combine(_directory, "mosaic.db"));
+        _database.Migrate();
         _sessions = new SessionStore(_time);
-        _connection = database.OpenConnection();
+        _connection = _database.OpenConnection();
         using (var transaction = _connection.BeginTransaction())
         {
             new AdminStore(_time).TryCreate(transaction, "Bridger", "hash");
@@ -131,6 +132,51 @@ public sealed class SessionStoreTests : IDisposable
         Assert.Null(_sessions.FindActive(_connection, _issued.Token));
     }
 
+    // The tests below run another request at the moment this lookup reads the clock,
+    // which is between its read of the session and its write.
+
+    [Fact]
+    public void ARenewalJustBeforeExpiryIsNotUndoneByALookupJustAfter()
+    {
+        var justBefore = Start.AddDays(7) - TimeSpan.FromMilliseconds(1);
+        ActiveSession? other = null;
+        _time.Advance(TimeSpan.FromDays(7));
+        _time.OnNextRead(() => other = AnotherRequest(at: justBefore));
+
+        var session = _sessions.FindActive(_connection, _issued.Token);
+
+        Assert.NotNull(other!.Renewal);
+        Assert.Equal(new ActiveSession(1, justBefore.AddDays(7), Renewal: null), session);
+        Assert.Equal(1L, Count());
+    }
+
+    [Fact]
+    public void ConcurrentLookupsRenewOnlyOnce()
+    {
+        ActiveSession? other = null;
+        _time.Advance(TimeSpan.FromDays(1));
+        _time.OnNextRead(() => other = AnotherRequest(at: Start.AddDays(1)));
+
+        var session = _sessions.FindActive(_connection, _issued.Token)!;
+
+        Assert.NotNull(other!.Renewal);
+        Assert.Equal(new ActiveSession(1, Start.AddDays(8), Renewal: null), session);
+    }
+
+    [Fact]
+    public void ALogoutDuringRenewalIsNotUndone()
+    {
+        _time.Advance(TimeSpan.FromDays(1));
+        _time.OnNextRead(() =>
+        {
+            using var connection = _database.OpenConnection();
+            _sessions.Delete(connection, _issued.Token);
+        });
+
+        Assert.Null(_sessions.FindActive(_connection, _issued.Token));
+        Assert.Equal(0L, Count());
+    }
+
     [Fact]
     public void IssuedTokensAreWellFormed() => Assert.True(SessionStore.IsWellFormed(_issued.Token));
 
@@ -143,6 +189,12 @@ public sealed class SessionStoreTests : IDisposable
     [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")]
     [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAé")]
     public void OtherTokensAreMalformed(string token) => Assert.False(SessionStore.IsWellFormed(token));
+
+    private ActiveSession? AnotherRequest(DateTimeOffset at)
+    {
+        using var connection = _database.OpenConnection();
+        return new SessionStore(new ManualTimeProvider(at)).FindActive(connection, _issued.Token);
+    }
 
     private long Count()
     {
