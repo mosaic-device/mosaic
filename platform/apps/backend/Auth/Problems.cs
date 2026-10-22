@@ -14,6 +14,10 @@ public static class Problems
     public static IResult InvalidCredentials(HttpContext context) =>
         Create(context, StatusCodes.Status401Unauthorized, "invalid_credentials", "Incorrect username or password.");
 
+    /// <summary>No valid session on a protected endpoint, whatever the reason.</summary>
+    public static IResult Unauthenticated(HttpContext context) =>
+        Create(context, StatusCodes.Status401Unauthorized, "unauthenticated", "Log in to continue.");
+
     public static IResult InvalidSetupCode(HttpContext context) =>
         Create(context, StatusCodes.Status403Forbidden, "invalid_setup_code", "The setup code is incorrect.");
 

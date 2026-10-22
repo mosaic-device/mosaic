@@ -6,7 +6,7 @@ using Microsoft.Extensions.Primitives;
 namespace Mosaic.Server.Auth;
 
 /// <summary>
-/// HTTP surface for first-run setup, login, and logout (Admin API Contract, sections 2 and 4).
+/// HTTP surface for first-run setup, login, logout, and the current session (Admin API Contract, sections 2 and 4).
 /// Handles content type, body parsing, cookies, and status codes; the rules live in <see cref="AuthService"/>.
 /// </summary>
 public static class AuthEndpoints
@@ -20,6 +20,7 @@ public static class AuthEndpoints
         app.MapPost("/api/setup", PostSetupAsync).RequireAuthRateLimits();
         app.MapPost("/api/auth/login", LoginAsync).RequireAuthRateLimits();
         app.MapPost("/api/auth/logout", Logout);
+        app.MapGet("/api/auth/session", GetSession).RequireAdminSession();
     }
 
     private static IResult GetSetup(AuthService auth) =>
@@ -68,6 +69,17 @@ public static class AuthEndpoints
         auth.Logout(SessionCookie.TryRead(context.Request, out var token) ? token : null);
         cookie.Clear(context.Response);
         return Results.NoContent();
+    }
+
+    private static IResult GetSession(HttpContext context)
+    {
+        var session = context.GetAdminSession();
+        // Whole seconds, as the contract shows, rounded down like the cookie's Max-Age.
+        var expiresAt = session.Session.ExpiresAt.UtcDateTime;
+        expiresAt = expiresAt.AddTicks(-(expiresAt.Ticks % TimeSpan.TicksPerSecond));
+        return Results.Json(
+            new SessionResponse(new AdminSummary(session.Admin.Username), expiresAt),
+            AuthJsonContext.Default.SessionResponse);
     }
 
     private static IResult Respond(HttpContext context, SessionCookie cookie, AuthResult result, int successStatus)

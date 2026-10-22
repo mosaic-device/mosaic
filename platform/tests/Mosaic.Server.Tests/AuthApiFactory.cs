@@ -77,6 +77,18 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         return request;
     }
 
+    /// <summary><c>GET /api/auth/session</c>, sending <paramref name="token"/> as the cookie value unless it is null.</summary>
+    public static HttpRequestMessage Session(string? token)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/auth/session");
+        if (token is not null)
+        {
+            request.Headers.Add("Cookie", $"mosaic_session={token}");
+        }
+
+        return request;
+    }
+
     /// <summary>The session cookie's value and lower-cased attributes from a response.</summary>
     public static (string Value, string[] Attributes) SessionCookie(HttpResponseMessage response)
     {

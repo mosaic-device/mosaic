@@ -13,6 +13,9 @@ public sealed record AdminSummary(string Username);
 
 public sealed record AdminResponse(AdminSummary Admin);
 
+/// <summary>The current session. <see cref="ExpiresAt"/> is UTC, so it is written with a <c>Z</c> suffix.</summary>
+public sealed record SessionResponse(AdminSummary Admin, DateTime ExpiresAt);
+
 /// <summary>RFC 9457 Problem Details plus the contract's machine-readable <c>code</c>.</summary>
 public sealed record ApiProblem(
     int Status,
@@ -27,5 +30,6 @@ public sealed record ApiProblem(
 [JsonSerializable(typeof(LoginRequest))]
 [JsonSerializable(typeof(SetupStatusResponse))]
 [JsonSerializable(typeof(AdminResponse))]
+[JsonSerializable(typeof(SessionResponse))]
 [JsonSerializable(typeof(ApiProblem))]
 public sealed partial class AuthJsonContext : JsonSerializerContext;
