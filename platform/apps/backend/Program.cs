@@ -61,7 +61,14 @@ if (app.Services.GetRequiredService<AuthService>().SetupRequired())
     }
 }
 
-// First, so the rate limiter and everything after it see the real client address.
+// Outermost, so every unhandled failure becomes the contract's 500. The middleware logs the exception;
+// the response carries only the trace ID, in every environment.
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    ExceptionHandler = context => Problems.InternalError(context).ExecuteAsync(context),
+});
+
+// Before the rate limiter, so it and everything after it see the real client address.
 app.UseTrustedProxies();
 
 var publishedWebRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");

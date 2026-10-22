@@ -104,6 +104,28 @@ public sealed class SessionEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task AFailedLookupIsA500NotA401()
+    {
+        var token = await SetupAsync();
+        using (var connection = _factory.Database.OpenConnection())
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "DROP TABLE sessions";
+            command.ExecuteNonQuery();
+        }
+
+        using var response = await SendAsync(AuthApiFactory.Session(token));
+
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Equal("application/problem+json", response.MediaType());
+        var body = await Json(response);
+        Assert.Equal(["status", "code", "title", "traceId"], body.EnumerateObject().Select(property => property.Name));
+        Assert.Equal("internal_error", body.GetProperty("code").GetString());
+        Assert.Equal("Something went wrong.", body.GetProperty("title").GetString());
+        Assert.DoesNotContain("sessions", await Text(response), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task TheSessionIsRenewedAtMostOnceADay()
     {
         var token = await SetupAsync();

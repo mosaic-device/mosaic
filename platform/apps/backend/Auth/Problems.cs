@@ -37,6 +37,10 @@ public static class Problems
         return Create(context, StatusCodes.Status429TooManyRequests, "too_many_requests", "Too many attempts. Wait a moment and try again.");
     }
 
+    /// <summary>Any unexpected failure. Never carries exception details; the trace ID links it to the server log.</summary>
+    public static IResult InternalError(HttpContext context) =>
+        Create(context, StatusCodes.Status500InternalServerError, "internal_error", "Something went wrong.");
+
     private static IResult Create(HttpContext context, int status, string code, string title, IReadOnlyDictionary<string, string[]>? errors = null) =>
         Results.Json(
             new ApiProblem(status, code, title, Activity.Current?.Id ?? context.TraceIdentifier, errors),
