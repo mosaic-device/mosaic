@@ -1,13 +1,14 @@
 # Mosaic.Server
 
 ASP.NET Core on .NET 10, with Native AOT publishing enabled. The server exposes
-`GET /healthz` (HTTP 200, plain text `OK`) and serves the built React admin app from
-`wwwroot/`. Browser navigation falls back to `index.html`; missing assets and
+`GET /healthz` (HTTP 200, plain text `OK`), the first-run setup and login API (see
+[Admin authentication](#admin-authentication)), and serves the built React admin app
+from `wwwroot/`. Browser navigation falls back to `index.html`; missing assets and
 unimplemented `/api` and `/ws` paths return 404.
 
 At startup the server opens its SQLite database and applies any pending schema
-migrations (see [Database](#database)). Authentication, pairing, integrations, and
-device transport are not implemented yet. The admin page is currently a placeholder. Keep the server
+migrations (see [Database](#database)). Protected admin routes, pairing,
+integrations, and device transport are not implemented yet. The admin page is currently a placeholder. Keep the server
 Native-AOT-compatible: [PR checks](../../../docs/ci.md) publish it for Linux x64 with
 AOT/trimming warnings as errors and run the smoke test against the result.
 
@@ -27,19 +28,20 @@ Restore and start the backend. Windows (PowerShell):
 ```powershell
 dotnet restore platform/Mosaic.slnx
 $backendRoot = (Resolve-Path ./platform/apps/backend).Path
-dotnet run --project platform/apps/backend/Mosaic.Server.csproj -- --contentRoot "$backendRoot" --urls http://localhost:5000
+dotnet run --project platform/apps/backend/Mosaic.Server.csproj -- --contentRoot "$backendRoot" --urls http://localhost:5000 --environment Development
 ```
 
 macOS/Linux:
 
 ```sh
 dotnet restore platform/Mosaic.slnx
-dotnet run --project platform/apps/backend/Mosaic.Server.csproj -- --contentRoot "$PWD/platform/apps/backend" --urls http://localhost:5000
+dotnet run --project platform/apps/backend/Mosaic.Server.csproj -- --contentRoot "$PWD/platform/apps/backend" --urls http://localhost:5000 --environment Development
 ```
 
 Use an absolute content root: a relative `platform/apps/backend` can resolve under
 the executable's output directory and fail with `DirectoryNotFoundException`.
-Normal `dotnet run` and Visual Studio F5 use JIT compilation even though
+`--environment Development` loads `appsettings.Development.json`, which sets the
+auth origins for `localhost`. Normal `dotnet run` and Visual Studio F5 use JIT compilation even though
 `PublishAot` is enabled. Stop an existing debugging session if it uses port 5000.
 
 In a second terminal, check health and start the admin development server:
@@ -54,7 +56,7 @@ In Windows PowerShell 5.1, `curl` is an alias for `Invoke-WebRequest`; use
 `curl.exe` there. PowerShell 7 and macOS/Linux shells run the real `curl`.
 
 Open the Vite URL printed in that terminal. Vite proxies `/api` and `/ws` to the
-backend on port 5000; those application routes are not implemented yet. Stop each
+backend on port 5000. Stop each
 foreground server with Ctrl+C.
 
 To serve a built admin app directly from the local backend, run this before
@@ -79,6 +81,68 @@ Migrations live in [`Data/MosaicDatabase.cs`](Data/MosaicDatabase.cs). Each one
 runs once inside a transaction and is recorded in `schema_migrations`. Append new
 migrations; never edit one that has shipped.
 
+## Admin authentication
+
+The API follows the [Admin API Contract](https://github.com/mosaic-device/mosaic/wiki/Admin-API-Contract):
+`GET`/`POST /api/setup`, `POST /api/auth/login`, and `POST /api/auth/logout`. Sessions
+are opaque tokens in an `HttpOnly`, `SameSite=Strict` `mosaic_session` cookie; the
+database stores only a SHA-256 hash of each token. Passwords are stored as
+PBKDF2-HMAC-SHA256 hashes.
+
+| Setting | Environment variable | Purpose |
+| --- | --- | --- |
+| `Auth:PublicOrigin` | `Auth__PublicOrigin` | **Required.** The origin browsers use, such as `https://<tunnel-host>`. State-changing `/api` requests must send a matching `Origin` header, or get `403 forbidden_origin`. The server refuses to start without it. |
+| `Auth:AdditionalOrigins` | `Auth__AdditionalOrigins__0`, ... | Extra accepted origins. Development adds the Vite server, `http://localhost:5173`. |
+| `Auth:SecureCookie` | `Auth__SecureCookie` | Marks the cookie `Secure`. Default `true`; Development sets `false` for `http://localhost`. |
+| `MOSAIC_SETUP_CODE` | same | Fixed first-run setup code. Without it, the server generates one on each start. |
+| `Auth:RateLimits:AttemptsPerMinute` | `Auth__RateLimits__AttemptsPerMinute` | Setup and login attempts per client per minute, combined. Default `10`. |
+| `Auth:RateLimits:ConcurrentPasswordChecks` | `Auth__RateLimits__ConcurrentPasswordChecks` | Password hashes running at once across all clients. Default half the CPU count, at least `1`. |
+| `Auth:RateLimits:QueuedPasswordChecks` | `Auth__RateLimits__QueuedPasswordChecks` | Attempts that may wait for a hashing slot. Default `16`. |
+| `Auth:RateLimits:BodyReadTimeoutSeconds` | `Auth__RateLimits__BodyReadTimeoutSeconds` | Seconds a setup or login body may take to arrive before the connection is closed. Default `10`. |
+| `ForwardedHeaders:KnownProxies` | `ForwardedHeaders__KnownProxies__0`, ... | IP addresses of reverse proxies allowed to report the client address in `X-Forwarded-For`. Default none. See [Behind a proxy](#behind-a-proxy). |
+
+Each setup or login attempt runs a deliberately slow password hash, so both limits
+reply `429 too_many_requests` with a `Retry-After` header when exceeded. A hashing
+slot is taken only once the body has been read, so slow uploads cannot hold one.
+Setup and login bodies over 4 KB get an empty `413`. The
+attempt limit is per client address.
+
+### Behind a proxy
+
+Behind a reverse proxy such as Tailscale Funnel, every connection comes from the
+proxy, so without configuration the attempt limit is one limit shared by everyone:
+a single outside client can use up the owner's attempts. List the proxy's address in
+`ForwardedHeaders:KnownProxies` and the server takes the client address from the
+last `X-Forwarded-For` entry on requests from that address only. Requests from any
+other address keep their connection address, so clients reaching the server
+directly cannot pick their own. With nothing listed (the default), `X-Forwarded-For`
+is ignored; keep it that way when the server is exposed directly. Entries must be
+single addresses, not ranges or host names, or the server refuses to start.
+
+`tailscale funnel 5000` and `tailscale serve` set `X-Forwarded-For` to the client's
+address, replacing any value the client sent, and connect from the machine
+`tailscaled` runs on. The address to list depends on where the server runs:
+
+| Server runs | Proxy address it sees | Setting |
+| --- | --- | --- |
+| On the same machine as `tailscaled` | `127.0.0.1` | `ForwardedHeaders__KnownProxies__0=127.0.0.1` |
+| In Docker, published with `-p 127.0.0.1:5000:8080` | The bridge gateway, usually `172.17.0.1` | `ForwardedHeaders__KnownProxies__0=172.17.0.1` |
+
+`docker network inspect bridge` shows the gateway; a Compose network has its own.
+The startup log names the trusted proxies, or says `X-Forwarded-For` is ignored.
+Don't set
+`ASPNETCORE_FORWARDEDHEADERS_ENABLED`: it trusts `X-Forwarded-For` from anyone, so
+the server refuses to start with it.
+
+`appsettings.Development.json` sets the first three for local development. While no
+admin exists, the server logs `No admin account exists. Setup code: K7QF-2M9X` at
+startup; enter that code in the setup screen. Scripts and `curl` must send an
+`Origin` header that matches, for example:
+
+```sh
+curl -i -X POST http://localhost:5000/api/auth/login -H "Origin: http://localhost:5000" -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"your-password\"}"
+```
+
 ## Build and run the Linux Native AOT container
 
 Prerequisite: Docker Desktop running Linux containers, or Docker Engine on Linux.
@@ -98,10 +162,11 @@ supported target yet.
 docker version
 docker info --format '{{.OSType}}/{{.Architecture}}'
 docker build --platform linux/amd64 --progress=plain -f Dockerfile.aot -t mosaic-server:aot .
-docker run --rm --name mosaic-aot -p 127.0.0.1:5080:8080 mosaic-server:aot
+docker run --rm --name mosaic-aot -p 127.0.0.1:5080:8080 -e Auth__PublicOrigin=http://localhost:5080 mosaic-server:aot
 ```
 
-Leave the last command running. Open `http://localhost:5080/` for the admin app, or
+Leave the last command running. The container log shows the setup code. Open
+`http://localhost:5080/` for the admin app, or
 check health from a second terminal:
 
 ```sh
@@ -143,9 +208,10 @@ docker build --platform linux/amd64 --progress=plain --target verify -f Dockerfi
 This builds the assets and native server, then executes
 [`scripts/smoke-server.py`](../../../scripts/smoke-server.py) inside Linux against
 `/out/Mosaic.Server`. The script starts the server on `127.0.0.1:55881` against a
-new temporary database, checks it, and stops it. It then confirms the schema
-exists, saves an admin row and a settings row, restarts the server, and confirms
-the rows remain and no migration ran twice. An unexpected response, startup
+new temporary database, checks it, runs first-run setup, a rejected login, a login,
+and a logout through the API, and stops it. It then confirms the schema exists and
+the password is stored hashed, saves a settings row, restarts the server, and
+confirms the admin can still log in, the rows remain, and no migration ran twice. An unexpected response, startup
 failure, or database mismatch fails the build.
 
 On each start the seven expected responses are:
@@ -173,7 +239,8 @@ The normal runtime build skips this independent stage. Do not deploy or run the
 
 The smoke test deliberately sets `ASPNETCORE_URLS` for its private test port. A log
 warning that it overrides inherited `HTTP_PORTS=8080` is expected in this stage.
-Successful verification does not establish login, pairing, or device behavior, or support for ARM64 and other deployment targets.
+Successful verification does not establish protected routes, pairing, or device
+behavior, or support for ARM64 and other deployment targets.
 
 ## Maintenance and contributor checks
 

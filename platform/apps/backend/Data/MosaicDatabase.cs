@@ -26,6 +26,15 @@ public sealed class MosaicDatabase
                 updated_at TEXT NOT NULL
             ) STRICT;
             """),
+        new(2, "admin_sessions", """
+            CREATE TABLE sessions (
+                token_hash BLOB PRIMARY KEY,
+                admin_id INTEGER NOT NULL REFERENCES admin (id) ON DELETE CASCADE,
+                created_at TEXT NOT NULL,
+                idle_expires_at TEXT NOT NULL,
+                absolute_expires_at TEXT NOT NULL
+            ) STRICT;
+            """),
     ];
 
     public MosaicDatabase(string path)
