@@ -59,8 +59,11 @@ public sealed class AuthBodyLimitTests
         stalled.Headers.Add("Origin", AuthApiFactory.PublicOrigin);
 
         // The body never finishes; the server gives up after the timeout instead of waiting forever.
-        await Assert.ThrowsAnyAsync<Exception>(() =>
+        // The test's own limit is only a backstop: hitting it means the server never closed the connection.
+        var closed = await Record.ExceptionAsync(() =>
             client.SendAsync(stalled, TestContext.Current.CancellationToken).WaitAsync(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken));
+        Assert.NotNull(closed);
+        Assert.False(closed is TimeoutException, "The server never closed the stalled connection.");
 
         using var next = await SendAsync(client, AuthApiFactory.Login());
         Assert.Equal(HttpStatusCode.OK, next.StatusCode);
