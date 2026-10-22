@@ -9,7 +9,7 @@ using Mosaic.Server.Data;
 
 namespace Mosaic.Server.Tests;
 
-/// <summary>Hosts the real server against a temporary database with a fixed clock and setup code.</summary>
+/// <summary>Hosts the real server against a temporary database with a manual clock and fixed setup code.</summary>
 public sealed class AuthApiFactory : WebApplicationFactory<Program>
 {
     public const string PublicOrigin = "https://mosaic.test";
@@ -35,7 +35,7 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         configure?.Invoke(_settings);
     }
 
-    public FixedTimeProvider Time { get; } = new(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
+    public ManualTimeProvider Time { get; } = new(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
 
     public string DatabasePath => Path.Combine(_directory, "mosaic.db");
 
@@ -128,9 +128,14 @@ internal sealed class PeerAddressFilter : IStartupFilter
     };
 }
 
-public sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+/// <summary>A clock that stands still until a test moves it, so expiry can be tested without waiting.</summary>
+public sealed class ManualTimeProvider(DateTimeOffset start) : TimeProvider
 {
-    public override DateTimeOffset GetUtcNow() => now;
+    private DateTimeOffset _now = start;
+
+    public override DateTimeOffset GetUtcNow() => _now;
+
+    public void Advance(TimeSpan by) => _now += by;
 }
 
 internal static class ResponseExtensions

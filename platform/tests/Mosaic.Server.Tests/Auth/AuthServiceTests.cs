@@ -20,7 +20,7 @@ public sealed class AuthServiceTests : IDisposable
     {
         _database = new MosaicDatabase(Path.Combine(_directory, "mosaic.db"));
         _database.Migrate();
-        var time = new FixedTimeProvider(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
+        var time = new ManualTimeProvider(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
         // One slot and no queue, so a test can hold the slot and observe rejection deterministically.
         _passwordChecks = new PasswordCheckLimiter(AuthRateLimitOptions.FromConfiguration(TestConfiguration.From(
             (AuthRateLimitOptions.ConcurrentPasswordChecksKey, "1"),
