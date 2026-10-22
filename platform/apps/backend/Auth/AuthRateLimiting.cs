@@ -84,8 +84,9 @@ public static class AuthRateLimiting
     {
         options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-        // Partitioned by client address. Behind a proxy such as Tailscale Funnel every request
-        // shares the proxy's address, so this becomes one shared limit until forwarded headers are trusted.
+        // Partitioned by client address. Behind a proxy such as Tailscale Funnel this is the forwarded
+        // client address only when the proxy is listed in ForwardedHeaders:KnownProxies; otherwise every
+        // request shares the proxy's address and this becomes one shared limit.
         options.AddPolicy(AttemptsPolicy, context => RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions

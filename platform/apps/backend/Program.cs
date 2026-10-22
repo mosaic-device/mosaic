@@ -1,6 +1,7 @@
 using Microsoft.Extensions.FileProviders;
 using Mosaic.Server.Auth;
 using Mosaic.Server.Data;
+using Mosaic.Server.Network;
 
 var builder = WebApplication.CreateBuilder(args);
 // Factories read configuration after Build, so every configuration source (including test hosts) applies.
@@ -16,12 +17,14 @@ builder.Services.AddSingleton<SessionStore>();
 builder.Services.AddSingleton<SessionCookie>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddAuthRateLimiting();
+builder.Services.AddTrustedProxies();
 var app = builder.Build();
 
 // Resolve configuration-backed services now so a misconfiguration fails at startup, not on first request.
 var database = app.Services.GetRequiredService<MosaicDatabase>();
 var authOptions = app.Services.GetRequiredService<AuthOptions>();
 var rateLimits = app.Services.GetRequiredService<AuthRateLimitOptions>();
+var trustedProxies = app.Services.GetRequiredService<TrustedProxies>();
 var appliedMigrations = database.Migrate();
 app.Logger.LogInformation(
     "Database {Path} at schema version {Version}; applied {Applied} migration(s) at startup",
@@ -34,6 +37,16 @@ app.Logger.LogInformation(
     rateLimits.AttemptsPerMinute,
     rateLimits.ConcurrentPasswordChecks,
     rateLimits.QueuedPasswordChecks);
+if (trustedProxies.Addresses.Count == 0)
+{
+    app.Logger.LogInformation("Client addresses come from the connection; X-Forwarded-For is ignored");
+}
+else
+{
+    app.Logger.LogInformation(
+        "Client addresses come from X-Forwarded-For when sent by {Proxies}",
+        string.Join(", ", trustedProxies.Addresses));
+}
 
 if (app.Services.GetRequiredService<AuthService>().SetupRequired())
 {
@@ -47,6 +60,9 @@ if (app.Services.GetRequiredService<AuthService>().SetupRequired())
         app.Logger.LogWarning("No admin account exists. Setup code: {SetupCode}", setupCode.Display);
     }
 }
+
+// First, so the rate limiter and everything after it see the real client address.
+app.UseTrustedProxies();
 
 var publishedWebRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
 var webRoot = Directory.Exists(publishedWebRoot)

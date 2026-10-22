@@ -1,5 +1,8 @@
+using System.Net;
 using System.Text;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Mosaic.Server.Data;
@@ -12,6 +15,9 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     public const string PublicOrigin = "https://mosaic.test";
     public const string DevOrigin = "http://localhost:5173";
     public const string Code = "K7QF-2M9X";
+
+    /// <summary>Test-only header giving the address of the connection's peer, which the test server leaves unset.</summary>
+    public const string PeerHeader = "Test-Peer-Address";
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "mosaic-tests", Guid.NewGuid().ToString("N"));
     private readonly Dictionary<string, string?> _settings;
@@ -87,7 +93,11 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
             builder.UseSetting(key, value);
         }
 
-        builder.ConfigureServices(services => services.AddSingleton<TimeProvider>(Time));
+        builder.ConfigureServices(services =>
+        {
+            services.AddSingleton<TimeProvider>(Time);
+            services.AddSingleton<IStartupFilter, PeerAddressFilter>();
+        });
     }
 
     protected override void Dispose(bool disposing)
@@ -98,6 +108,24 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
             Directory.Delete(_directory, recursive: true);
         }
     }
+}
+
+/// <summary>Sets the connection's remote address from <see cref="AuthApiFactory.PeerHeader"/>, ahead of the server's own middleware.</summary>
+internal sealed class PeerAddressFilter : IStartupFilter
+{
+    public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
+    {
+        app.Use((context, nextMiddleware) =>
+        {
+            if (context.Request.Headers.Remove(AuthApiFactory.PeerHeader, out var peer))
+            {
+                context.Connection.RemoteIpAddress = IPAddress.Parse(peer.ToString());
+            }
+
+            return nextMiddleware(context);
+        });
+        next(app);
+    };
 }
 
 public sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider

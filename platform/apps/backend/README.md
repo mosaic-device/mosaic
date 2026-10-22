@@ -99,13 +99,40 @@ PBKDF2-HMAC-SHA256 hashes.
 | `Auth:RateLimits:ConcurrentPasswordChecks` | `Auth__RateLimits__ConcurrentPasswordChecks` | Password hashes running at once across all clients. Default half the CPU count, at least `1`. |
 | `Auth:RateLimits:QueuedPasswordChecks` | `Auth__RateLimits__QueuedPasswordChecks` | Attempts that may wait for a hashing slot. Default `16`. |
 | `Auth:RateLimits:BodyReadTimeoutSeconds` | `Auth__RateLimits__BodyReadTimeoutSeconds` | Seconds a setup or login body may take to arrive before the connection is closed. Default `10`. |
+| `ForwardedHeaders:KnownProxies` | `ForwardedHeaders__KnownProxies__0`, ... | IP addresses of reverse proxies allowed to report the client address in `X-Forwarded-For`. Default none. See [Behind a proxy](#behind-a-proxy). |
 
 Each setup or login attempt runs a deliberately slow password hash, so both limits
 reply `429 too_many_requests` with a `Retry-After` header when exceeded. A hashing
 slot is taken only once the body has been read, so slow uploads cannot hold one.
 Setup and login bodies over 4 KB get an empty `413`. The
-attempt limit is per client address; behind a proxy such as Tailscale Funnel every
-request shares the proxy's address, so it acts as one shared limit.
+attempt limit is per client address.
+
+### Behind a proxy
+
+Behind a reverse proxy such as Tailscale Funnel, every connection comes from the
+proxy, so without configuration the attempt limit is one limit shared by everyone:
+a single outside client can use up the owner's attempts. List the proxy's address in
+`ForwardedHeaders:KnownProxies` and the server takes the client address from the
+last `X-Forwarded-For` entry on requests from that address only. Requests from any
+other address keep their connection address, so clients reaching the server
+directly cannot pick their own. With nothing listed (the default), `X-Forwarded-For`
+is ignored; keep it that way when the server is exposed directly. Entries must be
+single addresses, not ranges or host names, or the server refuses to start.
+
+`tailscale funnel 5000` and `tailscale serve` set `X-Forwarded-For` to the client's
+address, replacing any value the client sent, and connect from the machine
+`tailscaled` runs on. The address to list depends on where the server runs:
+
+| Server runs | Proxy address it sees | Setting |
+| --- | --- | --- |
+| On the same machine as `tailscaled` | `127.0.0.1` | `ForwardedHeaders__KnownProxies__0=127.0.0.1` |
+| In Docker, published with `-p 127.0.0.1:5000:8080` | The bridge gateway, usually `172.17.0.1` | `ForwardedHeaders__KnownProxies__0=172.17.0.1` |
+
+`docker network inspect bridge` shows the gateway; a Compose network has its own.
+The startup log names the trusted proxies, or says `X-Forwarded-For` is ignored.
+Don't set
+`ASPNETCORE_FORWARDEDHEADERS_ENABLED`: it trusts `X-Forwarded-For` from anyone, so
+the server refuses to start with it.
 
 `appsettings.Development.json` sets the first three for local development. While no
 admin exists, the server logs `No admin account exists. Setup code: K7QF-2M9X` at
