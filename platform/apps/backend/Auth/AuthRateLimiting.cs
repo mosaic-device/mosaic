@@ -11,6 +11,7 @@ public sealed class AuthRateLimitOptions
     public const string AttemptsPerMinuteKey = "Auth:RateLimits:AttemptsPerMinute";
     public const string ConcurrentPasswordChecksKey = "Auth:RateLimits:ConcurrentPasswordChecks";
     public const string QueuedPasswordChecksKey = "Auth:RateLimits:QueuedPasswordChecks";
+    public const string BodyReadTimeoutSecondsKey = "Auth:RateLimits:BodyReadTimeoutSeconds";
 
     /// <summary>Setup and login attempts allowed per client per minute, combined.</summary>
     public int AttemptsPerMinute { get; private init; } = 10;
@@ -21,6 +22,9 @@ public sealed class AuthRateLimitOptions
     /// <summary>Attempts allowed to wait for a hashing slot before being rejected.</summary>
     public int QueuedPasswordChecks { get; private init; } = 16;
 
+    /// <summary>How long a setup or login body may take to arrive before the connection is closed.</summary>
+    public TimeSpan BodyReadTimeout { get; private init; } = TimeSpan.FromSeconds(10);
+
     public static AuthRateLimitOptions FromConfiguration(IConfiguration configuration)
     {
         var defaults = new AuthRateLimitOptions();
@@ -29,6 +33,8 @@ public sealed class AuthRateLimitOptions
             AttemptsPerMinute = Read(configuration, AttemptsPerMinuteKey, defaults.AttemptsPerMinute, minimum: 1),
             ConcurrentPasswordChecks = Read(configuration, ConcurrentPasswordChecksKey, defaults.ConcurrentPasswordChecks, minimum: 1),
             QueuedPasswordChecks = Read(configuration, QueuedPasswordChecksKey, defaults.QueuedPasswordChecks, minimum: 0),
+            BodyReadTimeout = TimeSpan.FromSeconds(
+                Read(configuration, BodyReadTimeoutSecondsKey, (int)defaults.BodyReadTimeout.TotalSeconds, minimum: 1)),
         };
     }
 

@@ -98,9 +98,12 @@ PBKDF2-HMAC-SHA256 hashes.
 | `Auth:RateLimits:AttemptsPerMinute` | `Auth__RateLimits__AttemptsPerMinute` | Setup and login attempts per client per minute, combined. Default `10`. |
 | `Auth:RateLimits:ConcurrentPasswordChecks` | `Auth__RateLimits__ConcurrentPasswordChecks` | Password hashes running at once across all clients. Default half the CPU count, at least `1`. |
 | `Auth:RateLimits:QueuedPasswordChecks` | `Auth__RateLimits__QueuedPasswordChecks` | Attempts that may wait for a hashing slot. Default `16`. |
+| `Auth:RateLimits:BodyReadTimeoutSeconds` | `Auth__RateLimits__BodyReadTimeoutSeconds` | Seconds a setup or login body may take to arrive before the connection is closed. Default `10`. |
 
 Each setup or login attempt runs a deliberately slow password hash, so both limits
-reply `429 too_many_requests` with a `Retry-After` header when exceeded. The
+reply `429 too_many_requests` with a `Retry-After` header when exceeded. A hashing
+slot is taken only once the body has been read, so slow uploads cannot hold one.
+Setup and login bodies over 4 KB get an empty `413`. The
 attempt limit is per client address; behind a proxy such as Tailscale Funnel every
 request shares the proxy's address, so it acts as one shared limit.
 
