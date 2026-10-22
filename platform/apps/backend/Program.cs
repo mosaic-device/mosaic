@@ -84,6 +84,8 @@ if (Directory.Exists(webRoot))
 
 app.UseOriginCheck();
 app.UseRateLimiter();
+// After the Origin check, so a cross-site request gets 403 before any session lookup.
+app.UseAdminSessions();
 
 app.MapGet("/healthz", async context =>
 {

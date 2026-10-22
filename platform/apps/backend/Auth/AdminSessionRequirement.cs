@@ -8,21 +8,41 @@ namespace Mosaic.Server.Auth;
 /// token was missing, malformed, unknown, expired, or logged out. When a session cookie was
 /// sent, the 401 also clears it, whatever the reason.
 /// </summary>
+/// <remarks>
+/// Endpoints opt in with <see cref="RequireAdminSession"/>, and <see cref="UseAdminSessions"/>
+/// enforces it as middleware, before the endpoint binds any parameters. An anonymous request
+/// therefore gets the 401 whatever the handler takes, and its body is never read.
+/// </remarks>
 public static class AdminSessionRequirement
 {
-    /// <summary>
-    /// Requires a signed-in admin, renewing the session cookie when the lookup renewed the session.
-    /// Handlers read the admin with <see cref="GetAdminSession"/>.
-    /// </summary>
+    /// <summary>Requires a signed-in admin. Handlers read the admin with <see cref="GetAdminSession"/>.</summary>
     public static TBuilder RequireAdminSession<TBuilder>(this TBuilder builder)
-        where TBuilder : IEndpointConventionBuilder =>
-        builder.AddEndpointFilter(async (invocation, next) =>
+        where TBuilder : IEndpointConventionBuilder
+    {
+        builder.WithMetadata(Required.Instance);
+        // Fails closed: without UseAdminSessions in the pipeline the endpoint throws instead of running unprotected.
+        builder.AddEndpointFilter((invocation, next) =>
+            invocation.HttpContext.Features.Get<AdminSession>() is null
+                ? throw new InvalidOperationException($"{nameof(UseAdminSessions)} must run before endpoints that require an admin session.")
+                : next(invocation));
+        return builder;
+    }
+
+    /// <summary>Authenticates requests to endpoints marked with <see cref="RequireAdminSession"/>.</summary>
+    public static void UseAdminSessions(this IApplicationBuilder app)
+    {
+        var auth = app.ApplicationServices.GetRequiredService<AuthService>();
+        var cookie = app.ApplicationServices.GetRequiredService<SessionCookie>();
+        app.Use(async (context, next) =>
         {
-            var context = invocation.HttpContext;
-            var services = context.RequestServices;
-            var cookie = services.GetRequiredService<SessionCookie>();
+            if (context.GetEndpoint()?.Metadata.GetMetadata<Required>() is null)
+            {
+                await next(context);
+                return;
+            }
+
             var sent = SessionCookie.TryRead(context.Request, out var token);
-            var session = services.GetRequiredService<AuthService>().Authenticate(sent ? token : null);
+            var session = auth.Authenticate(sent ? token : null);
             if (session is null)
             {
                 // A cookie that no longer works is cleared so the browser stops sending it.
@@ -31,7 +51,8 @@ public static class AdminSessionRequirement
                     cookie.Clear(context.Response);
                 }
 
-                return Problems.Unauthenticated(context);
+                await Problems.Unauthenticated(context).ExecuteAsync(context);
+                return;
             }
 
             if (session.Session.Renewal is { } renewal)
@@ -40,9 +61,16 @@ public static class AdminSessionRequirement
             }
 
             context.Features.Set(session);
-            return await next(invocation);
+            await next(context);
         });
+    }
 
-    /// <summary>The admin authenticated by <see cref="RequireAdminSession"/> for this request.</summary>
+    /// <summary>The admin authenticated by <see cref="UseAdminSessions"/> for this request.</summary>
     public static AdminSession GetAdminSession(this HttpContext context) => context.Features.GetRequiredFeature<AdminSession>();
+
+    /// <summary>Endpoint metadata marking an endpoint as requiring an admin session.</summary>
+    private sealed class Required
+    {
+        public static readonly Required Instance = new();
+    }
 }
