@@ -6,7 +6,12 @@ using Mosaic.Server.Data;
 
 namespace Mosaic.Server.Auth;
 
-public sealed record IssuedSession(string Token, DateTimeOffset IdleExpiresAt, DateTimeOffset AbsoluteExpiresAt);
+/// <summary>A session token as handed to the browser at <see cref="IssuedAt"/>, on login or renewal.</summary>
+public sealed record IssuedSession(string Token, DateTimeOffset IssuedAt, DateTimeOffset IdleExpiresAt, DateTimeOffset AbsoluteExpiresAt)
+{
+    /// <summary>When the session ends: the earlier of its idle and absolute expiry.</summary>
+    public DateTimeOffset ExpiresAt => IdleExpiresAt < AbsoluteExpiresAt ? IdleExpiresAt : AbsoluteExpiresAt;
+}
 
 /// <summary>
 /// Opaque server-side sessions. The cookie carries a random token; the database stores
@@ -24,7 +29,7 @@ public sealed class SessionStore(TimeProvider time)
     {
         var token = Base64Url.EncodeToString(RandomNumberGenerator.GetBytes(TokenSize));
         var now = time.GetUtcNow();
-        var session = new IssuedSession(token, now + IdleLifetime, now + AbsoluteLifetime);
+        var session = new IssuedSession(token, now, now + IdleLifetime, now + AbsoluteLifetime);
 
         using var command = connection.CreateCommand("""
             INSERT INTO sessions (token_hash, admin_id, created_at, idle_expires_at, absolute_expires_at)
