@@ -25,11 +25,11 @@ public sealed class MosaicDatabaseTests : IDisposable
 
         var applied = database.Migrate();
 
-        Assert.Equal([1], applied);
+        Assert.Equal([1, 2], applied);
         Assert.True(File.Exists(DatabasePath));
         using var connection = database.OpenConnection();
         Assert.Equal(
-            ["admin", "schema_migrations", "settings"],
+            ["admin", "schema_migrations", "sessions", "settings"],
             Strings(connection, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name"));
         Assert.Equal(
             ["id", "username", "password_hash", "created_at", "updated_at"],
@@ -37,7 +37,27 @@ public sealed class MosaicDatabaseTests : IDisposable
         Assert.Equal(
             ["key", "value", "updated_at"],
             Strings(connection, "SELECT name FROM pragma_table_info('settings')"));
-        Assert.Equal(["1:initial_admin_and_settings"], Strings(connection, "SELECT version || ':' || name FROM schema_migrations"));
+        Assert.Equal(
+            ["token_hash", "admin_id", "created_at", "idle_expires_at", "absolute_expires_at"],
+            Strings(connection, "SELECT name FROM pragma_table_info('sessions')"));
+        Assert.Equal(
+            ["1:initial_admin_and_settings", "2:admin_sessions"],
+            Strings(connection, "SELECT version || ':' || name FROM schema_migrations ORDER BY version"));
+    }
+
+    [Fact]
+    public void DeletingTheAdminDeletesItsSessions()
+    {
+        var database = new MosaicDatabase(DatabasePath);
+        database.Migrate();
+        using var connection = database.OpenConnection();
+        Execute(connection, """
+            INSERT INTO admin VALUES (1, 'admin', 'hash', 'now', 'now');
+            INSERT INTO sessions VALUES (x'01', 1, 'now', 'later', 'later');
+            DELETE FROM admin;
+            """);
+
+        Assert.Equal(0L, Scalar(connection, "SELECT COUNT(*) FROM sessions"));
     }
 
     [Fact]
@@ -50,7 +70,7 @@ public sealed class MosaicDatabaseTests : IDisposable
         Assert.Empty(new MosaicDatabase(DatabasePath).Migrate());
 
         using var connection = database.OpenConnection();
-        Assert.Equal(1L, Scalar(connection, "SELECT COUNT(*) FROM schema_migrations"));
+        Assert.Equal(2L, Scalar(connection, "SELECT COUNT(*) FROM schema_migrations"));
     }
 
     [Fact]
