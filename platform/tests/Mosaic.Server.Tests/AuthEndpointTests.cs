@@ -312,6 +312,35 @@ public sealed class AuthEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task ConcurrentSetupRequestsCreateOneAdmin()
+    {
+        var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ =>
+            _client.SendAsync(AuthApiFactory.Setup(), TestContext.Current.CancellationToken)));
+
+        Assert.Equal(
+            [HttpStatusCode.Created, HttpStatusCode.Conflict, HttpStatusCode.Conflict, HttpStatusCode.Conflict],
+            responses.Select(response => response.StatusCode).Order());
+        Assert.Single(responses, response => response.Headers.Contains("Set-Cookie"));
+        foreach (var response in responses)
+        {
+            response.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task FailedSetupLeavesNoAdminBehind()
+    {
+        Execute("CREATE TRIGGER fail_sessions BEFORE INSERT ON sessions BEGIN SELECT RAISE(ABORT, 'injected failure'); END");
+
+        // The test server surfaces the unhandled failure to the client instead of a 500.
+        await Assert.ThrowsAnyAsync<Exception>(() => _client.SendAsync(AuthApiFactory.Setup(), TestContext.Current.CancellationToken));
+
+        Assert.True(await SetupRequired());
+        Execute("DROP TRIGGER fail_sessions");
+        await SendAsync(AuthApiFactory.Setup(), HttpStatusCode.Created);
+    }
+
+    [Fact]
     public void StartupFailsWithoutAPublicOrigin()
     {
         using var factory = new AuthApiFactory(settings => settings["Auth:PublicOrigin"] = null);
@@ -355,6 +384,14 @@ public sealed class AuthEndpointTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("title").GetString()));
         Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("traceId").GetString()));
         return body;
+    }
+
+    private void Execute(string sql)
+    {
+        using var connection = _factory.Database.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
     }
 
     private static string WithoutTraceId(JsonElement problem) =>

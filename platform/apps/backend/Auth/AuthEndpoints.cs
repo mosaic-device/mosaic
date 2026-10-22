@@ -3,7 +3,10 @@ using System.Text.Json.Serialization.Metadata;
 
 namespace Mosaic.Server.Auth;
 
-/// <summary>First-run setup, login, and logout (Admin API Contract, sections 2 and 4).</summary>
+/// <summary>
+/// HTTP surface for first-run setup, login, and logout (Admin API Contract, sections 2 and 4).
+/// Handles content type, body parsing, cookies, and status codes; the rules live in <see cref="AuthService"/>.
+/// </summary>
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
@@ -14,103 +17,66 @@ public static class AuthEndpoints
         app.MapPost("/api/auth/logout", Logout);
     }
 
-    private static IResult GetSetup(AdminStore admins) =>
-        Results.Json(new SetupStatusResponse(!admins.Exists()), AuthJsonContext.Default.SetupStatusResponse);
+    private static IResult GetSetup(AuthService auth) =>
+        Results.Json(new SetupStatusResponse(auth.SetupRequired()), AuthJsonContext.Default.SetupStatusResponse);
 
-    // Check order is part of the contract: content type, admin exists, fields, setup code.
-    private static async Task<IResult> PostSetupAsync(
-        HttpContext context, AdminStore admins, SessionStore sessions, SessionCookie cookie, SetupCode setupCode, PasswordHasher hasher)
+    private static async Task<IResult> PostSetupAsync(HttpContext context, AuthService auth, SessionCookie cookie)
     {
         if (!context.Request.HasJsonContentType())
         {
             return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
-        }
-
-        if (admins.Exists())
-        {
-            return Problems.SetupAlreadyCompleted(context);
         }
 
         var request = await ReadBodyAsync(context, AuthJsonContext.Default.SetupRequest);
-        if (request is null)
-        {
-            return MalformedBody(context);
-        }
-
-        var errors = CredentialRules.ValidateSetup(request);
-        if (errors.Count > 0)
-        {
-            return Problems.ValidationFailed(context, errors);
-        }
-
-        if (!setupCode.Matches(request.SetupCode!))
-        {
-            return Problems.InvalidSetupCode(context);
-        }
-
-        var admin = admins.TryCreate(request.Username!, hasher.Hash(request.Password!));
-        if (admin is null)
-        {
-            return Problems.SetupAlreadyCompleted(context);
-        }
-
-        cookie.Append(context.Response, sessions.Create(admin.Id));
-        return Results.Json(
-            new AdminResponse(new AdminSummary(admin.Username)),
-            AuthJsonContext.Default.AdminResponse,
-            statusCode: StatusCodes.Status201Created);
+        return Respond(context, cookie, auth.Setup(request), StatusCodes.Status201Created);
     }
 
-    private static async Task<IResult> LoginAsync(
-        HttpContext context, AdminStore admins, SessionStore sessions, SessionCookie cookie, PasswordHasher hasher)
+    private static async Task<IResult> LoginAsync(HttpContext context, AuthService auth, SessionCookie cookie)
     {
         if (!context.Request.HasJsonContentType())
         {
             return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
         }
 
-        if (!admins.Exists())
-        {
-            return Problems.SetupRequired(context);
-        }
-
         var request = await ReadBodyAsync(context, AuthJsonContext.Default.LoginRequest);
-        if (request is null)
-        {
-            return MalformedBody(context);
-        }
-
-        var errors = CredentialRules.ValidateLogin(request);
-        if (errors.Count > 0)
-        {
-            return Problems.ValidationFailed(context, errors);
-        }
-
-        // Unknown usernames and wrong passwords take the same time and get the same response.
-        var admin = admins.FindByUsername(request.Username!);
-        var verified = admin is null
-            ? hasher.VerifyAgainstDummy(request.Password!)
-            : hasher.Verify(request.Password!, admin.PasswordHash);
-        if (!verified || admin is null)
-        {
-            return Problems.InvalidCredentials(context);
-        }
-
-        cookie.Append(context.Response, sessions.Create(admin.Id));
-        return Results.Json(new AdminResponse(new AdminSummary(admin.Username)), AuthJsonContext.Default.AdminResponse);
+        return Respond(context, cookie, auth.Login(request), StatusCodes.Status200OK);
     }
 
-    private static IResult Logout(HttpContext context, SessionStore sessions, SessionCookie cookie)
+    private static IResult Logout(HttpContext context, AuthService auth, SessionCookie cookie)
     {
-        if (SessionCookie.TryRead(context.Request, out var token))
-        {
-            sessions.Delete(token);
-        }
-
+        auth.Logout(SessionCookie.TryRead(context.Request, out var token) ? token : null);
         cookie.Clear(context.Response);
         return Results.NoContent();
     }
 
+    private static IResult Respond(HttpContext context, SessionCookie cookie, AuthResult result, int successStatus)
+    {
+        switch (result.Outcome)
+        {
+            case AuthOutcome.Succeeded:
+                cookie.Append(context.Response, result.Session!);
+                return Results.Json(
+                    new AdminResponse(new AdminSummary(result.Admin!.Username)),
+                    AuthJsonContext.Default.AdminResponse,
+                    statusCode: successStatus);
+            case AuthOutcome.MalformedBody:
+                return Problems.ValidationFailed(context, errors: null, "The request body must be a JSON object.");
+            case AuthOutcome.ValidationFailed:
+                return Problems.ValidationFailed(context, result.Errors);
+            case AuthOutcome.SetupAlreadyCompleted:
+                return Problems.SetupAlreadyCompleted(context);
+            case AuthOutcome.InvalidSetupCode:
+                return Problems.InvalidSetupCode(context);
+            case AuthOutcome.SetupRequired:
+                return Problems.SetupRequired(context);
+            case AuthOutcome.InvalidCredentials:
+                return Problems.InvalidCredentials(context);
+            default:
+                throw new InvalidOperationException($"Unhandled auth outcome {result.Outcome}.");
+        }
+    }
+
+    /// <summary>The parsed body, or null when it isn't a JSON object of the expected shape.</summary>
     private static async Task<T?> ReadBodyAsync<T>(HttpContext context, JsonTypeInfo<T> typeInfo)
         where T : class
     {
@@ -123,7 +89,4 @@ public static class AuthEndpoints
             return null;
         }
     }
-
-    private static IResult MalformedBody(HttpContext context) =>
-        Problems.ValidationFailed(context, errors: null, "The request body must be a JSON object.");
 }

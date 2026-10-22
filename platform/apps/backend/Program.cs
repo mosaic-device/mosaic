@@ -14,6 +14,7 @@ builder.Services.AddSingleton(new PasswordHasher());
 builder.Services.AddSingleton<AdminStore>();
 builder.Services.AddSingleton<SessionStore>();
 builder.Services.AddSingleton<SessionCookie>();
+builder.Services.AddSingleton<AuthService>();
 var app = builder.Build();
 
 // Resolve configuration-backed services now so a misconfiguration fails at startup, not on first request.
@@ -27,7 +28,7 @@ app.Logger.LogInformation(
     appliedMigrations.Count);
 app.Logger.LogInformation("Admin API accepts requests from {Origins}", string.Join(", ", authOptions.AllowedOrigins));
 
-if (!app.Services.GetRequiredService<AdminStore>().Exists())
+if (app.Services.GetRequiredService<AuthService>().SetupRequired())
 {
     var setupCode = app.Services.GetRequiredService<SetupCode>();
     if (setupCode.FromOverride)
