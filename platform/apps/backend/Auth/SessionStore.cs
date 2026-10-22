@@ -11,9 +11,8 @@ public sealed record IssuedSession(string Token, DateTimeOffset IdleExpiresAt, D
 /// Opaque server-side sessions. The cookie carries a random token; the database stores
 /// only its SHA-256 hash, so a leaked database cannot be replayed as a cookie.
 /// </summary>
-public sealed class SessionStore(MosaicDatabase database, TimeProvider time, AuthOptions options)
+public sealed class SessionStore(MosaicDatabase database, TimeProvider time)
 {
-    public const string CookieName = "mosaic_session";
     public static readonly TimeSpan IdleLifetime = TimeSpan.FromDays(7);
     public static readonly TimeSpan AbsoluteLifetime = TimeSpan.FromDays(30);
 
@@ -49,20 +48,5 @@ public sealed class SessionStore(MosaicDatabase database, TimeProvider time, Aut
         command.ExecuteNonQuery();
     }
 
-    public void AppendCookie(HttpResponse response, IssuedSession session) =>
-        response.Cookies.Append(CookieName, session.Token, CookieOptions(IdleLifetime));
-
-    public void ClearCookie(HttpResponse response) =>
-        response.Cookies.Append(CookieName, "", CookieOptions(TimeSpan.Zero));
-
     public static byte[] HashToken(string token) => SHA256.HashData(Encoding.UTF8.GetBytes(token));
-
-    private CookieOptions CookieOptions(TimeSpan maxAge) => new()
-    {
-        Path = "/",
-        HttpOnly = true,
-        Secure = options.SecureCookie,
-        SameSite = SameSiteMode.Strict,
-        MaxAge = maxAge,
-    };
 }

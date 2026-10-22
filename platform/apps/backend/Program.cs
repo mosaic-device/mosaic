@@ -13,6 +13,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(new PasswordHasher());
 builder.Services.AddSingleton<AdminStore>();
 builder.Services.AddSingleton<SessionStore>();
+builder.Services.AddSingleton<SessionCookie>();
 var app = builder.Build();
 
 // Resolve configuration-backed services now so a misconfiguration fails at startup, not on first request.

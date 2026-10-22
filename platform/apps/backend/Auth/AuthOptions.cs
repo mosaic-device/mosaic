@@ -43,7 +43,13 @@ public sealed class AuthOptions
         }
 
         var secure = configuration[SecureCookieKey];
-        return new AuthOptions(publicOrigin, allowed, string.IsNullOrWhiteSpace(secure) || bool.Parse(secure));
+        var secureCookie = true;
+        if (!string.IsNullOrWhiteSpace(secure) && !bool.TryParse(secure, out secureCookie))
+        {
+            throw new InvalidOperationException($"{SecureCookieKey} must be true or false, not '{secure}'.");
+        }
+
+        return new AuthOptions(publicOrigin, allowed, secureCookie);
     }
 
     public bool IsAllowedOrigin(string? origin) =>
