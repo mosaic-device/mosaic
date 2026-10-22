@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 
 namespace Mosaic.Server.Auth;
 
@@ -25,8 +26,12 @@ public static class Problems
     public static IResult SetupRequired(HttpContext context) =>
         Create(context, StatusCodes.Status409Conflict, "setup_required", "Create the admin account before logging in.");
 
-    public static IResult TooManyRequests(HttpContext context) =>
-        Create(context, StatusCodes.Status429TooManyRequests, "too_many_requests", "Too many attempts. Wait a moment and try again.");
+    /// <summary>429 with <c>Retry-After</c> in whole seconds.</summary>
+    public static IResult TooManyRequests(HttpContext context, int retryAfterSeconds)
+    {
+        context.Response.Headers.RetryAfter = retryAfterSeconds.ToString(CultureInfo.InvariantCulture);
+        return Create(context, StatusCodes.Status429TooManyRequests, "too_many_requests", "Too many attempts. Wait a moment and try again.");
+    }
 
     private static IResult Create(HttpContext context, int status, string code, string title, IReadOnlyDictionary<string, string[]>? errors = null) =>
         Results.Json(

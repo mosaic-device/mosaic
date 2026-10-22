@@ -29,7 +29,7 @@ public static class AuthEndpoints
         }
 
         var request = await ReadBodyAsync(context, AuthJsonContext.Default.SetupRequest);
-        return Respond(context, cookie, auth.Setup(request), StatusCodes.Status201Created);
+        return Respond(context, cookie, await auth.SetupAsync(request, context.RequestAborted), StatusCodes.Status201Created);
     }
 
     private static async Task<IResult> LoginAsync(HttpContext context, AuthService auth, SessionCookie cookie)
@@ -40,7 +40,7 @@ public static class AuthEndpoints
         }
 
         var request = await ReadBodyAsync(context, AuthJsonContext.Default.LoginRequest);
-        return Respond(context, cookie, auth.Login(request), StatusCodes.Status200OK);
+        return Respond(context, cookie, await auth.LoginAsync(request, context.RequestAborted), StatusCodes.Status200OK);
     }
 
     private static IResult Logout(HttpContext context, AuthService auth, SessionCookie cookie)
@@ -72,6 +72,9 @@ public static class AuthEndpoints
                 return Problems.SetupRequired(context);
             case AuthOutcome.InvalidCredentials:
                 return Problems.InvalidCredentials(context);
+            case AuthOutcome.TooManyPasswordChecks:
+                // Hashing slots free up within about a second.
+                return Problems.TooManyRequests(context, retryAfterSeconds: 1);
             default:
                 throw new InvalidOperationException($"Unhandled auth outcome {result.Outcome}.");
         }

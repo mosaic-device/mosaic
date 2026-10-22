@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using Mosaic.Server.Auth;
 
 namespace Mosaic.Server.Tests;
@@ -60,31 +61,54 @@ public sealed class AuthRateLimitTests
     }
 
     [Fact]
-    public async Task ConcurrentPasswordChecksBeyondTheCapAreRejected()
+    public async Task PasswordChecksBeyondTheCapGet429()
     {
-        using var factory = new AuthApiFactory(settings =>
+        using var factory = SingleHashingSlot();
+        using var client = factory.CreateApiClient();
+        Assert.Equal(HttpStatusCode.Created, await StatusAsync(client, AuthApiFactory.Setup()));
+        var passwordChecks = factory.Services.GetRequiredService<PasswordCheckLimiter>();
+
+        using (var held = await passwordChecks.AcquireAsync(TestContext.Current.CancellationToken))
         {
-            settings[AuthRateLimitOptions.AttemptsPerMinuteKey] = "100";
-            settings[AuthRateLimitOptions.ConcurrentPasswordChecksKey] = "1";
-            settings[AuthRateLimitOptions.QueuedPasswordChecksKey] = "0";
-        });
+            Assert.True(held.IsAcquired);
+            using var rejected = await client.SendAsync(AuthApiFactory.Login(), TestContext.Current.CancellationToken);
+
+            Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
+            Assert.Equal("1", Assert.Single(rejected.Headers.GetValues("Retry-After")));
+            var body = JsonDocument.Parse(await rejected.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).RootElement;
+            Assert.Equal("too_many_requests", body.GetProperty("code").GetString());
+        }
+
+        Assert.Equal(HttpStatusCode.OK, await StatusAsync(client, AuthApiFactory.Login()));
+    }
+
+    [Fact]
+    public async Task AnUnfinishedUploadDoesNotHoldAHashingSlot()
+    {
+        using var factory = SingleHashingSlot();
         using var client = factory.CreateApiClient();
         Assert.Equal(HttpStatusCode.Created, await StatusAsync(client, AuthApiFactory.Setup()));
 
-        // Each login runs a full 600,000-iteration hash, so overlapping requests exceed a cap of one.
-        var responses = await Task.WhenAll(Enumerable.Range(0, 6).Select(i =>
-            client.SendAsync(AuthApiFactory.Login(password: $"wrong-password-{i}"), TestContext.Current.CancellationToken)));
+        // A login whose body is still arriving must not block another client's password check.
+        var stalled = new StalledJsonContent("""{"username":"Bridger","password":"mosaic-desk-2026"}""");
+        using var slowRequest = new HttpRequestMessage(HttpMethod.Post, "/api/auth/login") { Content = stalled };
+        slowRequest.Headers.Add("Origin", AuthApiFactory.PublicOrigin);
+        var slowResponse = client.SendAsync(slowRequest, TestContext.Current.CancellationToken);
+        await stalled.FirstChunkSent.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
-        Assert.All(responses, response => Assert.Contains(response.StatusCode, new[] { HttpStatusCode.Unauthorized, HttpStatusCode.TooManyRequests }));
-        Assert.Contains(responses, response => response.StatusCode == HttpStatusCode.Unauthorized);
-        var rejected = responses.Where(response => response.StatusCode == HttpStatusCode.TooManyRequests).ToList();
-        Assert.NotEmpty(rejected);
-        Assert.All(rejected, response => Assert.Equal("1", Assert.Single(response.Headers.GetValues("Retry-After"))));
-        foreach (var response in responses)
-        {
-            response.Dispose();
-        }
+        Assert.Equal(HttpStatusCode.Unauthorized, await StatusAsync(client, AuthApiFactory.Login(password: "wrong-password-1")));
+
+        stalled.Finish();
+        using var finished = await slowResponse;
+        Assert.Equal(HttpStatusCode.OK, finished.StatusCode);
     }
+
+    private static AuthApiFactory SingleHashingSlot() => new(settings =>
+    {
+        settings[AuthRateLimitOptions.AttemptsPerMinuteKey] = "100";
+        settings[AuthRateLimitOptions.ConcurrentPasswordChecksKey] = "1";
+        settings[AuthRateLimitOptions.QueuedPasswordChecksKey] = "0";
+    });
 
     private static async Task<HttpStatusCode> StatusAsync(HttpClient client, HttpRequestMessage request)
     {

@@ -51,8 +51,9 @@ public sealed class AuthRateLimitOptions
 
 /// <summary>
 /// Rate limiting for endpoints that check passwords. Two independent limits apply:
-/// a per-client attempt window, and a global cap on concurrent hashing. Either one
-/// rejects with <c>429 too_many_requests</c> and a <c>Retry-After</c> header.
+/// a per-client attempt window, enforced here when a request is admitted, and a global
+/// cap on concurrent hashing, enforced by <see cref="PasswordCheckLimiter"/> around the
+/// hashing itself. Either one rejects with <c>429 too_many_requests</c> and a <c>Retry-After</c> header.
 /// </summary>
 public static class AuthRateLimiting
 {
@@ -63,12 +64,13 @@ public static class AuthRateLimiting
     public static IServiceCollection AddAuthRateLimiting(this IServiceCollection services)
     {
         services.AddSingleton(provider => AuthRateLimitOptions.FromConfiguration(provider.GetRequiredService<IConfiguration>()));
+        services.AddSingleton<PasswordCheckLimiter>();
         services.AddRateLimiter(_ => { });
         services.AddOptions<RateLimiterOptions>().Configure<AuthRateLimitOptions>(Configure);
         return services;
     }
 
-    /// <summary>Marks an endpoint as a password check, subject to both limits.</summary>
+    /// <summary>Marks an endpoint as a password check, subject to the per-client attempt limit.</summary>
     public static TBuilder RequireAuthRateLimits<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder => builder.RequireRateLimiting(AttemptsPolicy);
 
@@ -87,27 +89,12 @@ public static class AuthRateLimiting
                 QueueLimit = 0,
             }));
 
-        // One shared partition: the cap is on total hashing work, whoever sends it.
-        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-            IsPasswordCheck(context)
-                ? RateLimitPartition.GetConcurrencyLimiter("password-checks", _ => new ConcurrencyLimiterOptions
-                {
-                    PermitLimit = limits.ConcurrentPasswordChecks,
-                    QueueLimit = limits.QueuedPasswordChecks,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                })
-                : RateLimitPartition.GetNoLimiter(""));
-
         options.OnRejected = async (rejected, _) =>
         {
             var retryAfter = rejected.Lease.TryGetMetadata(MetadataName.RetryAfter, out var wait)
                 ? Math.Max(1, (int)Math.Ceiling(wait.TotalSeconds))
                 : 1;
-            rejected.HttpContext.Response.Headers.RetryAfter = retryAfter.ToString(CultureInfo.InvariantCulture);
-            await Problems.TooManyRequests(rejected.HttpContext).ExecuteAsync(rejected.HttpContext);
+            await Problems.TooManyRequests(rejected.HttpContext, retryAfter).ExecuteAsync(rejected.HttpContext);
         };
     }
-
-    private static bool IsPasswordCheck(HttpContext context) =>
-        context.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName == AttemptsPolicy;
 }

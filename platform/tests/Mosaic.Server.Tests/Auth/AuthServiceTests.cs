@@ -13,6 +13,7 @@ public sealed class AuthServiceTests : IDisposable
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "mosaic-tests", Guid.NewGuid().ToString("N"));
     private readonly MosaicDatabase _database;
+    private readonly PasswordCheckLimiter _passwordChecks;
     private readonly AuthService _auth;
 
     public AuthServiceTests()
@@ -20,16 +21,22 @@ public sealed class AuthServiceTests : IDisposable
         _database = new MosaicDatabase(Path.Combine(_directory, "mosaic.db"));
         _database.Migrate();
         var time = new FixedTimeProvider(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
+        // One slot and no queue, so a test can hold the slot and observe rejection deterministically.
+        _passwordChecks = new PasswordCheckLimiter(AuthRateLimitOptions.FromConfiguration(TestConfiguration.From(
+            (AuthRateLimitOptions.ConcurrentPasswordChecksKey, "1"),
+            (AuthRateLimitOptions.QueuedPasswordChecksKey, "0"))));
         _auth = new AuthService(
             _database,
             new AdminStore(time),
             new SessionStore(time),
             SetupCode.FromConfiguration(TestConfiguration.From((SetupCode.OverrideKey, Code))),
-            new PasswordHasher(PasswordHasher.MinIterations));
+            new PasswordHasher(PasswordHasher.MinIterations),
+            _passwordChecks);
     }
 
     public void Dispose()
     {
+        _passwordChecks.Dispose();
         SqliteConnection.ClearAllPools();
         if (Directory.Exists(_directory))
         {
@@ -39,10 +46,14 @@ public sealed class AuthServiceTests : IDisposable
 
     private static SetupRequest ValidSetup(string code = Code) => new("Bridger", Password, code);
 
+    private Task<AuthResult> Setup(SetupRequest? request) => _auth.SetupAsync(request, TestContext.Current.CancellationToken);
+
+    private Task<AuthResult> Login(LoginRequest? request) => _auth.LoginAsync(request, TestContext.Current.CancellationToken);
+
     [Fact]
-    public void SetupCreatesTheAdminAndItsFirstSession()
+    public async Task SetupCreatesTheAdminAndItsFirstSession()
     {
-        var result = _auth.Setup(ValidSetup());
+        var result = await Setup(ValidSetup());
 
         Assert.Equal(AuthOutcome.Succeeded, result.Outcome);
         Assert.Equal("Bridger", result.Admin!.Username);
@@ -52,53 +63,64 @@ public sealed class AuthServiceTests : IDisposable
     }
 
     [Fact]
-    public void ExistingAdminIsReportedBeforeAnyOtherSetupCheck()
+    public async Task ExistingAdminIsReportedBeforeAnyOtherSetupCheck()
     {
-        _auth.Setup(ValidSetup());
+        await Setup(ValidSetup());
 
-        Assert.Equal(AuthOutcome.SetupAlreadyCompleted, _auth.Setup(null).Outcome);
-        Assert.Equal(AuthOutcome.SetupAlreadyCompleted, _auth.Setup(new SetupRequest("x", "short", "")).Outcome);
-        Assert.Equal(AuthOutcome.SetupAlreadyCompleted, _auth.Setup(ValidSetup("AAAA-BBBB")).Outcome);
+        Assert.Equal(AuthOutcome.SetupAlreadyCompleted, (await Setup(null)).Outcome);
+        Assert.Equal(AuthOutcome.SetupAlreadyCompleted, (await Setup(new SetupRequest("x", "short", ""))).Outcome);
+        Assert.Equal(AuthOutcome.SetupAlreadyCompleted, (await Setup(ValidSetup("AAAA-BBBB"))).Outcome);
     }
 
     [Fact]
-    public void MalformedBodyIsReportedBeforeFieldRules() =>
-        Assert.Equal(AuthOutcome.MalformedBody, _auth.Setup(null).Outcome);
+    public async Task MalformedBodyIsReportedBeforeFieldRules() =>
+        Assert.Equal(AuthOutcome.MalformedBody, (await Setup(null)).Outcome);
 
     [Fact]
-    public void FieldRulesAreCheckedBeforeTheSetupCode()
+    public async Task FieldRulesAreCheckedBeforeTheSetupCode()
     {
-        var result = _auth.Setup(new SetupRequest("x", Password, "AAAA-BBBB"));
+        var result = await Setup(new SetupRequest("x", Password, "AAAA-BBBB"));
 
         Assert.Equal(AuthOutcome.ValidationFailed, result.Outcome);
         Assert.Equal(["username"], result.Errors!.Keys);
     }
 
     [Fact]
-    public void WrongSetupCodeCreatesNothing()
+    public async Task WrongSetupCodeCreatesNothing()
     {
-        Assert.Equal(AuthOutcome.InvalidSetupCode, _auth.Setup(ValidSetup("AAAA-BBBB")).Outcome);
+        Assert.Equal(AuthOutcome.InvalidSetupCode, (await Setup(ValidSetup("AAAA-BBBB"))).Outcome);
         Assert.True(_auth.SetupRequired());
     }
 
     [Fact]
-    public void SetupIsAtomicWhenTheSessionCannotBeStored()
+    public async Task SetupIsAtomicWhenTheSessionCannotBeStored()
     {
         Execute("CREATE TRIGGER fail_sessions BEFORE INSERT ON sessions BEGIN SELECT RAISE(ABORT, 'injected failure'); END");
 
-        Assert.Throws<SqliteException>(() => _auth.Setup(ValidSetup()));
+        await Assert.ThrowsAsync<SqliteException>(() => Setup(ValidSetup()));
 
         Assert.True(_auth.SetupRequired());
         Assert.Equal(0L, Count("admin"));
 
         Execute("DROP TRIGGER fail_sessions");
-        Assert.Equal(AuthOutcome.Succeeded, _auth.Setup(ValidSetup()).Outcome);
+        Assert.Equal(AuthOutcome.Succeeded, (await Setup(ValidSetup())).Outcome);
     }
 
     [Fact]
     public async Task ConcurrentSetupsCreateExactlyOneAdmin()
     {
-        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() => _auth.Setup(ValidSetup()))));
+        using var limiter = new PasswordCheckLimiter(AuthRateLimitOptions.FromConfiguration(TestConfiguration.From(
+            (AuthRateLimitOptions.ConcurrentPasswordChecksKey, "8"))));
+        var time = TimeProvider.System;
+        var auth = new AuthService(
+            _database,
+            new AdminStore(time),
+            new SessionStore(time),
+            SetupCode.FromConfiguration(TestConfiguration.From((SetupCode.OverrideKey, Code))),
+            new PasswordHasher(PasswordHasher.MinIterations),
+            limiter);
+
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Task.Run(() => auth.SetupAsync(ValidSetup()))));
 
         Assert.Single(results, result => result.Outcome == AuthOutcome.Succeeded);
         Assert.All(results.Where(result => result.Outcome != AuthOutcome.Succeeded),
@@ -108,40 +130,81 @@ public sealed class AuthServiceTests : IDisposable
     }
 
     [Fact]
-    public void LoginBeforeSetupIsReportedFirst()
+    public async Task SetupIsRejectedWhileEveryHashingSlotIsBusy()
     {
-        Assert.Equal(AuthOutcome.SetupRequired, _auth.Login(null).Outcome);
-        Assert.Equal(AuthOutcome.SetupRequired, _auth.Login(new LoginRequest("Bridger", Password)).Outcome);
+        using (var held = await _passwordChecks.AcquireAsync(TestContext.Current.CancellationToken))
+        {
+            Assert.True(held.IsAcquired);
+
+            Assert.Equal(AuthOutcome.TooManyPasswordChecks, (await Setup(ValidSetup())).Outcome);
+            Assert.True(_auth.SetupRequired());
+        }
+
+        Assert.Equal(AuthOutcome.Succeeded, (await Setup(ValidSetup())).Outcome);
     }
 
     [Fact]
-    public void LoginRejectsMalformedAndIncompleteRequests()
+    public async Task LoginIsRejectedWhileEveryHashingSlotIsBusy()
     {
-        _auth.Setup(ValidSetup());
+        await Setup(ValidSetup());
 
-        Assert.Equal(AuthOutcome.MalformedBody, _auth.Login(null).Outcome);
-        Assert.Equal(AuthOutcome.ValidationFailed, _auth.Login(new LoginRequest("Bridger", "")).Outcome);
+        using (var held = await _passwordChecks.AcquireAsync(TestContext.Current.CancellationToken))
+        {
+            Assert.True(held.IsAcquired);
+
+            Assert.Equal(AuthOutcome.TooManyPasswordChecks, (await Login(new LoginRequest("Bridger", Password))).Outcome);
+            Assert.Equal(AuthOutcome.TooManyPasswordChecks, (await Login(new LoginRequest("nobody", Password))).Outcome);
+        }
+
+        Assert.Equal(AuthOutcome.Succeeded, (await Login(new LoginRequest("Bridger", Password))).Outcome);
+    }
+
+    [Fact]
+    public async Task ChecksThatNeedNoHashingIgnoreTheHashingLimit()
+    {
+        using var held = await _passwordChecks.AcquireAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(AuthOutcome.SetupRequired, (await Login(new LoginRequest("Bridger", Password))).Outcome);
+        Assert.Equal(AuthOutcome.MalformedBody, (await Setup(null)).Outcome);
+        Assert.Equal(AuthOutcome.ValidationFailed, (await Setup(new SetupRequest("x", "short", ""))).Outcome);
+        Assert.Equal(AuthOutcome.InvalidSetupCode, (await Setup(ValidSetup("AAAA-BBBB"))).Outcome);
+    }
+
+    [Fact]
+    public async Task LoginBeforeSetupIsReportedFirst()
+    {
+        Assert.Equal(AuthOutcome.SetupRequired, (await Login(null)).Outcome);
+        Assert.Equal(AuthOutcome.SetupRequired, (await Login(new LoginRequest("Bridger", Password))).Outcome);
+    }
+
+    [Fact]
+    public async Task LoginRejectsMalformedAndIncompleteRequests()
+    {
+        await Setup(ValidSetup());
+
+        Assert.Equal(AuthOutcome.MalformedBody, (await Login(null)).Outcome);
+        Assert.Equal(AuthOutcome.ValidationFailed, (await Login(new LoginRequest("Bridger", ""))).Outcome);
     }
 
     [Theory]
     [InlineData("Bridger", "wrong-password-1")]
     [InlineData("nobody", Password)]
-    public void LoginFailuresLookTheSame(string username, string password)
+    public async Task LoginFailuresLookTheSame(string username, string password)
     {
-        _auth.Setup(ValidSetup());
+        await Setup(ValidSetup());
 
-        var result = _auth.Login(new LoginRequest(username, password));
+        var result = await Login(new LoginRequest(username, password));
 
         Assert.Equal(AuthResult.Failed(AuthOutcome.InvalidCredentials), result);
         Assert.Equal(1L, Count("sessions"));
     }
 
     [Fact]
-    public void LoginMatchesTheUsernameCaseInsensitively()
+    public async Task LoginMatchesTheUsernameCaseInsensitively()
     {
-        _auth.Setup(ValidSetup());
+        await Setup(ValidSetup());
 
-        var result = _auth.Login(new LoginRequest("BRIDGER", Password));
+        var result = await Login(new LoginRequest("BRIDGER", Password));
 
         Assert.Equal(AuthOutcome.Succeeded, result.Outcome);
         Assert.Equal("Bridger", result.Admin!.Username);
@@ -149,10 +212,10 @@ public sealed class AuthServiceTests : IDisposable
     }
 
     [Fact]
-    public void LogoutDeletesOnlyThatSession()
+    public async Task LogoutDeletesOnlyThatSession()
     {
-        var first = _auth.Setup(ValidSetup()).Session!;
-        var second = _auth.Login(new LoginRequest("Bridger", Password)).Session!;
+        var first = (await Setup(ValidSetup())).Session!;
+        var second = (await Login(new LoginRequest("Bridger", Password))).Session!;
 
         _auth.Logout(first.Token);
 
@@ -164,9 +227,9 @@ public sealed class AuthServiceTests : IDisposable
     [InlineData(null)]
     [InlineData("")]
     [InlineData("not-a-session")]
-    public void LogoutWithoutAKnownSessionChangesNothing(string? token)
+    public async Task LogoutWithoutAKnownSessionChangesNothing(string? token)
     {
-        _auth.Setup(ValidSetup());
+        await Setup(ValidSetup());
 
         _auth.Logout(token);
 

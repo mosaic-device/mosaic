@@ -11,6 +11,7 @@ public enum AuthOutcome
     InvalidSetupCode,
     SetupRequired,
     InvalidCredentials,
+    TooManyPasswordChecks,
 }
 
 /// <summary>The result of an auth operation; <see cref="Session"/> is set only on success.</summary>
@@ -32,7 +33,12 @@ public sealed record AuthResult(
 /// the Admin API Contract, so each method applies its checks in the documented sequence.
 /// </summary>
 public sealed class AuthService(
-    MosaicDatabase database, AdminStore admins, SessionStore sessions, SetupCode setupCode, PasswordHasher hasher)
+    MosaicDatabase database,
+    AdminStore admins,
+    SessionStore sessions,
+    SetupCode setupCode,
+    PasswordHasher hasher,
+    PasswordCheckLimiter passwordChecks)
 {
     public bool SetupRequired()
     {
@@ -41,7 +47,7 @@ public sealed class AuthService(
     }
 
     /// <summary>Creates the admin and its first session atomically. A null request means the body was malformed.</summary>
-    public AuthResult Setup(SetupRequest? request)
+    public async Task<AuthResult> SetupAsync(SetupRequest? request, CancellationToken cancellationToken = default)
     {
         using var connection = database.OpenConnection();
         if (admins.Exists(connection))
@@ -66,7 +72,16 @@ public sealed class AuthService(
         }
 
         // Hash before taking the write lock; it is the slow part.
-        var passwordHash = hasher.Hash(request.Password!);
+        string passwordHash;
+        using (var permit = await passwordChecks.AcquireAsync(cancellationToken))
+        {
+            if (!permit.IsAcquired)
+            {
+                return AuthResult.Failed(AuthOutcome.TooManyPasswordChecks);
+            }
+
+            passwordHash = hasher.Hash(request.Password!);
+        }
 
         // BEGIN IMMEDIATE serializes concurrent setups; the loser sees the CHECK (id = 1) conflict.
         using var transaction = connection.BeginTransaction(deferred: false);
@@ -82,7 +97,7 @@ public sealed class AuthService(
     }
 
     /// <summary>Checks credentials and issues a session. A null request means the body was malformed.</summary>
-    public AuthResult Login(LoginRequest? request)
+    public async Task<AuthResult> LoginAsync(LoginRequest? request, CancellationToken cancellationToken = default)
     {
         using var connection = database.OpenConnection();
         if (!admins.Exists(connection))
@@ -101,11 +116,22 @@ public sealed class AuthService(
             return AuthResult.Invalid(errors);
         }
 
-        // Unknown usernames and wrong passwords take the same time and get the same result.
-        var admin = admins.FindByUsername(connection, request.Username!);
-        var verified = admin is null
-            ? hasher.VerifyAgainstDummy(request.Password!)
-            : hasher.Verify(request.Password!, admin.PasswordHash);
+        Admin? admin;
+        bool verified;
+        using (var permit = await passwordChecks.AcquireAsync(cancellationToken))
+        {
+            if (!permit.IsAcquired)
+            {
+                return AuthResult.Failed(AuthOutcome.TooManyPasswordChecks);
+            }
+
+            // Unknown usernames and wrong passwords take the same time and get the same result.
+            admin = admins.FindByUsername(connection, request.Username!);
+            verified = admin is null
+                ? hasher.VerifyAgainstDummy(request.Password!)
+                : hasher.Verify(request.Password!, admin.PasswordHash);
+        }
+
         if (!verified || admin is null)
         {
             return AuthResult.Failed(AuthOutcome.InvalidCredentials);
