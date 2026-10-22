@@ -66,6 +66,37 @@ public sealed class AuthBodyLimitTests
         Assert.Equal(HttpStatusCode.OK, next.StatusCode);
     }
 
+    [Fact]
+    public async Task CompletedSetupAnswers409WithoutReadingTheBody()
+    {
+        using var factory = new AuthApiFactory();
+        using var client = factory.CreateApiClient();
+        await SendAsync(client, AuthApiFactory.Setup());
+
+        using var oversized = await SendAsync(client, AuthApiFactory.Json(HttpMethod.Post, "/api/setup", PaddedLogin(AuthEndpoints.MaxBodyBytes + 1)));
+        Assert.Equal(HttpStatusCode.Conflict, oversized.StatusCode);
+
+        // A body that never arrives must not delay the answer either.
+        using var stalled = new HttpRequestMessage(HttpMethod.Post, "/api/setup") { Content = new StalledJsonContent("{}") };
+        stalled.Headers.Add("Origin", AuthApiFactory.PublicOrigin);
+        using var response = await client.SendAsync(stalled, TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("setup_already_completed", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task LoginBeforeSetupAnswers409WithoutReadingTheBody()
+    {
+        using var factory = new AuthApiFactory();
+        using var client = factory.CreateApiClient();
+
+        using var response = await SendAsync(client, AuthApiFactory.Json(HttpMethod.Post, "/api/auth/login", PaddedLogin(AuthEndpoints.MaxBodyBytes + 1)));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("setup_required", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+    }
+
     private static async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request)
     {
         using (request)

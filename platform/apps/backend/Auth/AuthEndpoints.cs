@@ -33,6 +33,13 @@ public static class AuthEndpoints
             return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
         }
 
+        // Contract order puts 409 before anything about the body, so answer it without reading one.
+        // AuthService repeats the check inside its transaction for setups that race.
+        if (!auth.SetupRequired())
+        {
+            return Problems.SetupAlreadyCompleted(context);
+        }
+
         var body = await ReadBodyAsync(context, AuthJsonContext.Default.SetupRequest, limits.BodyReadTimeout);
         return body.Rejection
             ?? Respond(context, cookie, await auth.SetupAsync(body.Value, context.RequestAborted), StatusCodes.Status201Created);
@@ -44,6 +51,11 @@ public static class AuthEndpoints
         if (!HasSupportedJsonBody(context.Request))
         {
             return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        if (auth.SetupRequired())
+        {
+            return Problems.SetupRequired(context);
         }
 
         var body = await ReadBodyAsync(context, AuthJsonContext.Default.LoginRequest, limits.BodyReadTimeout);
