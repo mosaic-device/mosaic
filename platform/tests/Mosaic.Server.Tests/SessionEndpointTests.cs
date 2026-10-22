@@ -89,7 +89,17 @@ public sealed class SessionEndpointTests : IDisposable
         Assert.Equal("unauthenticated", body.GetProperty("code").GetString());
         Assert.Equal("Log in to continue.", body.GetProperty("title").GetString());
         Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("traceId").GetString()));
-        Assert.False(response.Headers.Contains("Set-Cookie"));
+        if (string.IsNullOrEmpty(token))
+        {
+            Assert.False(response.Headers.Contains("Set-Cookie"));
+        }
+        else
+        {
+            // Any cookie that was sent is cleared the same way, whatever made it invalid.
+            var (value, attributes) = AuthApiFactory.SessionCookie(response);
+            Assert.Equal("", value);
+            Assert.Equal(["httponly", "max-age=0", "path=/", "samesite=strict", "secure"], attributes);
+        }
     }
 
     [Fact]

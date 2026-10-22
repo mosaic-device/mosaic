@@ -124,8 +124,10 @@ def expect_session(cookie, what):
 
 
 def expect_unauthenticated(cookie, what):
-    status, body, _ = api("GET", "/api/auth/session", cookie=cookie)
+    status, body, cleared = api("GET", "/api/auth/session", cookie=cookie)
     expect((status, body["code"], body["title"]), (401, "unauthenticated", "Log in to continue."), what)
+    # A cookie that was sent is cleared; without one, none is set.
+    expect(cleared, None if cookie is None else "mosaic_session=", f"{what} Set-Cookie")
 
 
 def query(database, sql):
