@@ -45,7 +45,7 @@ public static class AuthEndpoints
         Results.Json(new SetupStatusResponse(!admins.Exists()), AuthJsonContext.Default.SetupStatusResponse);
 
     // Check order is part of the contract: content type, admin exists, fields, setup code.
-    private static async Task<IResult> PostSetupAsync(HttpContext context, AdminStore admins, SessionStore sessions, SetupCode setupCode)
+    private static async Task<IResult> PostSetupAsync(HttpContext context, AdminStore admins, SessionStore sessions, SetupCode setupCode, PasswordHasher hasher)
     {
         if (!context.Request.HasJsonContentType())
         {
@@ -81,7 +81,7 @@ public static class AuthEndpoints
             return Problems.InvalidSetupCode(context);
         }
 
-        var admin = admins.TryCreate(request.Username!, PasswordHasher.Hash(request.Password!));
+        var admin = admins.TryCreate(request.Username!, hasher.Hash(request.Password!));
         if (admin is null)
         {
             return Problems.SetupAlreadyCompleted(context);
@@ -94,7 +94,7 @@ public static class AuthEndpoints
             statusCode: StatusCodes.Status201Created);
     }
 
-    private static async Task<IResult> LoginAsync(HttpContext context, AdminStore admins, SessionStore sessions)
+    private static async Task<IResult> LoginAsync(HttpContext context, AdminStore admins, SessionStore sessions, PasswordHasher hasher)
     {
         if (!context.Request.HasJsonContentType())
         {
@@ -131,8 +131,8 @@ public static class AuthEndpoints
         // Unknown usernames and wrong passwords take the same time and get the same response.
         var admin = admins.FindByUsername(request.Username!);
         var verified = admin is null
-            ? PasswordHasher.VerifyAgainstDummy(request.Password!)
-            : PasswordHasher.Verify(request.Password!, admin.PasswordHash);
+            ? hasher.VerifyAgainstDummy(request.Password!)
+            : hasher.Verify(request.Password!, admin.PasswordHash);
         if (!verified || admin is null)
         {
             return Problems.InvalidCredentials(context);

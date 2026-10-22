@@ -10,6 +10,7 @@ builder.Services.AddSingleton(services => MosaicDatabase.FromConfiguration(
 builder.Services.AddSingleton(services => AuthOptions.FromConfiguration(services.GetRequiredService<IConfiguration>()));
 builder.Services.AddSingleton(services => SetupCode.FromConfiguration(services.GetRequiredService<IConfiguration>()));
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(new PasswordHasher());
 builder.Services.AddSingleton<AdminStore>();
 builder.Services.AddSingleton<SessionStore>();
 var app = builder.Build();

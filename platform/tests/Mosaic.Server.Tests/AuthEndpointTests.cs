@@ -49,7 +49,7 @@ public sealed class AuthEndpointTests : IDisposable
         Assert.Equal("Bridger", stored[0]);
         Assert.StartsWith("pbkdf2-sha256$600000$", stored[1], StringComparison.Ordinal);
         Assert.DoesNotContain(Password, stored[1], StringComparison.Ordinal);
-        Assert.True(PasswordHasher.Verify(Password, stored[1]));
+        Assert.True(new PasswordHasher().Verify(Password, stored[1]));
 
         var session = Assert.Single(Rows(connection, "SELECT hex(token_hash), created_at, idle_expires_at, absolute_expires_at FROM sessions"));
         Assert.Equal(Convert.ToHexString(SessionStore.HashToken(token)), session[0]);
