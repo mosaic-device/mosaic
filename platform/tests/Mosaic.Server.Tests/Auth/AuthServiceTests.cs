@@ -13,6 +13,7 @@ public sealed class AuthServiceTests : IDisposable
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "mosaic-tests", Guid.NewGuid().ToString("N"));
     private readonly MosaicDatabase _database;
+    private readonly ManualTimeProvider _time = new(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
     private readonly PasswordCheckLimiter _passwordChecks;
     private readonly AuthService _auth;
 
@@ -20,15 +21,14 @@ public sealed class AuthServiceTests : IDisposable
     {
         _database = new MosaicDatabase(Path.Combine(_directory, "mosaic.db"));
         _database.Migrate();
-        var time = new ManualTimeProvider(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
         // One slot and no queue, so a test can hold the slot and observe rejection deterministically.
         _passwordChecks = new PasswordCheckLimiter(AuthRateLimitOptions.FromConfiguration(TestConfiguration.From(
             (AuthRateLimitOptions.ConcurrentPasswordChecksKey, "1"),
             (AuthRateLimitOptions.QueuedPasswordChecksKey, "0"))));
         _auth = new AuthService(
             _database,
-            new AdminStore(time),
-            new SessionStore(time),
+            new AdminStore(_time),
+            new SessionStore(_time),
             SetupCode.FromConfiguration(TestConfiguration.From((SetupCode.OverrideKey, Code))),
             new PasswordHasher(PasswordHasher.MinIterations),
             _passwordChecks);
@@ -234,6 +234,60 @@ public sealed class AuthServiceTests : IDisposable
         _auth.Logout(token);
 
         Assert.Equal(1L, Count("sessions"));
+    }
+
+    [Fact]
+    public async Task AuthenticateReturnsTheAdminForAValidSession()
+    {
+        var token = (await Setup(ValidSetup())).Session!.Token;
+
+        var session = _auth.Authenticate(token);
+
+        Assert.Equal("Bridger", session!.Admin.Username);
+        Assert.Equal(new DateTimeOffset(2026, 10, 28, 12, 0, 0, TimeSpan.Zero), session.Session.ExpiresAt);
+        Assert.Null(session.Session.Renewal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not-a-session")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+")]
+    public async Task AuthenticateRejectsMalformedTokensWithoutQueryingTheDatabase(string? token)
+    {
+        await Setup(ValidSetup());
+        // Any session query would now fail, so a null result shows none was made.
+        Execute("DROP TABLE sessions");
+
+        Assert.Null(_auth.Authenticate(token));
+    }
+
+    [Fact]
+    public async Task AuthenticateRejectsUnknownLoggedOutAndExpiredSessions()
+    {
+        var first = (await Setup(ValidSetup())).Session!.Token;
+        var second = (await Login(new LoginRequest("Bridger", Password))).Session!.Token;
+
+        Assert.Null(_auth.Authenticate(new string('A', 43)));
+
+        _auth.Logout(first);
+        Assert.Null(_auth.Authenticate(first));
+
+        _time.Advance(TimeSpan.FromDays(7));
+        Assert.Null(_auth.Authenticate(second));
+        Assert.Equal(0L, Count("sessions"));
+    }
+
+    [Fact]
+    public async Task AuthenticateReportsARenewal()
+    {
+        var token = (await Setup(ValidSetup())).Session!.Token;
+        _time.Advance(TimeSpan.FromDays(1));
+
+        var renewal = _auth.Authenticate(token)!.Session.Renewal;
+
+        Assert.Equal(token, renewal!.Token);
+        Assert.Equal(new DateTimeOffset(2026, 10, 29, 12, 0, 0, TimeSpan.Zero), renewal.ExpiresAt);
     }
 
     private long Count(string table) => Scalar($"SELECT COUNT(*) FROM {table}");
