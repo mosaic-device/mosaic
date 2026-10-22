@@ -73,9 +73,11 @@ def check_routes():
             raise AssertionError(f"Expected {expected} for {path}, received {actual}")
 
 
-def api(method, path, body=None):
-    """Calls the admin API as the admin app would: JSON body and a same-origin Origin header."""
+def api(method, path, body=None, cookie=None):
+    """Calls the admin API as the admin app would: JSON body, same-origin Origin header, session cookie."""
     headers = {"Origin": url}
+    if cookie is not None:
+        headers["Cookie"] = cookie
     data = None
     if body is not None:
         headers["Content-Type"] = "application/json"
@@ -94,19 +96,36 @@ def check_auth(setup_required, password):
     status, body, _ = api("GET", "/api/setup")
     expect((status, body), (200, {"setupRequired": setup_required}), "GET /api/setup")
     if setup_required:
+        expect_unauthenticated(None, "GET /api/auth/session before setup")
         status, body, cookie = api("POST", "/api/setup", {"username": "Smoke-Admin", "password": password, "setupCode": setup_code})
         expect((status, body), (201, {"admin": {"username": "Smoke-Admin"}}), "POST /api/setup")
         expect(cookie is not None, True, "setup issued a session cookie")
+        expect_session(cookie, "GET /api/auth/session after setup")
     status, body, _ = api("POST", "/api/auth/login", {"username": "smoke-admin", "password": "wrong-password-1"})
     expect((status, body["code"]), (401, "invalid_credentials"), "login with a wrong password")
     status, body, cookie = api("POST", "/api/auth/login", {"username": "smoke-admin", "password": password})
     expect((status, body), (200, {"admin": {"username": "Smoke-Admin"}}), "login")
+    expect_session(cookie, "GET /api/auth/session after login")
+    expect_unauthenticated(None, "GET /api/auth/session without a cookie")
+    expect_unauthenticated("mosaic_session=not-a-session", "GET /api/auth/session with a malformed cookie")
     request = urllib.request.Request(
         url + "/api/auth/logout", headers={"Origin": url, "Cookie": cookie}, method="POST"
     )
     with opener.open(request, timeout=3) as response:
         cleared = [c for c in response.headers.get_all("Set-Cookie") or [] if c.startswith("mosaic_session=;")]
         expect((response.status, len(cleared)), (204, 1), "logout")
+    expect_unauthenticated(cookie, "GET /api/auth/session after logout")
+
+
+def expect_session(cookie, what):
+    status, body, _ = api("GET", "/api/auth/session", cookie=cookie)
+    expect((status, body["admin"]), (200, {"username": "Smoke-Admin"}), what)
+    expect(re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", body["expiresAt"]) is not None, True, f"{what} expiresAt format")
+
+
+def expect_unauthenticated(cookie, what):
+    status, body, _ = api("GET", "/api/auth/session", cookie=cookie)
+    expect((status, body["code"], body["title"]), (401, "unauthenticated", "Log in to continue."), what)
 
 
 def query(database, sql):
