@@ -95,6 +95,14 @@ PBKDF2-HMAC-SHA256 hashes.
 | `Auth:AdditionalOrigins` | `Auth__AdditionalOrigins__0`, ... | Extra accepted origins. Development adds the Vite server, `http://localhost:5173`. |
 | `Auth:SecureCookie` | `Auth__SecureCookie` | Marks the cookie `Secure`. Default `true`; Development sets `false` for `http://localhost`. |
 | `MOSAIC_SETUP_CODE` | same | Fixed first-run setup code. Without it, the server generates one on each start. |
+| `Auth:RateLimits:AttemptsPerMinute` | `Auth__RateLimits__AttemptsPerMinute` | Setup and login attempts per client per minute, combined. Default `10`. |
+| `Auth:RateLimits:ConcurrentPasswordChecks` | `Auth__RateLimits__ConcurrentPasswordChecks` | Password hashes running at once across all clients. Default half the CPU count, at least `1`. |
+| `Auth:RateLimits:QueuedPasswordChecks` | `Auth__RateLimits__QueuedPasswordChecks` | Attempts that may wait for a hashing slot. Default `16`. |
+
+Each setup or login attempt runs a deliberately slow password hash, so both limits
+reply `429 too_many_requests` with a `Retry-After` header when exceeded. The
+attempt limit is per client address; behind a proxy such as Tailscale Funnel every
+request shares the proxy's address, so it acts as one shared limit.
 
 `appsettings.Development.json` sets the first three for local development. While no
 admin exists, the server logs `No admin account exists. Setup code: K7QF-2M9X` at

@@ -15,11 +15,13 @@ builder.Services.AddSingleton<AdminStore>();
 builder.Services.AddSingleton<SessionStore>();
 builder.Services.AddSingleton<SessionCookie>();
 builder.Services.AddSingleton<AuthService>();
+builder.Services.AddAuthRateLimiting();
 var app = builder.Build();
 
 // Resolve configuration-backed services now so a misconfiguration fails at startup, not on first request.
 var database = app.Services.GetRequiredService<MosaicDatabase>();
 var authOptions = app.Services.GetRequiredService<AuthOptions>();
+var rateLimits = app.Services.GetRequiredService<AuthRateLimitOptions>();
 var appliedMigrations = database.Migrate();
 app.Logger.LogInformation(
     "Database {Path} at schema version {Version}; applied {Applied} migration(s) at startup",
@@ -27,6 +29,11 @@ app.Logger.LogInformation(
     MosaicDatabase.LatestVersion,
     appliedMigrations.Count);
 app.Logger.LogInformation("Admin API accepts requests from {Origins}", string.Join(", ", authOptions.AllowedOrigins));
+app.Logger.LogInformation(
+    "Auth limits: {Attempts} attempts per client per minute, {Concurrent} concurrent password checks, {Queued} queued",
+    rateLimits.AttemptsPerMinute,
+    rateLimits.ConcurrentPasswordChecks,
+    rateLimits.QueuedPasswordChecks);
 
 if (app.Services.GetRequiredService<AuthService>().SetupRequired())
 {
@@ -53,6 +60,7 @@ if (Directory.Exists(webRoot))
 }
 
 app.UseOriginCheck();
+app.UseRateLimiter();
 
 app.MapGet("/healthz", async context =>
 {

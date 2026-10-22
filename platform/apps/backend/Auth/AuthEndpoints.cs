@@ -13,8 +13,8 @@ public static class AuthEndpoints
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/api/setup", GetSetup);
-        app.MapPost("/api/setup", PostSetupAsync);
-        app.MapPost("/api/auth/login", LoginAsync);
+        app.MapPost("/api/setup", PostSetupAsync).RequireAuthRateLimits();
+        app.MapPost("/api/auth/login", LoginAsync).RequireAuthRateLimits();
         app.MapPost("/api/auth/logout", Logout);
     }
 
