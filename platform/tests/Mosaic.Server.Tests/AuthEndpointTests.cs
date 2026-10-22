@@ -371,9 +371,7 @@ public sealed class AuthEndpointTests : IDisposable
         var rows = new List<string[]>();
         while (reader.Read())
         {
-            rows.Add(Enumerable.Range(0, reader.FieldCount)
-                .Select(i => Convert.ToString(reader.GetValue(i), CultureInfo.InvariantCulture) ?? "")
-                .ToArray());
+            rows.Add([.. Enumerable.Range(0, reader.FieldCount).Select(i => Convert.ToString(reader.GetValue(i), CultureInfo.InvariantCulture) ?? "")]);
         }
 
         return rows;

@@ -11,6 +11,7 @@ public sealed class AdminStore(MosaicDatabase database, TimeProvider time)
 {
     private const int SqliteConstraint = 19;
 
+    /// <summary>Whether first-run setup has created the admin yet.</summary>
     public bool Exists()
     {
         using var connection = database.OpenConnection();
@@ -55,11 +56,4 @@ public sealed class AdminStore(MosaicDatabase database, TimeProvider time)
 
         return new Admin(1, username, passwordHash);
     }
-}
-
-internal static class Timestamps
-{
-    // Same shape as the migration timestamps, so stored values sort and compare as text.
-    public static string Format(DateTimeOffset value) =>
-        value.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
 }
