@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using Microsoft.Extensions.Primitives;
 
 namespace Mosaic.Server.Auth;
 
@@ -22,7 +23,7 @@ public static class AuthEndpoints
 
     private static async Task<IResult> PostSetupAsync(HttpContext context, AuthService auth, SessionCookie cookie)
     {
-        if (!context.Request.HasJsonContentType())
+        if (!HasSupportedJsonBody(context.Request))
         {
             return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
         }
@@ -33,7 +34,7 @@ public static class AuthEndpoints
 
     private static async Task<IResult> LoginAsync(HttpContext context, AuthService auth, SessionCookie cookie)
     {
-        if (!context.Request.HasJsonContentType())
+        if (!HasSupportedJsonBody(context.Request))
         {
             return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
         }
@@ -75,6 +76,15 @@ public static class AuthEndpoints
                 throw new InvalidOperationException($"Unhandled auth outcome {result.Outcome}.");
         }
     }
+
+    /// <summary>
+    /// JSON with no charset or one .NET can decode. An unknown charset is an unsupported media
+    /// type, not a server failure, so it gets the same 415 as any other non-JSON body.
+    /// </summary>
+    private static bool HasSupportedJsonBody(HttpRequest request) =>
+        request.HasJsonContentType()
+        && request.GetTypedHeaders().ContentType is { } contentType
+        && (StringSegment.IsNullOrEmpty(contentType.Charset) || contentType.Encoding is not null);
 
     /// <summary>The parsed body, or null when it isn't a JSON object of the expected shape.</summary>
     private static async Task<T?> ReadBodyAsync<T>(HttpContext context, JsonTypeInfo<T> typeInfo)

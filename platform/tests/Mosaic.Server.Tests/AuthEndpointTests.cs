@@ -284,6 +284,32 @@ public sealed class AuthEndpointTests : IDisposable
     }
 
     [Theory]
+    [InlineData("/api/setup")]
+    [InlineData("/api/auth/login")]
+    public async Task UnknownCharsetsGetAnEmpty415(string path)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = new ByteArrayContent(Encoding.UTF8.GetBytes("{}")) };
+        request.Content.Headers.TryAddWithoutValidation("Content-Type", "application/json; charset=not-a-real-charset");
+        request.Headers.Add("Origin", AuthApiFactory.PublicOrigin);
+
+        using var response = await SendAsync(request, HttpStatusCode.UnsupportedMediaType);
+
+        Assert.Equal("", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task OtherKnownCharsetsAreDecoded()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/setup")
+        {
+            Content = new StringContent($$"""{"username":"Bridger","password":"mosaic-desk-2026","setupCode":"{{AuthApiFactory.Code}}"}""", Encoding.Unicode, "application/json"),
+        };
+        request.Headers.Add("Origin", AuthApiFactory.PublicOrigin);
+
+        await SendAsync(request, HttpStatusCode.Created);
+    }
+
+    [Theory]
     [InlineData("/api/setup", "{\"username\":")]
     [InlineData("/api/setup", "[]")]
     [InlineData("/api/setup", "null")]
