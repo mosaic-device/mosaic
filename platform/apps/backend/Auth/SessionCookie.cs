@@ -11,8 +11,12 @@ public sealed class SessionCookie(AuthOptions options)
         return token.Length > 0;
     }
 
+    /// <summary>
+    /// Sets the cookie to last as long as the session, so it never outlives the absolute expiry.
+    /// Max-Age is written in whole seconds, rounded down.
+    /// </summary>
     public void Append(HttpResponse response, IssuedSession session) =>
-        response.Cookies.Append(Name, session.Token, Options(SessionStore.IdleLifetime));
+        response.Cookies.Append(Name, session.Token, Options(session.ExpiresAt - session.IssuedAt));
 
     public void Clear(HttpResponse response) =>
         response.Cookies.Append(Name, "", Options(TimeSpan.Zero));

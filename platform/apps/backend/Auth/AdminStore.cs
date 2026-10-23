@@ -27,8 +27,14 @@ public sealed class AdminStore(TimeProvider time)
         using var command = connection.CreateCommand(
             "SELECT id, username, password_hash FROM admin WHERE lower(username) = lower($username)");
         command.Parameters.AddWithValue("$username", username);
-        using var reader = command.ExecuteReader();
-        return reader.Read() ? new Admin(reader.GetInt64(0), reader.GetString(1), reader.GetString(2)) : null;
+        return Read(command);
+    }
+
+    public Admin? FindById(SqliteConnection connection, long id)
+    {
+        using var command = connection.CreateCommand("SELECT id, username, password_hash FROM admin WHERE id = $id");
+        command.Parameters.AddWithValue("$id", id);
+        return Read(command);
     }
 
     /// <summary>Creates the one admin, or returns null when one already exists.</summary>
@@ -53,5 +59,11 @@ public sealed class AdminStore(TimeProvider time)
         }
 
         return new Admin(1, username, passwordHash);
+    }
+
+    private static Admin? Read(SqliteCommand command)
+    {
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? new Admin(reader.GetInt64(0), reader.GetString(1), reader.GetString(2)) : null;
     }
 }

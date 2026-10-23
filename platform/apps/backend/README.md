@@ -1,14 +1,14 @@
 # Mosaic.Server
 
 ASP.NET Core on .NET 10, with Native AOT publishing enabled. The server exposes
-`GET /healthz` (HTTP 200, plain text `OK`), the first-run setup and login API (see
-[Admin authentication](#admin-authentication)), and serves the built React admin app
+`GET /healthz` (HTTP 200, plain text `OK`), the first-run setup, login, and session API
+(see [Admin authentication](#admin-authentication)), and serves the built React admin app
 from `wwwroot/`. Browser navigation falls back to `index.html`; missing assets and
 unimplemented `/api` and `/ws` paths return 404.
 
 At startup the server opens its SQLite database and applies any pending schema
-migrations (see [Database](#database)). Protected admin routes, pairing,
-integrations, and device transport are not implemented yet. The admin page is currently a placeholder. Keep the server
+migrations (see [Database](#database)). Pairing, integrations, and device
+transport are not implemented yet. The admin page is currently a placeholder. Keep the server
 Native-AOT-compatible: [PR checks](../../../docs/ci.md) publish it for Linux x64 with
 AOT/trimming warnings as errors and run the smoke test against the result.
 
@@ -84,10 +84,23 @@ migrations; never edit one that has shipped.
 ## Admin authentication
 
 The API follows the [Admin API Contract](https://github.com/mosaic-device/mosaic/wiki/Admin-API-Contract):
-`GET`/`POST /api/setup`, `POST /api/auth/login`, and `POST /api/auth/logout`. Sessions
-are opaque tokens in an `HttpOnly`, `SameSite=Strict` `mosaic_session` cookie; the
-database stores only a SHA-256 hash of each token. Passwords are stored as
-PBKDF2-HMAC-SHA256 hashes.
+`GET`/`POST /api/setup`, `POST /api/auth/login`, `POST /api/auth/logout`, and
+`GET /api/auth/session`. Sessions are opaque tokens in an `HttpOnly`,
+`SameSite=Strict` `mosaic_session` cookie; the database stores only a SHA-256 hash
+of each token. Passwords are stored as PBKDF2-HMAC-SHA256 hashes.
+
+`GET /api/auth/session` returns the signed-in admin and when the session ends,
+for example `{ "admin": { "username": "bridger" }, "expiresAt": "2026-10-26T18:00:00Z" }`.
+A session ends after 7 days without use or 30 days after login, whichever comes
+first. At most once a day, a request with a valid session moves the 7-day limit
+forward (never past the 30-day one) and reissues the cookie; the cookie's `Max-Age`
+always ends with the session. Protected endpoints opt in with
+`.RequireAdminSession()` (see [`Auth/AdminSessionRequirement.cs`](Auth/AdminSessionRequirement.cs)),
+which answers a missing, malformed, unknown, expired, or logged-out session with
+the same `401 unauthenticated` and clears the cookie if one was sent. It runs as
+middleware (`UseAdminSessions()`), before the endpoint reads any request body, and
+marks every response from a protected endpoint `Cache-Control: no-store`. Any unexpected failure returns
+`500 internal_error` with only a trace ID; the exception itself goes to the log.
 
 | Setting | Environment variable | Purpose |
 | --- | --- | --- |
@@ -209,7 +222,8 @@ This builds the assets and native server, then executes
 [`scripts/smoke-server.py`](../../../scripts/smoke-server.py) inside Linux against
 `/out/Mosaic.Server`. The script starts the server on `127.0.0.1:55881` against a
 new temporary database, checks it, runs first-run setup, a rejected login, a login,
-and a logout through the API, and stops it. It then confirms the schema exists and
+and a logout through the API, checks `GET /api/auth/session` with a valid, missing,
+malformed, and logged-out session cookie, and stops it. It then confirms the schema exists and
 the password is stored hashed, saves a settings row, restarts the server, and
 confirms the admin can still log in, the rows remain, and no migration ran twice. An unexpected response, startup
 failure, or database mismatch fails the build.
@@ -239,8 +253,8 @@ The normal runtime build skips this independent stage. Do not deploy or run the
 
 The smoke test deliberately sets `ASPNETCORE_URLS` for its private test port. A log
 warning that it overrides inherited `HTTP_PORTS=8080` is expected in this stage.
-Successful verification does not establish protected routes, pairing, or device
-behavior, or support for ARM64 and other deployment targets.
+Successful verification does not establish pairing or device behavior, or support
+for ARM64 and other deployment targets.
 
 ## Maintenance and contributor checks
 

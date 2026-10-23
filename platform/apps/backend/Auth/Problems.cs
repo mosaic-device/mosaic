@@ -14,6 +14,10 @@ public static class Problems
     public static IResult InvalidCredentials(HttpContext context) =>
         Create(context, StatusCodes.Status401Unauthorized, "invalid_credentials", "Incorrect username or password.");
 
+    /// <summary>No valid session on a protected endpoint, whatever the reason.</summary>
+    public static IResult Unauthenticated(HttpContext context) =>
+        Create(context, StatusCodes.Status401Unauthorized, "unauthenticated", "Log in to continue.");
+
     public static IResult InvalidSetupCode(HttpContext context) =>
         Create(context, StatusCodes.Status403Forbidden, "invalid_setup_code", "The setup code is incorrect.");
 
@@ -32,6 +36,10 @@ public static class Problems
         context.Response.Headers.RetryAfter = retryAfterSeconds.ToString(CultureInfo.InvariantCulture);
         return Create(context, StatusCodes.Status429TooManyRequests, "too_many_requests", "Too many attempts. Wait a moment and try again.");
     }
+
+    /// <summary>Any unexpected failure. Never carries exception details; the trace ID links it to the server log.</summary>
+    public static IResult InternalError(HttpContext context) =>
+        Create(context, StatusCodes.Status500InternalServerError, "internal_error", "Something went wrong.");
 
     private static IResult Create(HttpContext context, int status, string code, string title, IReadOnlyDictionary<string, string[]>? errors = null) =>
         Results.Json(

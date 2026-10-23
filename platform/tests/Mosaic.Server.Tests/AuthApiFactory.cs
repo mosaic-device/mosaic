@@ -9,7 +9,7 @@ using Mosaic.Server.Data;
 
 namespace Mosaic.Server.Tests;
 
-/// <summary>Hosts the real server against a temporary database with a fixed clock and setup code.</summary>
+/// <summary>Hosts the real server against a temporary database with a manual clock and fixed setup code.</summary>
 public sealed class AuthApiFactory : WebApplicationFactory<Program>
 {
     public const string PublicOrigin = "https://mosaic.test";
@@ -35,7 +35,7 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
         configure?.Invoke(_settings);
     }
 
-    public FixedTimeProvider Time { get; } = new(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
+    public ManualTimeProvider Time { get; } = new(new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero));
 
     public string DatabasePath => Path.Combine(_directory, "mosaic.db");
 
@@ -69,6 +69,18 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
             request.Headers.Add("Origin", origin);
         }
 
+        if (token is not null)
+        {
+            request.Headers.Add("Cookie", $"mosaic_session={token}");
+        }
+
+        return request;
+    }
+
+    /// <summary><c>GET /api/auth/session</c>, sending <paramref name="token"/> as the cookie value unless it is null.</summary>
+    public static HttpRequestMessage Session(string? token)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/auth/session");
         if (token is not null)
         {
             request.Headers.Add("Cookie", $"mosaic_session={token}");
@@ -128,9 +140,24 @@ internal sealed class PeerAddressFilter : IStartupFilter
     };
 }
 
-public sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+/// <summary>A clock that stands still until a test moves it, so expiry can be tested without waiting.</summary>
+public sealed class ManualTimeProvider(DateTimeOffset start) : TimeProvider
 {
-    public override DateTimeOffset GetUtcNow() => now;
+    private DateTimeOffset _now = start;
+    private Action? _onNextRead;
+
+    public override DateTimeOffset GetUtcNow()
+    {
+        var action = _onNextRead;
+        _onNextRead = null;
+        action?.Invoke();
+        return _now;
+    }
+
+    public void Advance(TimeSpan by) => _now += by;
+
+    /// <summary>Runs <paramref name="action"/> the next time the clock is read, to interleave work deterministically.</summary>
+    public void OnNextRead(Action action) => _onNextRead = action;
 }
 
 internal static class ResponseExtensions

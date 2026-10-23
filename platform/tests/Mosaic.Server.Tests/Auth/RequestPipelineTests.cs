@@ -40,7 +40,7 @@ public sealed class RequestPipelineTests
         var context = new DefaultHttpContext();
 
         new SessionCookie(TestConfiguration.Options(secureCookie: secure))
-            .Append(context.Response, new IssuedSession("token", DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch));
+            .Append(context.Response, Issued(idle: TimeSpan.FromDays(7), absolute: TimeSpan.FromDays(30)));
 
         var header = context.Response.Headers.SetCookie.ToString().ToLowerInvariant();
         Assert.StartsWith("mosaic_session=token;", header, StringComparison.Ordinal);
@@ -48,6 +48,27 @@ public sealed class RequestPipelineTests
         Assert.Contains("; httponly", header, StringComparison.Ordinal);
         Assert.Contains("; samesite=strict", header, StringComparison.Ordinal);
         Assert.Contains("; max-age=604800", header, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(7.0, 30.0, 604800)]
+    [InlineData(7.0, 2.0, 172800)] // Near the absolute expiry, the cookie must not outlive the session.
+    [InlineData(2.0, 2.0, 172800)]
+    [InlineData(7.0, 2.00001, 172800)] // Fractions of a second round down.
+    public void CookieMaxAgeEndsWithTheSession(double idleDays, double absoluteDays, int maxAge)
+    {
+        var context = new DefaultHttpContext();
+
+        new SessionCookie(TestConfiguration.Options())
+            .Append(context.Response, Issued(TimeSpan.FromDays(idleDays), TimeSpan.FromDays(absoluteDays)));
+
+        Assert.Contains($"; max-age={maxAge};", context.Response.Headers.SetCookie.ToString() + ";", StringComparison.Ordinal);
+    }
+
+    private static IssuedSession Issued(TimeSpan idle, TimeSpan absolute)
+    {
+        var now = new DateTimeOffset(2026, 10, 21, 12, 0, 0, TimeSpan.Zero);
+        return new IssuedSession("token", now, now + idle, now + absolute);
     }
 
     [Fact]

@@ -28,8 +28,11 @@ public sealed record AuthResult(
     public static AuthResult Invalid(IReadOnlyDictionary<string, string[]> errors) => new(AuthOutcome.ValidationFailed, Errors: errors);
 }
 
+/// <summary>The signed-in admin and the session that authenticated the request.</summary>
+public sealed record AdminSession(Admin Admin, ActiveSession Session);
+
 /// <summary>
-/// First-run setup, login, and logout rules, independent of HTTP. The check order is part of
+/// First-run setup, login, logout, and session rules, independent of HTTP. The check order is part of
 /// the Admin API Contract, so each method applies its checks in the documented sequence.
 /// </summary>
 public sealed class AuthService(
@@ -150,5 +153,28 @@ public sealed class AuthService(
 
         using var connection = database.OpenConnection();
         sessions.Delete(connection, token);
+    }
+
+    /// <summary>
+    /// The admin signed in with <paramref name="token"/>, or null when the token is missing,
+    /// malformed, unknown, expired, or logged out. Malformed tokens never reach the database.
+    /// </summary>
+    public AdminSession? Authenticate(string? token)
+    {
+        if (string.IsNullOrEmpty(token) || !SessionStore.IsWellFormed(token))
+        {
+            return null;
+        }
+
+        using var connection = database.OpenConnection();
+        var session = sessions.FindActive(connection, token);
+        if (session is null)
+        {
+            return null;
+        }
+
+        // Deleting the admin cascades to its sessions, so this misses only if that happens mid-request.
+        var admin = admins.FindById(connection, session.AdminId);
+        return admin is null ? null : new AdminSession(admin, session);
     }
 }

@@ -358,8 +358,13 @@ public sealed class AuthEndpointTests : IDisposable
     {
         Execute("CREATE TRIGGER fail_sessions BEFORE INSERT ON sessions BEGIN SELECT RAISE(ABORT, 'injected failure'); END");
 
-        // The test server surfaces the unhandled failure to the client instead of a 500.
-        await Assert.ThrowsAnyAsync<Exception>(() => _client.SendAsync(AuthApiFactory.Setup(), TestContext.Current.CancellationToken));
+        using (var response = await SendAsync(AuthApiFactory.Setup(), HttpStatusCode.InternalServerError))
+        {
+            var body = await AssertProblem(response, "internal_error");
+            Assert.Equal("status=500,code=internal_error,title=Something went wrong.", WithoutTraceId(body));
+            Assert.DoesNotContain("injected failure", body.ToString(), StringComparison.Ordinal);
+            Assert.False(response.Headers.Contains("Set-Cookie"));
+        }
 
         Assert.True(await SetupRequired());
         Execute("DROP TRIGGER fail_sessions");
