@@ -5,6 +5,7 @@ import {
   Outlet,
   type RouterHistory,
 } from '@tanstack/react-router'
+import { PageLoading } from '@/components/PageLoading'
 import { AppShell } from '@/components/shell/AppShell'
 import { PublicLayout } from '@/components/shell/PublicLayout'
 import { DevPreview } from '@/DevPreview'
@@ -65,7 +66,11 @@ const routeTree = rootRoute.addChildren([
 ])
 
 function createAppRouter(options: { history?: RouterHistory } = {}) {
-  return createRouter({ routeTree, history: options.history })
+  return createRouter({
+    routeTree,
+    history: options.history,
+    defaultPendingComponent: PageLoading,
+  })
 }
 
 type AppRouter = ReturnType<typeof createAppRouter>

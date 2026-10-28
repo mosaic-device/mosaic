@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import { Settings, Check, Hourglass } from 'lucide-react'
+import { Settings, Check, Hourglass, Monitor } from 'lucide-react'
+import { EmptyState } from '@/components/EmptyState'
+import { PageLoading } from '@/components/PageLoading'
+import { StatusIndicator } from '@/components/StatusIndicator'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -261,6 +264,29 @@ export default function ComponentPreview() {
                 data.
               </p>
             </div>
+          </CardContent>
+        </Card>
+        <Card className="col-[1/-1]">
+          <CardHeader>
+            <CardTitle>Page patterns</CardTitle>
+            <CardDescription>
+              Shared states every admin page reuses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className={stack}>
+            <div className={controlRow}>
+              <StatusIndicator tone="neutral">Not paired</StatusIndicator>
+              <StatusIndicator tone="success">Online</StatusIndicator>
+              <StatusIndicator tone="warning">Sign in again</StatusIndicator>
+              <StatusIndicator tone="danger">Offline</StatusIndicator>
+            </div>
+            <EmptyState
+              icon={Monitor}
+              title="No devices yet"
+              description="When you pair a Mosaic, it shows up here with whether it's online."
+              headingLevel={3}
+            />
+            <PageLoading />
           </CardContent>
         </Card>
       </div>
