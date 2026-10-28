@@ -1,4 +1,5 @@
 import { Outlet } from '@tanstack/react-router'
+import { MobileNav } from '@/components/shell/MobileNav'
 import { NavLinks } from '@/components/shell/NavLinks'
 import { Wordmark } from '@/components/shell/Wordmark'
 
@@ -20,6 +21,10 @@ function AppShell() {
         <div data-slot="account" className="mt-auto" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
+        <header className="border-border bg-surface flex h-16 items-center justify-between border-b pr-2 pl-5 md:hidden">
+          <Wordmark />
+          <MobileNav />
+        </header>
         <main
           id="main-content"
           tabIndex={-1}
