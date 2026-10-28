@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useRouterState } from '@tanstack/react-router'
 import { Menu } from 'lucide-react'
 import { NavLinks } from '@/components/shell/NavLinks'
 import { Wordmark } from '@/components/shell/Wordmark'
@@ -11,10 +12,18 @@ import {
 } from '@/components/ui/sheet'
 
 function MobileNav() {
-  const [open, setOpen] = useState(false)
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
+  // Remember which page the menu opened on, so any page change (including
+  // Back and Forward) closes it.
+  const [openedOn, setOpenedOn] = useState<string | null>(null)
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={openedOn === pathname}
+      onOpenChange={(open) => setOpenedOn(open ? pathname : null)}
+    >
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -29,7 +38,7 @@ function MobileNav() {
         <SheetTitle className="sr-only">Menu</SheetTitle>
         <Wordmark className="px-3 py-3 text-lg" />
         <nav aria-label="Main">
-          <NavLinks onNavigate={() => setOpen(false)} />
+          <NavLinks onNavigate={() => setOpenedOn(null)} />
         </nav>
       </SheetContent>
     </Sheet>

@@ -23,6 +23,7 @@ describe('navigation', () => {
   it.each([
     ['/', 'Home'],
     ['/devices', 'Devices'],
+    ['/devices/', 'Devices'],
     ['/settings', 'Settings'],
   ])('on %s only %s is current', async (path, label) => {
     await renderAppAt(path)
@@ -51,6 +52,17 @@ describe('navigation', () => {
         .getByRole('link', { name: 'Home' })
         .getAttribute('aria-current'),
     ).toBeNull()
+  })
+
+  it('marks no link current on a not-found page under a section', async () => {
+    await renderAppAt('/devices/no-such-device')
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Page not found' }),
+    ).toBeTruthy()
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    for (const link of within(nav).getAllByRole('link')) {
+      expect(link.getAttribute('aria-current')).toBeNull()
+    }
   })
 
   it('keeps the navigation on the not-found page', async () => {

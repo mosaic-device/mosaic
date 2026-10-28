@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { renderAppAt } from '@/test/render-app'
 
@@ -17,6 +17,18 @@ describe('phone menu', () => {
     fireEvent.click(within(dialog).getByRole('link', { name: 'Settings' }))
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Settings' }),
+    ).toBeTruthy()
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('closes when the page changes without a menu link, like Back', async () => {
+    const router = await renderAppAt('/')
+    await act(() => router.navigate({ to: '/settings' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
+    await screen.findByRole('dialog', { name: 'Menu' })
+    act(() => router.history.back())
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Welcome' }),
     ).toBeTruthy()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
