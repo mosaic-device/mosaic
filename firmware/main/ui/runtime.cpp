@@ -1,6 +1,7 @@
 #include "runtime.hpp"
 #include "render_ack.hpp"
 #include "../drivers/display.hpp"
+#include "../drivers/encoder.hpp"
 #include "../support/secure_erase.hpp"
 #include "generated/design_tokens.h"
 #include <atomic>
@@ -101,6 +102,9 @@ esp_err_t start(Renderer callbacks) {
         return err;
     if (!display::lock())
         return ESP_ERR_TIMEOUT;
+    // Before any screen exists, so its focusable widgets join the encoder's default group.
+    if (drivers::encoder::start(display::handle()) != ESP_OK)
+        ESP_LOGE("mosaic_ui", "Rotary encoder unavailable; continuing with touch input only");
     renderer = callbacks;
     auto* screen = lv_obj_create(nullptr);
     lv_obj_set_style_bg_color(screen, lv_color_hex(TOKEN_COLOR_BACKGROUND_DARK), 0);
