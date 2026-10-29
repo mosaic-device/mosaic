@@ -28,7 +28,7 @@ function ApiErrorNotice({
       <div className="grid min-w-0 gap-1">
         <p>{message}</p>
         {reference && (
-          <p className="text-muted-foreground text-sm break-all">
+          <p className="text-muted-foreground text-caption break-all">
             Reference: {reference}
           </p>
         )}
