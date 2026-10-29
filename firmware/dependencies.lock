@@ -319,6 +319,7 @@ dependencies:
       type: service
     version: 9.4.0
 direct_dependencies:
+- espressif/button
 - espressif/cmake_utilities
 - espressif/esp_codec_dev
 - espressif/esp_hosted
@@ -329,6 +330,6 @@ direct_dependencies:
 - idf
 - lvgl/lvgl
 - waveshare/esp_lcd_hx8394
-manifest_hash: 7920ed888351daf8d89400c6ddc4d416707dba54f36b154e3dea44c67af1f770
+manifest_hash: 85529fdcd86119daa4159a0111c5f7940335ac5bb66e63698424078080e74b71
 target: esp32p4
 version: 2.0.0
