@@ -1,9 +1,12 @@
 # @mosaic/admin
 
-Vite/React/Tailwind admin scaffold. No API integration, authentication, or product
-screens are implemented. `/dev/components` is development-only and excluded from
-production. `dist/` supplies the backend's static assets; local `/api` and `/ws`
-proxies target `http://localhost:5000`.
+Vite/React/Tailwind admin app. It has the signed-in shell (sidebar on wide screens,
+top bar and menu sheet on narrow ones) and Home, Devices, Settings and not-found pages
+in their empty states. No API integration or authentication is implemented yet.
+Routes live in `src/router.ts`, pages in `src/pages/`, the shell in
+`src/components/shell/`. `/dev/components` is development-only and excluded from
+production. `pnpm build:admin-assets` copies `dist/` into the backend's `wwwroot/`;
+local `/api` and `/ws` proxies target `http://localhost:5000`.
 
 Run from the repository root:
 
@@ -13,8 +16,9 @@ pnpm --filter @mosaic/admin test
 pnpm web:check
 ```
 
-`test` builds production and checks preview exclusion, local fonts, semantic CSS
-states, and font notices. After changing primitives, manually check keyboard focus,
+`test` runs the Vitest suite (`src/**/*.test.tsx`: direct loading of every route,
+navigation, the phone menu, page states), then builds production and checks preview
+exclusion, root-relative asset paths, local fonts, and font notices. After changing primitives, manually check keyboard focus,
 dialog trapping/restoration, pending/disabled states, field errors, mobile layout,
 forced colors, and reduced motion at `/dev/components`.
 
@@ -35,8 +39,9 @@ forced colors, and reduced motion at `/dev/components`.
   `aria-invalid`, native `required`, `name`, and form submission semantics.
 - `.list-row` uses `aria-pressed` for independent selections, not listbox or radio
   behavior. Status text must convey meaning without color alone.
-- Text helpers: `.text-title`, `.text-heading`, `.text-caption`, `.supporting`.
-  `.empty-state` supplies a small layout pattern.
+- Text utilities: `text-title`, `text-heading`, `text-caption`. For empty, status,
+  and loading states use `EmptyState`, `StatusIndicator`, and `PageLoading` from
+  `src/components/`.
 
 ## Maintaining primitives
 

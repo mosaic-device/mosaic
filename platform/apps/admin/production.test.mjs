@@ -51,6 +51,15 @@ test('production excludes the development preview', async () => {
   )
 })
 
+test('production index loads assets from the site root so deep links work', async () => {
+  const html = await readFile(
+    new URL('./dist/index.html', import.meta.url),
+    'utf8',
+  )
+  assert.match(html, /src="\/assets\/[^"]+\.js"/)
+  assert.doesNotMatch(html, /(?:src|href)="\.\/assets\//)
+})
+
 test('production ships self-hosted fonts without external CSS requests', async () => {
   const files = await readdir(assets)
   for (const font of ['manrope-400-', 'manrope-500-', 'outfit-500-']) {
