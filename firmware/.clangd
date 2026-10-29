@@ -1,7 +1,5 @@
 CompileFlags:
   CompilationDatabase: build
-  Add:
-    - -march=rv32imafc_zicsr_zifencei
   Remove:
     - -march=*
     - -fno-shrink-wrap
