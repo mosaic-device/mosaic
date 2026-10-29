@@ -111,6 +111,12 @@ void prepare_reboot() {
     ::available = false;
 }
 }
+namespace mosaic::drivers::encoder {
+esp_err_t start(lv_display_t* display) {
+    assert(display == mosaic::drivers::display::handle());
+    return ESP_FAIL; // Encoder failure must not block the touch UI.
+}
+}
 int main() {
     using namespace mosaic::ui;
     constexpr char secret[] = "test-secret";

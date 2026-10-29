@@ -5,10 +5,26 @@ import sys
 import tempfile
 import unittest
 
-from firmware import PLACEHOLDER, run
+from firmware import PLACEHOLDER, run, select_compilation_database
 
 
 class FirmwareLockTests(unittest.TestCase):
+    def test_named_build_selects_its_compilation_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            firmware = pathlib.Path(directory)
+            first = firmware / "build" / "first" / "compile_commands.json"
+            second = firmware / "build" / "second" / "compile_commands.json"
+            for database in (first, second):
+                database.parent.mkdir(parents=True)
+                database.write_text("[]")
+
+            select_compilation_database(firmware, ["-B", "build/first", "build"])
+            link = firmware / "build" / "compile_commands.json"
+            self.assertEqual(link.resolve(), first.resolve())
+
+            select_compilation_database(firmware, ["--build-dir=build/second", "build"])
+            self.assertEqual(link.resolve(), second.resolve())
+
     def test_relocated_checkouts_preserve_dependency_updates_on_success_and_failure(
         self,
     ):

@@ -112,6 +112,8 @@ python3 firmware/main/features/provisioning/tests/run.py
 node --test firmware/main/features/provisioning/tests/setup_ui.test.mjs
 python3 firmware/main/support/tests/run.py
 python3 firmware/main/ui/tests/run.py
+python3 firmware/main/events/tests/run.py
+python3 firmware/main/drivers/tests/run.py
 ```
 
 ### Firmware build
