@@ -11,6 +11,7 @@
 #include "ui/runtime.hpp"
 #include "features/provisioning/ui/renderer.hpp"
 #include "features/provisioning/presentation/presenter.hpp"
+#include "events/bus.hpp"
 #endif
 
 namespace {
@@ -31,6 +32,9 @@ extern "C" void app_main() {
     ESP_LOGI(kTag, "Setup display ready");
     mosaic::features::provisioning::publish_view(
         mosaic::features::provisioning::present(mosaic::features::provisioning::StartupView::starting));
+
+    // Feedback features subscribe before this; the M3 connection and debug triggers publish after it.
+    ESP_ERROR_CHECK(mosaic::events::start());
 
     ESP_LOGI(kTag, "Starting provisioning service");
     const esp_err_t err = mosaic::features::provisioning::start();

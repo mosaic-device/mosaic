@@ -29,6 +29,8 @@ idf_component_register(
          "features/provisioning/adapters/captive_portal.cpp"
          "features/provisioning/adapters/settings_store.cpp"
          "features/provisioning/adapters/wifi.cpp"
+         "events/status.cpp"
+         "events/bus.cpp"
          ${gallery_sources}
          ${diagnostic_sources}
          ${MOSAIC_ASSET_SOURCES}

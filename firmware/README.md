@@ -59,6 +59,7 @@ From `firmware/`:
 python3 main/features/provisioning/tests/run.py
 python3 main/support/tests/run.py
 python3 main/ui/tests/run.py
+python3 main/events/tests/run.py
 clang-tidy -p build main/app_main.cpp
 ```
 
