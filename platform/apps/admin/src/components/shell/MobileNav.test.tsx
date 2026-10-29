@@ -33,6 +33,21 @@ describe('phone menu', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
+  it('stays closed after Back then Forward', async () => {
+    const router = await renderAppAt('/')
+    await act(() => router.navigate({ to: '/settings' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
+    await screen.findByRole('dialog', { name: 'Menu' })
+    act(() => router.history.back())
+    await screen.findByRole('heading', { level: 1, name: 'Welcome' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    act(() => router.history.forward())
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Settings' }),
+    ).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('closes on Escape and returns focus to the menu button', async () => {
     await renderAppAt('/')
     const button = screen.getByRole('button', { name: 'Open menu' })
