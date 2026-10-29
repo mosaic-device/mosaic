@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Settings, Check, Hourglass, Monitor } from 'lucide-react'
+import { ApiError } from '@/api/errors'
+import { ApiErrorNotice } from '@/components/ApiErrorNotice'
 import { EmptyState } from '@/components/EmptyState'
 import { PageLoading } from '@/components/PageLoading'
 import { StatusIndicator } from '@/components/StatusIndicator'
@@ -31,6 +33,18 @@ const stack = 'grid min-w-0 gap-[var(--space-4)]'
 const controlRow = 'flex flex-wrap items-center gap-[var(--space-3)]'
 const choice =
   'flex min-h-[var(--control-touch-target)] items-center gap-[var(--space-3)]'
+
+const sampleErrors = [
+  new ApiError({
+    kind: 'problem',
+    status: 500,
+    code: 'internal_error',
+    title: 'Something went wrong.',
+    traceId: '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01',
+  }),
+  new ApiError({ kind: 'unavailable', status: 502 }),
+  new ApiError({ kind: 'malformed', status: 200 }),
+]
 
 export default function ComponentPreview() {
   const [selected, setSelected] = useState('First example')
@@ -287,6 +301,9 @@ export default function ComponentPreview() {
               headingLevel={3}
             />
             <PageLoading />
+            {sampleErrors.map((error) => (
+              <ApiErrorNotice key={error.kind} error={error} />
+            ))}
           </CardContent>
         </Card>
       </div>
