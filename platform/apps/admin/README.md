@@ -2,9 +2,9 @@
 
 Vite/React/Tailwind admin app. It has the signed-in shell (sidebar on wide screens,
 top bar and menu sheet on narrow ones) and Home, Devices, Settings and not-found pages
-in their empty states. No API integration or authentication is implemented yet.
-Routes live in `src/router.ts`, pages in `src/pages/`, the shell in
-`src/components/shell/`. `/dev/components` is development-only and excluded from
+in their empty states, plus the shared API client in `src/api/`. Setup, login and
+session handling come next (#66, #67). Routes live in `src/router.ts`, pages in
+`src/pages/`, the shell in `src/components/shell/`. `/dev/components` is development-only and excluded from
 production. `pnpm build:admin-assets` copies `dist/` into the backend's `wwwroot/`;
 local `/api` and `/ws` proxies target `http://localhost:5000`.
 
@@ -16,11 +16,42 @@ pnpm --filter @mosaic/admin test
 pnpm web:check
 ```
 
-`test` runs the Vitest suite (`src/**/*.test.tsx`: direct loading of every route,
-navigation, the phone menu, page states), then builds production and checks preview
+`test` runs the Vitest suite (`src/**/*.test.{ts,tsx}`: direct loading of every route,
+navigation, the phone menu, page states, the API client and its error states), then builds production and checks preview
 exclusion, root-relative asset paths, local fonts, and font notices. After changing primitives, manually check keyboard focus,
 dialog trapping/restoration, pending/disabled states, field errors, mobile layout,
 forced colors, and reduced motion at `/dev/components`.
+
+## Calling the API
+
+Screens call the functions in `src/api/auth.ts` (`getSetupStatus`, `completeSetup`,
+`login`, `logout`, `getSession`), never `fetch` directly. URLs are relative
+(`/api/...`): in development the Vite proxy forwards them to the server, and in
+production the server serves the app itself, so it is always same-origin. The
+contract is the wiki's "Admin API Contract".
+
+Every call returns its data or throws an `ApiError` whose `kind` is:
+
+- `problem`: the server said no. Branch on `code` (never `status` or `title`), show
+  `title` as-is, put `fieldErrors` under the matching inputs, and wait
+  `retryAfterSeconds` after `too_many_requests`.
+- `unavailable`: the server could not be reached, or something other than the API
+  answered (the dev proxy with the backend stopped, for example).
+- `malformed`: the server's answer did not match the contract.
+
+A cancelled call rejects with the browser's `AbortError` instead. It is not an
+error to show; `isAbortError` tells it apart.
+
+- **Reads** belong in a route `loader` or `beforeLoad`. Pass the route's
+  `abortController.signal` so leaving the page cancels the call. `PageLoading` shows
+  while it loads and `PageError` (with a "Try again" button) if it fails.
+- **Writes** go through `useApiAction`. `run(input)` never rejects: it resolves
+  `success`, `error` or `cancelled`. Starting another run cancels the one in flight,
+  and late results are ignored. Show `error` with `ApiErrorNotice`.
+
+The backend must run with `--environment Development` for the dev proxy to work
+(non-Secure cookie, `http://localhost:5173` allowed by the Origin check). Vite is
+pinned to port 5173 (`strictPort`) for the same reason.
 
 ## UI constraints
 
@@ -40,8 +71,8 @@ forced colors, and reduced motion at `/dev/components`.
 - `.list-row` uses `aria-pressed` for independent selections, not listbox or radio
   behavior. Status text must convey meaning without color alone.
 - Text utilities: `text-title`, `text-heading`, `text-caption`. For empty, status,
-  and loading states use `EmptyState`, `StatusIndicator`, and `PageLoading` from
-  `src/components/`.
+  loading and error states use `EmptyState`, `StatusIndicator`, `PageLoading`,
+  `PageError` and `ApiErrorNotice` from `src/components/`.
 
 ## Maintaining primitives
 
