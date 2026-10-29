@@ -5,6 +5,7 @@ import {
   Outlet,
   type RouterHistory,
 } from '@tanstack/react-router'
+import { PageError } from '@/components/PageError'
 import { PageLoading } from '@/components/PageLoading'
 import { AppShell } from '@/components/shell/AppShell'
 import { PublicLayout } from '@/components/shell/PublicLayout'
@@ -70,6 +71,7 @@ function createAppRouter(options: { history?: RouterHistory } = {}) {
     routeTree,
     history: options.history,
     defaultPendingComponent: PageLoading,
+    defaultErrorComponent: PageError,
   })
 }
 
