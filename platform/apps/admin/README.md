@@ -47,7 +47,10 @@ error to show; `isAbortError` tells it apart.
   while it loads and `PageError` (with a "Try again" button) if it fails.
 - **Writes** go through `useApiAction`. `run(input)` never rejects: it resolves
   `success`, `error` or `cancelled`. Starting another run cancels the one in flight,
-  and late results are ignored. Show `error` with `ApiErrorNotice`.
+  and late results are ignored. Show `error` with `ApiErrorNotice`. Cancelling only
+  stops the app waiting: a write the server already received still happens. So keep
+  submit disabled while `pending` (the `Button` `pending` prop) instead of letting a
+  second click replace the first. On-mount calls belong in a `loader`, not here.
 
 The backend must run with `--environment Development` for the dev proxy to work
 (non-Secure cookie, `http://localhost:5173` allowed by the Origin check). Vite is

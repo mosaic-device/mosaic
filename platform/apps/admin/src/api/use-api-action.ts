@@ -13,6 +13,8 @@ export type ActionResult<T> =
  *   `status` without a try/catch.
  * - Starting a run cancels the one in flight, as do `reset` and unmounting.
  *   Only the latest run may change state; earlier ones resolve `cancelled`.
+ *   Cancelling does not undo a write the server already received, so forms
+ *   keep submit disabled while `pending`.
  * - An error that is not an `ApiError` is a bug in the app. It is thrown
  *   during the next render so the route's error boundary shows it.
  */
