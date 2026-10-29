@@ -1,6 +1,6 @@
 # ESP32-P4 firmware
 
-Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 using ESP-IDF **5.5.4** and ESP32-C6-hosted Wi-Fi. Display/touch, phone setup, credential save, reboot, Wi-Fi join and recovery have been verified on the physical board. Audio, the production dashboard, pairing and backend transport are not implemented.
+Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 using ESP-IDF **5.5.4** and ESP32-C6-hosted Wi-Fi. Display/touch, phone setup, credential save, reboot, Wi-Fi join and recovery have been verified on the physical board. Audio, the production dashboard, pairing and backend transport are not implemented; device states can be injected with [debug triggers](#debug-triggers).
 
 ## Build and flash
 
@@ -51,6 +51,17 @@ Swipe to browse; interactive controls update the gallery state. **Recreate galle
 
 Shared helpers live in `main/ui/styles/` and `main/ui/components/`. Create controls inside runtime renderer callbacks and render authoritative feature state; callbacks report actions, not completion. Screens own objects and scrolling; callback contexts must outlive controls. Styles live for the process lifetime. Firmware tokens use desk-distance text sizing and an 80 px minimum control height. Use generated asset symbols and explicit mask recoloring.
 
+## Debug triggers
+
+Navigation, LED and speaker feedback follow `MOSAIC_EVENT` events on a dedicated ESP-IDF [`esp_event`](https://docs.espressif.com/projects/esp-idf/en/v5.5.4/esp32p4/api-reference/system/esp_event.html) loop, wrapped by `main/events/bus.hpp`. `MOSAIC_EVENT_STATUS_CHANGED` carries the connection status (disconnected, pairing, connected, error) and is posted only when it changes; `MOSAIC_EVENT_NOTIFICATION_RECEIVED` is posted once per notification. Features subscribe with `events::subscribe()` after `events::start()`; handlers run on the `mosaic_events` task and must hand blocking work (audio, LVGL) to their own task. A post that cannot be queued within 100 ms is logged and returned as an error. The M3 connection will publish here. Until then, a development-only image adds a serial command that publishes through the same bus:
+
+```sh
+python3 ../scripts/firmware.py -B build/debug-triggers -D SDKCONFIG=build/debug-triggers/sdkconfig -D MOSAIC_DEBUG_TRIGGERS=ON build
+python3 ../scripts/firmware.py -B build/debug-triggers flash monitor
+```
+
+At the `mosaic>` prompt on the UART console, run `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected` or `trigger error`. Posted events log `Status: <name>` or `Notification` under `mosaic_events`; setting the current status again posts nothing. Provisioning and Wi-Fi run normally. The option is off by default and cannot be combined with the gallery; the CI firmware build checks that the normal image contains no trigger code.
+
 ## Tests and tooling
 
 From `firmware/`:
@@ -59,6 +70,8 @@ From `firmware/`:
 python3 main/features/provisioning/tests/run.py
 python3 main/support/tests/run.py
 python3 main/ui/tests/run.py
+python3 main/events/tests/run.py
+python3 main/drivers/tests/run.py
 clang-tidy -p build main/app_main.cpp
 ```
 
@@ -82,6 +95,19 @@ python3 ../scripts/firmware.py -B build/display-diagnostics flash monitor
 ```
 
 On refresh timeout, `mosaic_display` logs entry/return counters. More entries than returns identify the blocked operation. Diagnostics are off in normal builds. Startup waits for refresh, a 100 ms settling window and redraw before lighting the panel; reboot blanks and holds the backlight low.
+
+## Rotary encoder
+
+A KY-040 on GPIO 5 (A/CLK), 4 (B/DT) and 2 (switch) is an LVGL encoder: turning moves focus and pressing activates. Power the module from 3.3V, never 5V, because its pull-ups go to its VCC pin. The PCNT peripheral counts edges in hardware, and `drivers/encoder_logic.cpp` turns the count into one step per detent, realigning at each rest position. `espressif/button` debounces the switch, and a latch hands each press to LVGL so a tap between input reads still clicks. If the encoder fails to start, the UI logs it and keeps touch input.
+
+Steps and presses are logged at Debug, which normal builds compile out. For a board check, use a gallery build in its own directory (its focusable controls show focus moving) with `MOSAIC_ENCODER_TRACE`, which raises only the encoder's logs:
+
+```sh
+python3 ../scripts/firmware.py -B build/encoder-trace -D SDKCONFIG=build/encoder-trace/sdkconfig -D MOSAIC_UI_GALLERY=ON -D MOSAIC_ENCODER_TRACE=ON build
+python3 ../scripts/firmware.py -B build/encoder-trace flash monitor
+```
+
+Boot logs `Rotary encoder ready`; each click logs `Step +1`/`Step -1` (a fast spin may log larger steps) and each press logs `Button pressed` and `Button released` under `mosaic_encoder`. Do not raise the global default log level instead: early boot then logs long enough to trip the bootloader watchdog and reset in a loop.
 
 ## Architecture and limits
 

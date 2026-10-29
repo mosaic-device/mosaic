@@ -3,3 +3,5 @@ dependencies:
     version: "0.14.5"
   espressif/esp_hosted:
     version: "1.4.7"
+  espressif/button:
+    version: "4.2.1"
