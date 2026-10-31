@@ -188,8 +188,10 @@ jobs:
         run: python3 firmware/main/ui/tests/run.py
       - name: Event bus host tests
         run: python3 firmware/main/events/tests/run.py
-      - name: Encoder host tests
+      - name: Driver host tests
         run: python3 firmware/main/drivers/tests/run.py
+      - name: LED feedback host tests
+        run: python3 firmware/main/features/led_feedback/tests/run.py
 
   firmware-build:
     name: Firmware build

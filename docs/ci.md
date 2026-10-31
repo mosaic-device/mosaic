@@ -114,6 +114,7 @@ python3 firmware/main/support/tests/run.py
 python3 firmware/main/ui/tests/run.py
 python3 firmware/main/events/tests/run.py
 python3 firmware/main/drivers/tests/run.py
+python3 firmware/main/features/led_feedback/tests/run.py
 ```
 
 ### Firmware build
@@ -149,7 +150,7 @@ cargo fmt --manifest-path platform/apps/companion/src-tauri/Cargo.toml
 ## Coverage requiring hardware
 
 Physical-board checks remain manual: flashing, display/touch behavior, QR scanning,
-real Wi-Fi/captive-portal behavior, and credential persistence/reboot/rejoin.
+real Wi-Fi/captive-portal behavior, credential persistence/reboot/rejoin, and LED output.
 See the [firmware guide](../firmware/README.md) for the board and procedures.
 
 ## Verify and require the checks

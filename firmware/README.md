@@ -72,6 +72,7 @@ python3 main/support/tests/run.py
 python3 main/ui/tests/run.py
 python3 main/events/tests/run.py
 python3 main/drivers/tests/run.py
+python3 main/features/led_feedback/tests/run.py
 clang-tidy -p build main/app_main.cpp
 ```
 
@@ -108,6 +109,22 @@ python3 ../scripts/firmware.py -B build/encoder-trace flash monitor
 ```
 
 Boot logs `Rotary encoder ready`; each click logs `Step +1`/`Step -1` (a fast spin may log larger steps) and each press logs `Button pressed` and `Button released` under `mosaic_encoder`. Do not raise the global default log level instead: early boot then logs long enough to trip the bootloader watchdog and reset in a loop.
+
+## LED ring and strip
+
+The WS2812 ring (8 LEDs) takes data on GPIO 28 and the strip on GPIO 29, both driven directly from 3.3V GPIO by the RMT peripheral; see the [hardware wiki](https://github.com/mosaic-device/mosaic/wiki/Hardware-Wiring-and-Power) for power and the series resistor. The strip length is set to the planned 12 LEDs in `main/drivers/leds.hpp`; change it there once the strip is cut. The driver starts first in `app_main`, sends a dark frame and blanks the LEDs again on restart. Every value it sends passes through `limit()` in `main/drivers/leds_logic.hpp`, which scales full-scale colors onto the 30% ceiling (76/255 per channel).
+
+`main/features/led_feedback/` shows the device status and notifications. The patterns in `patterns.cpp` are provisional until #56 defines LED meanings; edit them there:
+
+| Event | Ring | Strip |
+| --- | --- | --- |
+| `disconnected` | off | off |
+| `pairing` | blue, spinning | blue, breathing |
+| `connected` (idle) | off | dim warm white, steady |
+| `error` | red, blinking | dim red, steady |
+| `notification` (3 s, then back to the status) | cool white, spinning | warm white, breathing |
+
+To check them on the board, flash the [debug triggers](#debug-triggers) image and run each `trigger` command. The boot log shows `LEDs ready` under `mosaic_leds` with the pins, lengths and ceiling.
 
 ## Architecture and limits
 
