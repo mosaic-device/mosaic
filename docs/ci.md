@@ -118,6 +118,7 @@ python3 firmware/main/features/led_feedback/tests/run.py
 python3 firmware/main/features/audio_cues/tests/run.py
 python3 firmware/main/features/brightness/tests/run.py
 python3 firmware/main/features/clock/tests/run.py
+python3 firmware/main/features/settings/tests/run.py
 ```
 
 ### Firmware build
