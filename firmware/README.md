@@ -163,6 +163,32 @@ Volume (default 60%) applies from the next cue. Muting, or volume 0, skips cues 
 
 The cues are 22050 Hz mono 16-bit WAV files in `main/features/audio_cues/generated/`, synthesized from a spec in `platform/packages/assets` and original to Mosaic; change them there, not here. To check them on the board, flash the [debug triggers](#debug-triggers) image and run `trigger notification`, `trigger connected` and `trigger error`, with `volume` and `mute` in between.
 
+## Ambient brightness
+
+A BH1750 light sensor sets the screen and LED brightness. It has its own I2C bus: SDA on GPIO 21, SCL on GPIO 22, 100 kHz, address 0x23 (ADDR low or unconnected), separate from the BSP's touch and audio bus on GPIO 7/8. Power the breakout from 3.3V: its pull-ups go to its VCC, and the P4's pins must never see 5V. The P4's weak internal pull-ups are also enabled as a backstop.
+
+`main/features/brightness/policy.cpp` turns readings into levels. The curve is provisional until #56:
+
+| Light | Screen | LEDs (share of the 30% ceiling) |
+| --- | --- | --- |
+| 1 lux or darker | 15% | 25% |
+| 20 lux | 35% | 50% |
+| 150 lux | 65% | 78% |
+| 600 lux or brighter | 100% | 100% |
+
+Between points, levels follow log(lux). Readings every 200 ms are smoothed over about a second. Levels change only once the light moves more than about 26% from where they were last set, so light wavering near a point never flickers them, and each change fades over a few seconds. The LED level only dims below the 30% ceiling, and the display driver never lets the backlight drop below 10%, because the setup credentials handshake treats a lit panel as visible.
+
+If the sensor is missing at startup or stops responding, the device logs one warning under `mosaic_brightness`, fades to fixed levels (screen 70%, LEDs 78%) and retries every 5 s without logging; it logs `Ambient light sensor ready` when the sensor returns.
+
+To check it on the board, build with `MOSAIC_BRIGHTNESS_TRACE`, which logs each reading that changes the levels:
+
+```sh
+python3 ../scripts/firmware.py -B build/brightness-trace -D SDKCONFIG=build/brightness-trace/sdkconfig -D MOSAIC_BRIGHTNESS_TRACE=ON build
+python3 ../scripts/firmware.py -B build/brightness-trace flash monitor
+```
+
+Cover the sensor and shine a light on it; the screen and LEDs should fade without flicker. Unplug the sensor to see the fallback, and plug it back in to see it recover.
+
 ## Architecture and limits
 
 See [provisioning design constraints](main/features/provisioning/README.md#design-constraints) and the [provisioning decision](../docs/adr/0001-softap-provisioning.md).
