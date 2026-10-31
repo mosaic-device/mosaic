@@ -8,6 +8,7 @@
 #include "ui/gallery/gallery.hpp"
 #else
 #include "drivers/leds.hpp"
+#include "features/led_feedback/service.hpp"
 #include "features/provisioning/service.hpp"
 #include "ui/runtime.hpp"
 #include "features/provisioning/ui/renderer.hpp"
@@ -41,8 +42,13 @@ extern "C" void app_main() {
     mosaic::features::provisioning::publish_view(
         mosaic::features::provisioning::present(mosaic::features::provisioning::StartupView::starting));
 
-    // Feedback features subscribe before this; the M3 connection and debug triggers publish after it.
+    // Feedback features subscribe once the bus starts; the M3 connection and debug triggers publish after them.
     ESP_ERROR_CHECK(mosaic::events::start());
+    if (leds_err == ESP_OK) {
+        const esp_err_t feedback_err = mosaic::features::led_feedback::start();
+        if (feedback_err != ESP_OK)
+            ESP_LOGE(kTag, "LED feedback unavailable: %s", esp_err_to_name(feedback_err));
+    }
 #ifdef MOSAIC_DEBUG_TRIGGERS
     ESP_LOGW(kTag, "Development debug triggers enabled");
     ESP_ERROR_CHECK(mosaic::features::debug_triggers::start());

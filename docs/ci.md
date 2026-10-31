@@ -114,6 +114,7 @@ python3 firmware/main/support/tests/run.py
 python3 firmware/main/ui/tests/run.py
 python3 firmware/main/events/tests/run.py
 python3 firmware/main/drivers/tests/run.py
+python3 firmware/main/features/led_feedback/tests/run.py
 ```
 
 ### Firmware build

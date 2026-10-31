@@ -32,6 +32,8 @@ idf_component_register(
          "drivers/encoder.cpp"
          "drivers/encoder_logic.cpp"
          "drivers/leds.cpp"
+         "features/led_feedback/patterns.cpp"
+         "features/led_feedback/service.cpp"
          "features/provisioning/presentation/presenter.cpp"
          "features/provisioning/ui/renderer.cpp"
          "features/provisioning/ui/setup_screen.cpp"
