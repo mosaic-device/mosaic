@@ -45,6 +45,10 @@ struct ViewState {
     bool recovery_enabled = true;
     ViewText<192> setup_failure;
     uint32_t session = 0;
+    // For navigation: startup has not reported a state yet, or Wi-Fi is joined with
+    // setup closed. Other screens show only while online.
+    bool starting = false;
+    bool online = false;
     bool operator==(const ViewState&) const = default;
 };
 enum class StartupView { starting, unavailable };

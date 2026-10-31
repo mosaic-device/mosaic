@@ -17,6 +17,9 @@ namespace {
     ViewState rendered { };
     bool has_rendered = false;
     uint32_t credential_session = 0; // LVGL worker only
+    // What the visible provisioning screen means for navigation. LVGL worker only.
+    bool showing_starting = true;
+    bool showing_online = false;
     struct Credentials {
         uint32_t session;
         char ssid[33] { };
@@ -28,6 +31,8 @@ namespace {
             return false;
         setup.create(parent);
         status.render(present(StartupView::starting));
+        showing_starting = true;
+        showing_online = false;
         has_rendered = false;
         credential_session = 0;
         portENTER_CRITICAL(&mux);
@@ -59,6 +64,8 @@ namespace {
                 }
                 rendered = state;
                 has_rendered = true;
+                showing_starting = state.starting;
+                showing_online = state.online && !credential_session;
             }
         }
         portENTER_CRITICAL(&mux);
@@ -78,6 +85,8 @@ namespace {
         }
         status.hide();
         setup.show(value.ssid, value.password, value.url, qr);
+        showing_starting = false;
+        showing_online = false;
         support::secure_erase(qr);
         credential_session = value.session;
         support::secure_erase(value);
@@ -93,6 +102,8 @@ namespace {
         credential_session = 0;
         has_rendered = false;
         status.render(present(StartupView::starting));
+        showing_starting = true;
+        showing_online = false;
     }
     bool valid(std::string_view value, size_t max) {
         return !value.empty() && value.size() <= max && value.find('\0') == std::string_view::npos;
@@ -104,6 +115,12 @@ namespace {
 }
 mosaic::ui::Renderer renderer_callbacks() {
     return { create, routine, credentials, cancel, nullptr };
+}
+bool starting() {
+    return showing_starting;
+}
+bool online() {
+    return showing_online;
 }
 esp_err_t publish_view(const ViewState& state) {
     if (!mosaic::ui::ready())

@@ -21,15 +21,23 @@ int32_t DetentCounter::update(int32_t raw_count, bool at_rest) {
     return steps;
 }
 
-bool PressLatch::update(ButtonEvents events) {
-    // Consume one event per read, alternating, so every press gets a pressed read
-    // and a released read. A press still held keeps reporting pressed.
-    if (!reported_ && events.downs != seen_.downs) {
-        ++seen_.downs;
-        reported_ = true;
-    } else if (reported_ && events.ups != seen_.ups) {
-        ++seen_.ups;
+Press PressSorter::long_press_started() {
+    held_ = true;
+    return Press::back;
+}
+
+Press PressSorter::released() {
+    const bool held = held_;
+    held_ = false;
+    return held ? Press::none : Press::click;
+}
+
+bool PressLatch::update(uint32_t clicks) {
+    if (reported_) {
         reported_ = false;
+        ++seen_;
+    } else if (clicks != seen_) {
+        reported_ = true;
     }
     return reported_;
 }

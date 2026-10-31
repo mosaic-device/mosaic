@@ -7,6 +7,7 @@
 #ifdef MOSAIC_UI_GALLERY
 #include "ui/gallery/gallery.hpp"
 #else
+#include "app/screens.hpp"
 #include "drivers/leds.hpp"
 #include "features/led_feedback/service.hpp"
 #include "features/provisioning/service.hpp"
@@ -37,7 +38,7 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_LOGI(kTag, "Starting setup display");
-    ESP_ERROR_CHECK(mosaic::ui::start(mosaic::features::provisioning::renderer_callbacks()));
+    ESP_ERROR_CHECK(mosaic::ui::start(mosaic::app::screens()));
     ESP_LOGI(kTag, "Setup display ready");
     mosaic::features::provisioning::publish_view(
         mosaic::features::provisioning::present(mosaic::features::provisioning::StartupView::starting));

@@ -1,10 +1,7 @@
 
 option(MOSAIC_UI_GALLERY "Build isolated development-only UI gallery (no provisioning startup)" OFF)
 if(MOSAIC_UI_GALLERY)
-    list(APPEND gallery_sources
-        "ui/styles/styles.cpp"
-        "ui/components/controls.cpp"
-        "ui/gallery/gallery.cpp")
+    list(APPEND gallery_sources "ui/gallery/gallery.cpp")
 endif()
 
 option(MOSAIC_DEBUG_TRIGGERS "Build a development-only serial command that publishes device events" OFF)
@@ -27,11 +24,18 @@ include("${CMAKE_CURRENT_LIST_DIR}/ui/generated/assets/sources.cmake")
 
 idf_component_register(
     SRCS "app_main.cpp"
+         "app/screens.cpp"
          "ui/runtime.cpp"
+         "ui/navigation/host.cpp"
+         "ui/navigation/navigator.cpp"
+         "ui/styles/styles.cpp"
+         "ui/components/controls.cpp"
          "drivers/display.cpp"
          "drivers/encoder.cpp"
          "drivers/encoder_logic.cpp"
          "drivers/leds.cpp"
+         "features/home/screen.cpp"
+         "features/settings/screen.cpp"
          "features/led_feedback/patterns.cpp"
          "features/led_feedback/service.cpp"
          "features/provisioning/presentation/presenter.cpp"

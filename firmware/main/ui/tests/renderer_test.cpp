@@ -62,6 +62,7 @@ void unlock() { }
 int main() {
     const auto callbacks = renderer_callbacks();
     assert(callbacks.create(nullptr, nullptr));
+    assert(starting() && !online());
     ViewState first;
     first.message = "First";
     ViewState newest;
@@ -86,9 +87,16 @@ int main() {
     assert(callbacks.create(nullptr, nullptr));
     callbacks.routine(nullptr);
     assert(visible == during_render); // recreation needs no command replay
+    assert(!starting() && !online());
+    ViewState unpaired = during_render;
+    unpaired.online = true;
+    publish_view(unpaired);
+    callbacks.routine(nullptr);
+    assert(!starting() && online());
 
     assert(render_setup_credentials("Mosaic-TEST", "test-key", "http://192.168.4.1/", 1) == ESP_OK);
     const int clears = credential_clears;
+    assert(!online()); // Setup credentials are never hidden behind another screen.
     publish_view(first); // stale startup session cannot hide the QR
     callbacks.routine(nullptr);
     assert(credential_clears == clears);
@@ -111,6 +119,7 @@ int main() {
     assert(credential_clears == clears + 1 && visible == newest);
     callbacks.cancel_credentials(nullptr);
     assert(credential_clears == clears + 2);
+    assert(starting() && !online());
     // Credentials were acknowledged, but AP/HTTP startup then failed.
     StateMachine startup;
     (void)startup.dispatch(Start { false }, 0);

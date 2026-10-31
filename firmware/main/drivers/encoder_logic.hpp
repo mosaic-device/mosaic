@@ -23,23 +23,32 @@ private:
     int32_t origin_; // Raw count at the last emitted detent boundary.
 };
 
-// Running totals of debounced button events. Named fields keep the two counts
-// from being swapped at the call site.
-struct ButtonEvents {
-    uint32_t downs = 0;
-    uint32_t ups = 0;
+// What a debounced press means. A press held past the long-press time is Back and
+// never reaches LVGL, so a long press cannot also click or toggle a slider's edit mode.
+enum class Press : uint8_t { none, click, back };
+
+// Sorts each press into a click or Back. iot_button reports both events from one task.
+class PressSorter {
+public:
+    // The press has been held for the long-press time: Back, once per press.
+    Press long_press_started();
+    // The press ended: a click, unless it already became Back.
+    Press released();
+
+private:
+    bool held_ = false;
 };
 
-// Turns debounced press/release counts into the state LVGL reads. Each press is
-// reported as pressed on one read and released on a later one, so a tap that
-// starts and ends between two reads still registers as a click.
+// Turns the running click count into the state LVGL reads. Each click is reported
+// as pressed on one read and released on the next, so clicks between two reads are
+// replayed one at a time, never merged.
 class PressLatch {
 public:
-    bool update(ButtonEvents events);
+    bool update(uint32_t clicks);
 
 private:
     bool reported_ = false;
-    ButtonEvents seen_;
+    uint32_t seen_ = 0;
 };
 
 }

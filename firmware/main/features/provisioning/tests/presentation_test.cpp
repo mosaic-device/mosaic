@@ -20,13 +20,17 @@ int main() {
     assert(!present(StartupView::unavailable).recovery_visible);
     StateMachine s;
     assert(present(s.snapshot()) == present(StartupView::starting));
+    assert(present(s.snapshot()).starting && !present(s.snapshot()).online);
+    assert(!present(StartupView::unavailable).starting);
     (void)s.dispatch(Start { true }, 0);
     assert(present(s.snapshot()).message == "Connecting to saved Wi-Fi...");
+    assert(!present(s.snapshot()).starting && !present(s.snapshot()).online);
     (void)s.dispatch(StartupCompleted { true }, 1);
     assert(s.dispatch(SetupTapped { 1 }, 2).count == 0); // hidden initial connection
     (void)s.dispatch(Connected { }, 3);
     (void)s.dispatch(GotIp { }, 4);
     assert(present(s.snapshot()).heading == "Wi-Fi connected");
+    assert(present(s.snapshot()).online && !present(s.snapshot()).starting);
     (void)s.dispatch(SetupTapped { 2 }, 10);
     assert(s.snapshot().recovery == RecoveryState::confirming);
     auto confirming = present(s.snapshot());
@@ -58,6 +62,7 @@ int main() {
     online(offline);
     (void)offline.dispatch(Disconnected { }, 4);
     assert(present(offline.snapshot()).message == "Wi-Fi offline. Retrying; tap to enter setup.");
+    assert(!present(offline.snapshot()).online);
     (void)offline.dispatch(Tick { }, 1'000'004);
     (void)offline.dispatch(ReconnectCompleted { false }, 1'000'005);
     assert(present(offline.snapshot()).message == "Wi-Fi unavailable. Retrying; tap to enter setup.");
