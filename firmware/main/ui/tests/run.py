@@ -15,6 +15,7 @@ compiler = shlex.split(os.environ.get("CXX", "c++"))
 cases = [
     ("component_action", ["tests/component_action_test.cpp"], []),
     ("render_ack", ["tests/render_ack_test.cpp"], []),
+    ("navigator", ["navigation/navigator.cpp", "tests/navigator_test.cpp"], []),
     ("latest_state", ["tests/latest_state_test.cpp"], ["-pthread"]),
     (
         "renderer",
@@ -59,9 +60,13 @@ with tempfile.TemporaryDirectory(prefix="mosaic-ui-") as work:
 
 # Keep shared boundaries and passive callback constraints checked alongside host seams.
 main = ui.parent
-for directory in (ui, main / "drivers"):
+for directory in (ui, ui / "navigation", main / "drivers"):
     for path in directory.glob("*.*pp"):
-        assert "features/provisioning/" not in path.read_text(), path
+        assert "features/" not in path.read_text(), path
+# The navigation model stays hardware-free so its tests exercise the code that ships.
+for path in (ui / "navigation").glob("navigator.*pp"):
+    for forbidden in ('"lvgl', '"esp_', '"freertos/'):
+        assert forbidden not in path.read_text(), (path, forbidden)
 screen = (main / "features/provisioning/ui/status_screen.cpp").read_text()
 for forbidden in (
     "lv_timer_",
