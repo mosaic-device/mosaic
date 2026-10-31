@@ -74,6 +74,7 @@ python3 main/events/tests/run.py
 python3 main/drivers/tests/run.py
 python3 main/features/led_feedback/tests/run.py
 python3 main/features/audio_cues/tests/run.py
+python3 main/features/brightness/tests/run.py
 clang-tidy -p build main/app_main.cpp
 ```
 
