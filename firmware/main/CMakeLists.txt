@@ -38,6 +38,8 @@ idf_component_register(
          "drivers/leds.cpp"
          "features/brightness/policy.cpp"
          "features/brightness/service.cpp"
+         "features/clock/clock.cpp"
+         "features/clock/service.cpp"
          "features/home/screen.cpp"
          "features/settings/screen.cpp"
          "features/audio_cues/cues.cpp"
