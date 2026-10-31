@@ -12,6 +12,7 @@
 #include "features/audio_cues/service.hpp"
 #include "features/brightness/service.hpp"
 #include "features/clock/service.hpp"
+#include "features/settings/service.hpp"
 #include "features/led_feedback/service.hpp"
 #include "features/provisioning/service.hpp"
 #include "ui/runtime.hpp"
@@ -63,6 +64,10 @@ extern "C" void app_main() {
     const esp_err_t brightness_err = mosaic::features::brightness::start();
     if (brightness_err != ESP_OK)
         ESP_LOGE(kTag, "Ambient brightness unavailable: %s", esp_err_to_name(brightness_err));
+    // After the features it configures; storage failures fall back to defaults.
+    const esp_err_t settings_err = mosaic::features::settings::start();
+    if (settings_err != ESP_OK)
+        ESP_LOGE(kTag, "Settings will not be saved: %s", esp_err_to_name(settings_err));
 #ifdef MOSAIC_DEBUG_TRIGGERS
     ESP_LOGW(kTag, "Development debug triggers enabled");
     ESP_ERROR_CHECK(mosaic::features::debug_triggers::start());
