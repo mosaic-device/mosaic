@@ -99,7 +99,7 @@ On refresh timeout, `mosaic_display` logs entry/return counters. More entries th
 
 ## Rotary encoder
 
-A KY-040 on GPIO 5 (A/CLK), 4 (B/DT) and 2 (switch) is an LVGL encoder: turning moves focus and pressing activates. Power the module from 3.3V, never 5V, because its pull-ups go to its VCC pin. The PCNT peripheral counts edges in hardware, and `drivers/encoder_logic.cpp` turns the count into one step per detent, realigning at each rest position. `espressif/button` debounces the switch, and a latch hands each press to LVGL so a tap between input reads still clicks. If the encoder fails to start, the UI logs it and keeps touch input.
+A KY-040 on GPIO 5 (A/CLK), 4 (B/DT) and 2 (switch) is an LVGL encoder: turning moves focus and pressing activates. Power the module from 3.3V, never 5V, because its pull-ups go to its VCC pin. The PCNT peripheral counts edges in hardware, and `drivers/encoder_logic.cpp` turns the count into one step per detent, realigning at each rest position. `espressif/button` debounces the switch. A press shorter than 600 ms clicks when released, and a latch hands each click to LVGL so a tap between input reads still clicks. Holding the button for 600 ms is Back: it never reaches LVGL, so it cannot also click or toggle a slider's edit mode. If the encoder fails to start, the UI logs it and keeps touch input.
 
 Steps and presses are logged at Debug, which normal builds compile out. For a board check, use a gallery build in its own directory (its focusable controls show focus moving) with `MOSAIC_ENCODER_TRACE`, which raises only the encoder's logs:
 
@@ -108,7 +108,7 @@ python3 ../scripts/firmware.py -B build/encoder-trace -D SDKCONFIG=build/encoder
 python3 ../scripts/firmware.py -B build/encoder-trace flash monitor
 ```
 
-Boot logs `Rotary encoder ready`; each click logs `Step +1`/`Step -1` (a fast spin may log larger steps) and each press logs `Button pressed` and `Button released` under `mosaic_encoder`. Do not raise the global default log level instead: early boot then logs long enough to trip the bootloader watchdog and reset in a loop.
+Boot logs `Rotary encoder ready`; each click logs `Step +1`/`Step -1` (a fast spin may log larger steps) and each short press logs `Click` and each long press logs `Back` under `mosaic_encoder`. Do not raise the global default log level instead: early boot then logs long enough to trip the bootloader watchdog and reset in a loop.
 
 ## LED ring and strip
 

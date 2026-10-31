@@ -26,14 +26,19 @@ namespace {
     // The hardware counter limits; accum_count carries the total past them.
     constexpr int kCountLimit = 10'000;
     constexpr uint32_t kGlitchFilterNs = 1'000;
+    // Holding the button this long is Back; shorter presses click when released.
+    constexpr uint16_t kLongPressMs = 600;
 
     pcnt_unit_handle_t s_unit = nullptr;
+    lv_indev_t* s_indev = nullptr;
     bool s_ready = false;
     DetentCounter s_detents;
     PressLatch s_latch;
-    // Debounced button events, counted on the iot_button timer task and consumed by LVGL.
-    std::atomic<uint32_t> s_downs { 0 };
-    std::atomic<uint32_t> s_ups { 0 };
+    PressSorter s_sorter; // iot_button timer task only
+    // Sorted presses, counted on the iot_button timer task. LVGL consumes clicks;
+    // navigation consumes Back.
+    std::atomic<uint32_t> s_clicks { 0 };
+    std::atomic<uint32_t> s_backs { 0 };
 
     bool at_rest() {
         return gpio_get_level(kPinA) == kRestLevel && gpio_get_level(kPinB) == kRestLevel;
@@ -45,7 +50,7 @@ namespace {
         if (pcnt_unit_get_count(s_unit, &count) != ESP_OK)
             return;
         const int32_t steps = s_detents.update(count, rest_before && at_rest());
-        const bool pressed = s_latch.update({ .downs = s_downs.load(), .ups = s_ups.load() });
+        const bool pressed = s_latch.update(s_clicks.load());
         if (steps != 0)
             ESP_LOGD(kTag, "Step %+ld (raw %d)", static_cast<long>(steps), count);
         data->enc_diff = static_cast<int16_t>(steps);
@@ -90,24 +95,31 @@ namespace {
         ESP_RETURN_ON_ERROR(pcnt_unit_clear_count(s_unit), kTag, "PCNT clear");
         return pcnt_unit_start(s_unit);
     }
-    void on_down(void*, void*) {
-        s_downs.fetch_add(1);
-        ESP_LOGD(kTag, "Button pressed");
+    void count(Press press) {
+        if (press == Press::click) {
+            s_clicks.fetch_add(1);
+            ESP_LOGD(kTag, "Click");
+        } else if (press == Press::back) {
+            s_backs.fetch_add(1);
+            ESP_LOGD(kTag, "Back");
+        }
+    }
+    void on_long_press(void*, void*) {
+        count(s_sorter.long_press_started());
     }
     void on_up(void*, void*) {
-        s_ups.fetch_add(1);
-        ESP_LOGD(kTag, "Button released");
+        count(s_sorter.released());
     }
     esp_err_t start_button() {
         // iot_button polls and debounces on its own timer; read() only sees settled events.
-        const button_config_t config { };
+        const button_config_t config { .long_press_time = kLongPressMs, .short_press_time = 0 };
         button_gpio_config_t gpio { };
         gpio.gpio_num = kPinButton;
         gpio.active_level = kPressedLevel; // Internal pull-up stays on: the KY-040 switch has none.
         button_handle_t button = nullptr;
         ESP_RETURN_ON_ERROR(iot_button_new_gpio_device(&config, &gpio, &button), kTag, "Button device");
-        ESP_RETURN_ON_ERROR(
-            iot_button_register_cb(button, BUTTON_PRESS_DOWN, nullptr, on_down, nullptr), kTag, "Button down");
+        ESP_RETURN_ON_ERROR(iot_button_register_cb(button, BUTTON_LONG_PRESS_START, nullptr, on_long_press, nullptr),
+            kTag, "Button long press");
         return iot_button_register_cb(button, BUTTON_PRESS_UP, nullptr, on_up, nullptr);
     }
 }
@@ -124,16 +136,23 @@ esp_err_t start(lv_display_t* display) {
     ESP_RETURN_ON_ERROR(start_counter(), kTag, "Cannot start rotation counter");
     ESP_RETURN_ON_ERROR(start_button(), kTag, "Cannot start button");
     lv_group_t* group = lv_group_create();
-    lv_indev_t* indev = lv_indev_create();
-    if (!group || !indev)
+    s_indev = lv_indev_create();
+    if (!group || !s_indev)
         return ESP_ERR_NO_MEM;
     lv_group_set_default(group);
-    lv_indev_set_type(indev, LV_INDEV_TYPE_ENCODER);
-    lv_indev_set_read_cb(indev, read);
-    lv_indev_set_display(indev, display);
-    lv_indev_set_group(indev, group);
+    lv_indev_set_type(s_indev, LV_INDEV_TYPE_ENCODER);
+    lv_indev_set_read_cb(s_indev, read);
+    lv_indev_set_display(s_indev, display);
+    lv_indev_set_group(s_indev, group);
     s_ready = true;
     ESP_LOGI(kTag, "Rotary encoder ready on A=%d B=%d button=%d", kPinA, kPinB, kPinButton);
     return ESP_OK;
+}
+void set_group(lv_group_t* group) {
+    if (s_ready)
+        lv_indev_set_group(s_indev, group);
+}
+uint32_t back_presses() {
+    return s_backs.load();
 }
 }

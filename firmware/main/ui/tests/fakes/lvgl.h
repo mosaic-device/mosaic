@@ -4,6 +4,7 @@ struct lv_obj_t { };
 struct lv_display_t { };
 struct lv_event_t { };
 struct lv_timer_t { };
+struct lv_group_t { };
 constexpr int LV_OPA_COVER = 255;
 constexpr int LV_FLEX_FLOW_COLUMN = 0;
 constexpr int LV_FLEX_ALIGN_CENTER = 0;

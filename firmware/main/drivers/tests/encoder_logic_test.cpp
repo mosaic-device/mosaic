@@ -115,43 +115,38 @@ void counter_wraparound() {
     assert(counter.update(INT32_MIN + 6, false) == 2);
 }
 
+void press_sorter() {
+    PressSorter sorter;
+    // A short press is a click when it ends.
+    assert(sorter.released() == Press::click);
+    // A long press is Back as soon as it is held long enough, and its release does nothing.
+    assert(sorter.long_press_started() == Press::back);
+    assert(sorter.released() == Press::none);
+    // The next short press is a click again.
+    assert(sorter.released() == Press::click);
+}
+
 void press_latch() {
     {
-        // A held press: pressed until its release arrives, then released.
+        // One click: a pressed read, then released.
         PressLatch latch;
-        assert(!latch.update({ .downs = 0, .ups = 0 }));
-        assert(latch.update({ .downs = 1, .ups = 0 }));
-        assert(latch.update({ .downs = 1, .ups = 0 }));
-        assert(!latch.update({ .downs = 1, .ups = 1 }));
-        assert(!latch.update({ .downs = 1, .ups = 1 }));
+        assert(!latch.update(0));
+        assert(latch.update(1));
+        assert(!latch.update(1));
+        assert(!latch.update(1));
     }
     {
-        // A quick tap that starts and ends between two reads still gives LVGL
-        // a pressed read followed by a released read.
-        PressLatch latch;
-        assert(latch.update({ .downs = 1, .ups = 1 }));
-        assert(!latch.update({ .downs = 1, .ups = 1 }));
-    }
-    {
-        // Two taps between reads replay as two clicks, never merged into one.
+        // Two clicks between reads replay as two clicks, never merged into one.
         PressLatch latch;
         int clicks = 0;
         bool was = false;
         for (int read = 0; read < 6; ++read) {
-            const bool now = latch.update({ .downs = 2, .ups = 2 });
+            const bool now = latch.update(2);
             if (was && !now)
                 ++clicks;
             was = now;
         }
         assert(clicks == 2 && !was);
-    }
-    {
-        // A tap, then a second press still held at the next read.
-        PressLatch latch;
-        assert(latch.update({ .downs = 2, .ups = 1 }));
-        assert(!latch.update({ .downs = 2, .ups = 1 }));
-        assert(latch.update({ .downs = 2, .ups = 1 }));
-        assert(latch.update({ .downs = 2, .ups = 1 }));
     }
 }
 }
@@ -164,5 +159,6 @@ int main() {
     bounce();
     realigns_after_lost_or_extra_edges();
     counter_wraparound();
+    press_sorter();
     press_latch();
 }
