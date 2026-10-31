@@ -20,10 +20,10 @@ namespace {
     // How often a missing or failed sensor is retried, quietly.
     constexpr int64_t kRetryUs = 5'000'000;
 
-    void apply(Levels levels) {
+    void apply(Output out) {
         // Each driver keeps its own floor and ceiling; a failure here repeats next change.
-        drivers::display::set_brightness(levels.screen);
-        drivers::leds::set_level(levels.leds);
+        drivers::display::set_brightness(out.screen_percent);
+        drivers::leds::set_level(out.led_level);
     }
     void run(void*) {
         AutoBrightness brightness;
@@ -61,13 +61,12 @@ namespace {
             }
             const Levels levels = brightness.update(lux);
             if (!any_applied || !(levels == applied)) {
-                apply(levels);
+                const Output out = output(levels);
+                apply(out);
                 applied = levels;
                 any_applied = true;
-                if (lux)
-                    ESP_LOGD(kTag, "%ld lux: screen %u%%, LEDs %u/255", std::lround(*lux), levels.screen, levels.leds);
-                else
-                    ESP_LOGD(kTag, "No reading: screen %u%%, LEDs %u/255", levels.screen, levels.leds);
+                ESP_LOGD(kTag, "%ld lux: screen %u (%u%% PWM), LEDs %u (%u/255)", lux ? std::lround(*lux) : -1L,
+                    levels.screen, out.screen_percent, levels.leds, out.led_level);
             }
         }
     }

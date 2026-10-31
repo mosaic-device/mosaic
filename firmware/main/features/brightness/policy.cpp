@@ -19,9 +19,10 @@ namespace {
     // ahead of the smoothed light, in decades. Noise that lands a reading behind it
     // also stops it, so wavering light never keeps the levels moving.
     constexpr float kCaughtUp = 0.01F;
-    // Largest change per reading, so a full sweep fades over about four seconds.
-    constexpr int kScreenStep = 4;
-    constexpr int kLedStep = 12;
+    // Largest perceived change per reading, so the full range of the curve fades
+    // evenly over about four seconds.
+    constexpr int kStep = 3;
+    constexpr int kMaxPerceived = 100;
 
     float light(float lux) {
         return std::log10(std::max(lux, kMinLux));
@@ -33,6 +34,22 @@ namespace {
         return static_cast<uint8_t>(from + std::clamp(to - from, -limit, limit));
     }
 } // namespace
+
+float luminance(uint8_t perceived) {
+    // Inverse of CIE 1976 L*: cubic above the linear segment near black.
+    const float lightness = std::min<int>(perceived, kMaxPerceived);
+    if (lightness <= 8)
+        return lightness / 903.3F;
+    const float cube_root = (lightness + 16) / 116;
+    return cube_root * cube_root * cube_root;
+}
+
+Output output(Levels levels) {
+    return {
+        .screen_percent = static_cast<uint8_t>(std::lround(luminance(levels.screen) * 100)),
+        .led_level = static_cast<uint8_t>(std::lround(luminance(levels.leds) * 255)),
+    };
+}
 
 Levels curve(float lux) {
     const float at = light(lux);
@@ -70,9 +87,9 @@ Levels AutoBrightness::update(std::optional<float> lux) {
         sensing_ = true;
     }
     // The first levels apply at once; after that, every change fades.
-    shown_ = started_ ? Levels { .screen = step(shown_.screen, goal_.screen, kScreenStep),
-        .leds = step(shown_.leds, goal_.leds, kLedStep) }
-                      : goal_;
+    shown_ = started_
+        ? Levels { .screen = step(shown_.screen, goal_.screen, kStep), .leds = step(shown_.leds, goal_.leds, kStep) }
+        : goal_;
     started_ = true;
     return shown_;
 }

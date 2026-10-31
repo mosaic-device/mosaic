@@ -12,7 +12,7 @@ using namespace mosaic::features::brightness;
 namespace {
 // Settled levels land within rounding of the curve.
 bool near(Levels a, Levels b) {
-    return std::abs(a.screen - b.screen) <= 1 && std::abs(a.leds - b.leds) <= 2;
+    return std::abs(a.screen - b.screen) <= 1 && std::abs(a.leds - b.leds) <= 1;
 }
 
 // Readings until the levels hold for a few seconds; fails if they never settle.
@@ -60,8 +60,8 @@ void changes_fade_in_small_steps() {
     while (!near(shown, curve(600))) {
         const Levels next = brightness.update(600);
         // Brighter light never dims, and no single reading jumps far.
-        assert(next.screen >= shown.screen && next.screen - shown.screen <= 4);
-        assert(next.leds >= shown.leds && next.leds - shown.leds <= 12);
+        assert(next.screen >= shown.screen && next.screen - shown.screen <= 3);
+        assert(next.leds >= shown.leds && next.leds - shown.leds <= 3);
         shown = next;
         assert(++readings < 100);
     }
@@ -74,9 +74,9 @@ void brief_spikes_are_smoothed() {
     const Levels dim = settle(brightness, 5);
     // A single bright reading, like a passing reflection, barely moves anything.
     const Levels spike = brightness.update(5'000);
-    assert(spike.screen - dim.screen <= 4);
+    assert(spike.screen - dim.screen <= 3);
     const Levels after = settle(brightness, 5);
-    assert(std::abs(after.screen - dim.screen) <= 4);
+    assert(std::abs(after.screen - dim.screen) <= 3);
 }
 
 void light_wavering_near_a_point_does_not_flicker() {
@@ -135,9 +135,34 @@ void sensor_failure_fades_to_the_fallback_and_recovers() {
 }
 
 void screen_never_goes_dark() {
-    for (float lux : { 0.0F, 0.5F, 1.0F })
-        assert(curve(lux).screen > 0 && curve(lux).leds > 0);
-    assert(kFallback.screen > 0);
+    for (float lux : { 0.0F, 0.5F, 1.0F }) {
+        const Output dark = output(curve(lux));
+        assert(dark.screen_percent > 0 && dark.led_level > 0);
+    }
+    assert(output(kFallback).screen_percent > 0 && output(kFallback).led_level > 0);
+}
+
+void perceived_brightness_converts_to_light_output() {
+    assert(luminance(0) == 0);
+    assert(std::fabs(luminance(100) - 1) < 1e-6F);
+    assert(luminance(250) == luminance(100)); // Clamped.
+    // Half as bright to the eye is under a fifth of the light (CIE L* 50 = 18.4%).
+    assert(std::fabs(luminance(50) - 0.184F) < 0.001F);
+    // Rising, and each equal perceived step needs more light than the one before,
+    // which is why linear PWM steps look uneven.
+    float previous = 0;
+    float previous_step = 0;
+    for (int level = 1; level <= 100; ++level) {
+        const float light = luminance(static_cast<uint8_t>(level));
+        assert(light > previous);
+        if (level > 9)
+            assert(light - previous >= previous_step);
+        previous_step = light - previous;
+        previous = light;
+    }
+    // Full perceived brightness is full output: the drivers apply their own limits.
+    assert((output({ .screen = 100, .leds = 100 }) == Output { .screen_percent = 100, .led_level = 255 }));
+    assert((output({ .screen = 0, .leds = 0 }) == Output { .screen_percent = 0, .led_level = 0 }));
 }
 } // namespace
 
@@ -151,4 +176,5 @@ int main() {
     a_change_in_noisy_light_settles_without_flicker();
     sensor_failure_fades_to_the_fallback_and_recovers();
     screen_never_goes_dark();
+    perceived_brightness_converts_to_light_output();
 }

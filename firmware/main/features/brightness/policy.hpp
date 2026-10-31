@@ -5,13 +5,28 @@
 
 namespace mosaic::features::brightness {
 
+// Perceived brightness, 0-100: 50 looks half as bright as 100. Eyes judge light
+// roughly logarithmically, so the policy works in these units, which keeps curve
+// points easy to choose and fades even. output() converts them for the drivers.
 struct Levels {
-    // Backlight percent. The display driver keeps it at or above its visible minimum.
     uint8_t screen = 100;
-    // LED level (0-255) below the 30% ceiling; the LED driver applies the ceiling.
-    uint8_t leds = 255;
+    // A share of the LEDs' 30% ceiling, which the LED driver always applies.
+    uint8_t leds = 100;
     bool operator==(const Levels&) const = default;
 };
+
+// What the drivers take: PWM duty, which light output follows linearly.
+struct Output {
+    // Backlight percent. The display driver keeps it at or above its visible minimum.
+    uint8_t screen_percent;
+    // LED level (0-255) below the 30% ceiling.
+    uint8_t led_level;
+    bool operator==(const Output&) const = default;
+};
+
+// Light output (0-1) for a perceived brightness (0-100), by CIE 1976 lightness.
+float luminance(uint8_t perceived);
+Output output(Levels levels);
 
 // One point on the ambient light curve.
 struct Point {
@@ -23,13 +38,13 @@ struct Point {
 // levels follow log(lux), which matches how eyes judge brightness; outside them
 // they hold the end values.
 inline constexpr Point kCurve[] = {
-    { .lux = 1, .levels = { .screen = 15, .leds = 64 } },
-    { .lux = 20, .levels = { .screen = 35, .leds = 128 } },
-    { .lux = 150, .levels = { .screen = 65, .leds = 200 } },
-    { .lux = 600, .levels = { .screen = 100, .leds = 255 } },
+    { .lux = 1, .levels = { .screen = 45, .leds = 55 } },
+    { .lux = 20, .levels = { .screen = 65, .leds = 75 } },
+    { .lux = 150, .levels = { .screen = 85, .leds = 90 } },
+    { .lux = 600, .levels = { .screen = 100, .leds = 100 } },
 };
 // Used while the sensor is missing or failing.
-inline constexpr Levels kFallback { .screen = 70, .leds = 200 };
+inline constexpr Levels kFallback { .screen = 85, .leds = 90 };
 
 // The levels the curve gives for a light level.
 Levels curve(float lux);
