@@ -23,11 +23,9 @@ test('committed outputs match checksums and sizes', () => {
       outputs.some((o) => o.file === `web/${name}`),
       name,
     )
-  // Cue outputs are tracked separately, in metadata/cues.json.
-  const tracked = [...outputs, ...json('metadata/cues.json')]
   for (const name of fs.readdirSync(new URL('licenses/', root)))
     assert.ok(
-      tracked.some((o) => o.file === `licenses/${name}`),
+      outputs.some((o) => o.file === `licenses/${name}`),
       name,
     )
 })
@@ -154,9 +152,9 @@ test('pinned upstream sources match checksums and canonical notices', () => {
     assert.equal(hash(source.file), source.sha256, source.file)
     assert.match(
       source.url,
-      /^https:\/\/(raw\.githubusercontent\.com\/(google\/fonts|lucide-icons\/lucide)\/|creativecommons\.org\/publicdomain\/zero\/1\.0\/legalcode\.txt$)/,
+      /^https:\/\/raw\.githubusercontent\.com\/(google\/fonts|lucide-icons\/lucide)\//,
     )
-    if (/OFL\.txt$|Lucide-LICENSE$|CC0-1\.0\.txt$/.test(source.file))
+    if (/OFL\.txt$|Lucide-LICENSE$/.test(source.file))
       assert.deepEqual(
         read(source.file),
         read(source.file.replace('sources/', 'licenses/')),
@@ -273,10 +271,7 @@ test('audio cues match checksums, format and the cue spec', () => {
     assert.equal(bytes.readInt16LE(44), 0, `${name}: starts silent`)
     assert.equal(bytes.readInt16LE(bytes.length - 2), 0, `${name}: ends silent`)
   }
-  assert.deepEqual(
-    read(`${prefix}licenses/CC0-1.0.txt`),
-    read('sources/CC0-1.0.txt'),
-  )
-  assert.deepEqual(read('licenses/CC0-1.0.txt'), read('sources/CC0-1.0.txt'))
-  assert.match(read(`${prefix}README.md`).toString(), /CC0 1\.0 Universal/)
+  // Original work: no third-party audio, so no license sidecars to ship.
+  assert.ok(!fs.existsSync(new URL(`${prefix}licenses/`, root)))
+  assert.match(read(`${prefix}README.md`).toString(), /original to Mosaic/)
 })

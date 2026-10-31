@@ -140,10 +140,9 @@ pnpm --filter @mosaic/assets generate:cues
 
 `pnpm generate-assets` also runs it after the fonts. Checksums of the cues and
 their notices are in `metadata/cues.json`; tests check the WAV format, peak
-level, silent ends and one file per cue in the spec. The cues are synthesized
-for Mosaic and dedicated to the public domain under CC0 1.0 Universal
-(`licenses/CC0-1.0.txt`, pinned in the manifest from creativecommons.org); this
-covers only the cues, not other Mosaic code.
+level, silent ends and one file per cue in the spec. The cues are original to
+Mosaic, synthesized with no third-party audio, so they are covered by the
+project's license and need no separate notice.
 
 ## Footprint and validation boundary
 

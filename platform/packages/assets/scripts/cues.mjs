@@ -12,13 +12,6 @@ const out = path.resolve(
 )
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex')
 
-const license = 'CC0-1.0.txt'
-const pinned = JSON.parse(
-  fs.readFileSync('sources/manifest.json'),
-).sources.find((s) => s.file === `sources/${license}`)
-if (!pinned || sha256(fs.readFileSync(pinned.file)) !== pinned.sha256)
-  throw Error(`Source checksum: sources/${license}`)
-
 const spec = JSON.parse(fs.readFileSync('sources/cues.json'))
 const rate = spec.sampleRate
 const frames = (ms) => Math.round((ms * rate) / 1000)
@@ -85,7 +78,7 @@ function wav(pcm) {
   return Buffer.concat([header, pcm])
 }
 
-fs.mkdirSync(path.join(out, 'licenses'), { recursive: true })
+fs.mkdirSync(out, { recursive: true })
 const names = Object.keys(spec.cues)
 for (const name of fs.readdirSync(out))
   if (name.endsWith('.wav') && !names.includes(name.slice(0, -4)))
@@ -96,8 +89,6 @@ for (const name of names) {
   fs.writeFileSync(file, wav(render(spec.cues[name])))
   outputs.push(file)
 }
-fs.copyFileSync(`sources/${license}`, `licenses/${license}`)
-fs.copyFileSync(`sources/${license}`, path.join(out, 'licenses', license))
 fs.writeFileSync(
   path.join(out, 'README.md'),
   `# Generated Mosaic audio cues
@@ -111,16 +102,11 @@ Format: ${rate} Hz, mono, 16-bit PCM WAV.
 
 ## License
 
-The cues are synthesized for Mosaic and dedicated to the public domain under
-CC0 1.0 Universal; full text in licenses/${license}. This covers only these cue
-files and does not license other Mosaic code.
+The cues are original to Mosaic, synthesized from the spec above with no
+third-party audio, and are covered by the project's license.
 `,
 )
-outputs.push(
-  path.join(out, 'README.md'),
-  path.join(out, 'licenses', license),
-  path.resolve(`licenses/${license}`),
-)
+outputs.push(path.join(out, 'README.md'))
 fs.writeFileSync(
   'metadata/cues.json',
   JSON.stringify(

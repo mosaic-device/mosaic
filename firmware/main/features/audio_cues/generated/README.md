@@ -9,6 +9,5 @@ Format: 22050 Hz, mono, 16-bit PCM WAV.
 
 ## License
 
-The cues are synthesized for Mosaic and dedicated to the public domain under
-CC0 1.0 Universal; full text in licenses/CC0-1.0.txt. This covers only these cue
-files and does not license other Mosaic code.
+The cues are original to Mosaic, synthesized from the spec above with no
+third-party audio, and are covered by the project's license.

@@ -160,7 +160,7 @@ Cues play through the board's ES8311 codec and the speaker connector, using the 
 
 Volume (default 60%) applies from the next cue. Muting, or volume 0, skips cues without opening the codec, and stops a playing cue within about 10 ms. Settings will store both (#88); until then they reset on restart. If cues arrive faster than they play, up to four wait and the rest are dropped.
 
-The cues are 22050 Hz mono 16-bit WAV files in `main/features/audio_cues/generated/`, synthesized and dedicated to the public domain (CC0) by `platform/packages/assets`; change them there, not here. To check them on the board, flash the [debug triggers](#debug-triggers) image and run `trigger notification`, `trigger connected` and `trigger error`, with `volume` and `mute` in between.
+The cues are 22050 Hz mono 16-bit WAV files in `main/features/audio_cues/generated/`, synthesized from a spec in `platform/packages/assets` and original to Mosaic; change them there, not here. To check them on the board, flash the [debug triggers](#debug-triggers) image and run `trigger notification`, `trigger connected` and `trigger error`, with `volume` and `mute` in between.
 
 ## Architecture and limits
 

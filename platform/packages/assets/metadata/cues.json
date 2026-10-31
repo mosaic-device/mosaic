@@ -16,17 +16,7 @@
   },
   {
     "file": "../../../firmware/main/features/audio_cues/generated/README.md",
-    "bytes": 607,
-    "sha256": "22f6c5f3ebf696a0634fb59dcca6e42c789d4921c141f8a209d3f7c8a343981b"
-  },
-  {
-    "file": "../../../firmware/main/features/audio_cues/generated/licenses/CC0-1.0.txt",
-    "bytes": 7048,
-    "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
-  },
-  {
-    "file": "licenses/CC0-1.0.txt",
-    "bytes": 7048,
-    "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+    "bytes": 537,
+    "sha256": "72d26a59f25a55a137699ec338f30d26170c9efcb37b559517a5b5abfa4eae43"
   }
 ]
