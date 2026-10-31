@@ -1,11 +1,13 @@
 #include "console.hpp"
 
 #include "../../events/bus.hpp"
+#include "../audio_cues/service.hpp"
 
 #include "esp_console.h"
 #include "linenoise/linenoise.h"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace mosaic::features::debug_triggers {
@@ -29,6 +31,49 @@ namespace {
         }
         return 0;
     }
+
+    int volume(int argc, char** argv) {
+        if (argc == 2) {
+            char* end = nullptr;
+            const long percent = std::strtol(argv[1], &end, 10);
+            if (*argv[1] == '\0' || *end != '\0' || percent < 0 || percent > 100) {
+                std::printf("usage: volume [0-100]\n");
+                return 1;
+            }
+            features::audio_cues::set_volume(static_cast<uint8_t>(percent));
+        } else if (argc != 1) {
+            std::printf("usage: volume [0-100]\n");
+            return 1;
+        }
+        std::printf("volume %u%%\n", features::audio_cues::volume());
+        return 0;
+    }
+
+    int mute(int argc, char** argv) {
+        if (argc == 2 && std::strcmp(argv[1], "on") == 0) {
+            features::audio_cues::set_muted(true);
+        } else if (argc == 2 && std::strcmp(argv[1], "off") == 0) {
+            features::audio_cues::set_muted(false);
+        } else if (argc != 1) {
+            std::printf("usage: mute [on|off]\n");
+            return 1;
+        }
+        std::printf("mute %s\n", features::audio_cues::muted() ? "on" : "off");
+        return 0;
+    }
+
+    esp_err_t add(const char* name, const char* help, const char* hint, esp_console_cmd_func_t func) {
+        const esp_console_cmd_t command = {
+            .command = name,
+            .help = help,
+            .hint = hint,
+            .func = func,
+            .argtable = nullptr,
+            .func_w_context = nullptr,
+            .context = nullptr,
+        };
+        return esp_console_cmd_register(&command);
+    }
 } // namespace
 
 esp_err_t start() {
@@ -40,16 +85,12 @@ esp_err_t start() {
     if (err != ESP_OK)
         return err;
 
-    const esp_console_cmd_t command = {
-        .command = "trigger",
-        .help = "Post a notification, or set status: pairing, connected, disconnected or error",
-        .hint = "<event>",
-        .func = trigger,
-        .argtable = nullptr,
-        .func_w_context = nullptr,
-        .context = nullptr,
-    };
-    err = esp_console_cmd_register(&command);
+    err = add(
+        "trigger", "Post a notification, or set status: pairing, connected, disconnected or error", "<event>", trigger);
+    if (err == ESP_OK)
+        err = add("volume", "Show or set the cue volume (0-100) until restart", "[0-100]", volume);
+    if (err == ESP_OK)
+        err = add("mute", "Show or set cue muting until restart", "[on|off]", mute);
     if (err != ESP_OK)
         return err;
     // Echo keystrokes instead of redrawing the whole line on each one; the redraws flicker in idf.py monitor.

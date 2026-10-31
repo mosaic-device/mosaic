@@ -36,6 +36,9 @@ idf_component_register(
          "drivers/leds.cpp"
          "features/home/screen.cpp"
          "features/settings/screen.cpp"
+         "features/audio_cues/cues.cpp"
+         "features/audio_cues/service.cpp"
+         "features/audio_cues/wav.cpp"
          "features/led_feedback/patterns.cpp"
          "features/led_feedback/service.cpp"
          "features/provisioning/presentation/presenter.cpp"
@@ -60,6 +63,9 @@ idf_component_register(
              # Unconditional: IDF resolves requirements before options apply. Unused unless MOSAIC_DEBUG_TRIGGERS.
              console
     EMBED_TXTFILES "features/provisioning/assets/setup.html" "features/provisioning/assets/setup.js"
+    EMBED_FILES "features/audio_cues/generated/notification.wav"
+                "features/audio_cues/generated/connected.wav"
+                "features/audio_cues/generated/error.wav"
 )
 
 if(MOSAIC_UI_GALLERY)
