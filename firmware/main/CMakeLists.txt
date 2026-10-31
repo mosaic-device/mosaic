@@ -19,6 +19,7 @@ if(MOSAIC_DISPLAY_DIAGNOSTICS)
 endif()
 
 option(MOSAIC_ENCODER_TRACE "Log every rotary encoder step and button press" OFF)
+option(MOSAIC_BRIGHTNESS_TRACE "Log ambient light readings and brightness changes" OFF)
 
 include("${CMAKE_CURRENT_LIST_DIR}/ui/generated/assets/sources.cmake")
 
@@ -30,10 +31,13 @@ idf_component_register(
          "ui/navigation/navigator.cpp"
          "ui/styles/styles.cpp"
          "ui/components/controls.cpp"
+         "drivers/bh1750.cpp"
          "drivers/display.cpp"
          "drivers/encoder.cpp"
          "drivers/encoder_logic.cpp"
          "drivers/leds.cpp"
+         "features/brightness/policy.cpp"
+         "features/brightness/service.cpp"
          "features/home/screen.cpp"
          "features/settings/screen.cpp"
          "features/audio_cues/cues.cpp"
@@ -78,6 +82,10 @@ endif()
 
 if(MOSAIC_ENCODER_TRACE)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE MOSAIC_ENCODER_TRACE=1)
+endif()
+
+if(MOSAIC_BRIGHTNESS_TRACE)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE MOSAIC_BRIGHTNESS_TRACE=1)
 endif()
 
 # IDF supplies the cross-compiler; fail instead of silently building owned code as C++17.
