@@ -55,8 +55,10 @@ Levels curve(float lux);
 class AutoBrightness {
 public:
     // The levels to show after one reading, or a failed reading (nullopt), which
-    // fades to kFallback. Call about every 200 ms.
-    Levels update(std::optional<float> lux);
+    // fades to kFallback. A manual level (perceived, 0-100) overrides the light for
+    // the screen and LEDs alike; readings still update the smoothing meanwhile, so
+    // going back to automatic resumes from the current light. Call about every 200 ms.
+    Levels update(std::optional<float> lux, std::optional<uint8_t> manual = std::nullopt);
 
 private:
     bool started_ = false;
@@ -69,6 +71,7 @@ private:
     float goal_light_ = 0;
     bool following_ = false;
     float direction_ = 0;
+    bool manual_ = false;
     Levels goal_ = kFallback;
     Levels shown_ = kFallback;
 };

@@ -134,6 +134,35 @@ void sensor_failure_fades_to_the_fallback_and_recovers() {
     assert(missing.update(std::nullopt) == kFallback);
 }
 
+void manual_brightness_overrides_and_returns_to_automatic() {
+    AutoBrightness brightness;
+    settle(brightness, 600);
+    // A manual level fades in, for the screen and LEDs alike, whatever the light.
+    Levels shown = brightness.update(600, 50);
+    assert(shown.screen < 100 && shown.screen >= 97);
+    for (int i = 0; i < 100; ++i)
+        shown = brightness.update(1, 50);
+    assert((shown == Levels { .screen = 50, .leds = 50 }));
+    // Manual holds even with no sensor.
+    for (int i = 0; i < 10; ++i)
+        shown = brightness.update(std::nullopt, 50);
+    assert((shown == Levels { .screen = 50, .leds = 50 }));
+    // Back to automatic follows the light seen meanwhile (dark), not the old level.
+    for (int i = 0; i < 30; ++i)
+        brightness.update(1, 50);
+    assert(near(settle(brightness, 1), curve(1)));
+    // Back to automatic without a sensor fades to the fixed levels.
+    AutoBrightness missing;
+    for (int i = 0; i < 30; ++i)
+        missing.update(std::nullopt, 50);
+    for (int i = 0; i < 30; ++i)
+        shown = missing.update(std::nullopt);
+    assert(shown == kFallback);
+    // A manual level above the range is clamped.
+    AutoBrightness bright;
+    assert((bright.update(1, 250) == Levels { .screen = 100, .leds = 100 }));
+}
+
 void screen_never_goes_dark() {
     for (float lux : { 0.0F, 0.5F, 1.0F }) {
         const Output dark = output(curve(lux));
@@ -175,6 +204,7 @@ int main() {
     a_real_change_is_followed();
     a_change_in_noisy_light_settles_without_flicker();
     sensor_failure_fades_to_the_fallback_and_recovers();
+    manual_brightness_overrides_and_returns_to_automatic();
     screen_never_goes_dark();
     perceived_brightness_converts_to_light_output();
 }
