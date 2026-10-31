@@ -7,6 +7,7 @@
 #include "../../drivers/bh1750.hpp"
 #include "../../drivers/display.hpp"
 #include "../../drivers/leds.hpp"
+#include <atomic>
 #include <cmath>
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -19,6 +20,10 @@ namespace {
     constexpr TickType_t kReadPeriod = pdMS_TO_TICKS(200);
     // How often a missing or failed sensor is retried, quietly.
     constexpr int64_t kRetryUs = 5'000'000;
+    constexpr int16_t kAutomatic = -1;
+
+    // The manual level, or kAutomatic. Written by any task.
+    std::atomic<int16_t> s_manual = kAutomatic;
 
     void apply(Output out) {
         // Each driver keeps its own floor and ceiling; a failure here repeats next change.
@@ -59,7 +64,9 @@ namespace {
                     ESP_LOGW(kTag, "Ambient light sensor failed (%s); using fixed brightness", esp_err_to_name(err));
                 }
             }
-            const Levels levels = brightness.update(lux);
+            const int16_t manual = s_manual.load();
+            const Levels levels = brightness.update(
+                lux, manual == kAutomatic ? std::nullopt : std::optional<uint8_t>(static_cast<uint8_t>(manual)));
             if (!any_applied || !(levels == applied)) {
                 const Output out = output(levels);
                 apply(out);
@@ -70,6 +77,9 @@ namespace {
             }
         }
     }
+}
+void set_manual(std::optional<uint8_t> level) {
+    s_manual = level ? static_cast<int16_t>(*level) : kAutomatic;
 }
 esp_err_t start() {
 #ifdef MOSAIC_BRIGHTNESS_TRACE

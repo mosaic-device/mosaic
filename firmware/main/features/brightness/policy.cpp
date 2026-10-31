@@ -68,7 +68,7 @@ Levels curve(float lux) {
     return std::end(kCurve)[-1].levels;
 }
 
-Levels AutoBrightness::update(std::optional<float> lux) {
+Levels AutoBrightness::update(std::optional<float> lux, std::optional<uint8_t> manual) {
     if (!lux) {
         sensing_ = false;
         goal_ = kFallback;
@@ -86,6 +86,16 @@ Levels AutoBrightness::update(std::optional<float> lux) {
         }
         sensing_ = true;
     }
+    if (manual) {
+        const uint8_t level = std::min<uint8_t>(*manual, kMaxPerceived);
+        goal_ = { .screen = level, .leds = level };
+    } else if (manual_) {
+        // Back to automatic: aim for the current light, not where it was before,
+        // or the fixed levels if there is no sensor.
+        goal_light_ = smoothed_;
+        goal_ = sensing_ ? curve(std::pow(10.0F, smoothed_)) : kFallback;
+    }
+    manual_ = manual.has_value();
     // The first levels apply at once; after that, every change fades.
     shown_ = started_
         ? Levels { .screen = step(shown_.screen, goal_.screen, kStep), .leds = step(shown_.leds, goal_.leds, kStep) }

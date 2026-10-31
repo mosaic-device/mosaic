@@ -1,7 +1,7 @@
 #include "console.hpp"
 
 #include "../../events/bus.hpp"
-#include "../audio_cues/service.hpp"
+#include "../settings/service.hpp"
 
 #include "esp_console.h"
 #include "linenoise/linenoise.h"
@@ -40,25 +40,27 @@ namespace {
                 std::printf("usage: volume [0-100]\n");
                 return 1;
             }
-            features::audio_cues::set_volume(static_cast<uint8_t>(percent));
+            auto settings = features::settings::current();
+            settings.volume = static_cast<uint8_t>(percent);
+            features::settings::set(settings);
         } else if (argc != 1) {
             std::printf("usage: volume [0-100]\n");
             return 1;
         }
-        std::printf("volume %u%%\n", features::audio_cues::volume());
+        std::printf("volume %u%%\n", features::settings::current().volume);
         return 0;
     }
 
     int mute(int argc, char** argv) {
-        if (argc == 2 && std::strcmp(argv[1], "on") == 0) {
-            features::audio_cues::set_muted(true);
-        } else if (argc == 2 && std::strcmp(argv[1], "off") == 0) {
-            features::audio_cues::set_muted(false);
+        auto settings = features::settings::current();
+        if (argc == 2 && (std::strcmp(argv[1], "on") == 0 || std::strcmp(argv[1], "off") == 0)) {
+            settings.muted = std::strcmp(argv[1], "on") == 0;
+            features::settings::set(settings);
         } else if (argc != 1) {
             std::printf("usage: mute [on|off]\n");
             return 1;
         }
-        std::printf("mute %s\n", features::audio_cues::muted() ? "on" : "off");
+        std::printf("mute %s\n", features::settings::current().muted ? "on" : "off");
         return 0;
     }
 
@@ -88,9 +90,9 @@ esp_err_t start() {
     err = add(
         "trigger", "Post a notification, or set status: pairing, connected, disconnected or error", "<event>", trigger);
     if (err == ESP_OK)
-        err = add("volume", "Show or set the cue volume (0-100) until restart", "[0-100]", volume);
+        err = add("volume", "Show or set the saved cue volume (0-100)", "[0-100]", volume);
     if (err == ESP_OK)
-        err = add("mute", "Show or set cue muting until restart", "[on|off]", mute);
+        err = add("mute", "Show or set the saved cue muting", "[on|off]", mute);
     if (err != ESP_OK)
         return err;
     // Echo keystrokes instead of redrawing the whole line on each one; the redraws flicker in idf.py monitor.

@@ -60,7 +60,7 @@ python3 ../scripts/firmware.py -B build/debug-triggers -D SDKCONFIG=build/debug-
 python3 ../scripts/firmware.py -B build/debug-triggers flash monitor
 ```
 
-At the `mosaic>` prompt on the UART console, run `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected` or `trigger error`. Posted events log `Status: <name>` or `Notification` under `mosaic_events`; setting the current status again posts nothing. `volume [0-100]` and `mute [on|off]` show or change speaker cue output until restart. Provisioning and Wi-Fi run normally. The option is off by default and cannot be combined with the gallery; the CI firmware build checks that the normal image contains no trigger code.
+At the `mosaic>` prompt on the UART console, run `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected` or `trigger error`. Posted events log `Status: <name>` or `Notification` under `mosaic_events`; setting the current status again posts nothing. `volume [0-100]` and `mute [on|off]` show or change those [device settings](#device-settings), which are saved like any other change. Provisioning and Wi-Fi run normally. The option is off by default and cannot be combined with the gallery; the CI firmware build checks that the normal image contains no trigger code.
 
 ## Tests and tooling
 
@@ -76,6 +76,7 @@ python3 main/features/led_feedback/tests/run.py
 python3 main/features/audio_cues/tests/run.py
 python3 main/features/brightness/tests/run.py
 python3 main/features/clock/tests/run.py
+python3 main/features/settings/tests/run.py
 clang-tidy -p build main/app_main.cpp
 ```
 
@@ -147,6 +148,22 @@ The WS2812 ring (8 LEDs) takes data on GPIO 28 and the strip on GPIO 29, both dr
 
 To check them on the board, flash the [debug triggers](#debug-triggers) image and run each `trigger` command. The boot log shows `LEDs ready` under `mosaic_leds` with the pins, lengths and ceiling.
 
+## Device settings
+
+Settings, opened from Home, adjusts device feedback. `main/features/settings/settings.cpp` defines them; the defaults, ranges and steps are provisional until #56:
+
+| Setting | Default | Range |
+| --- | --- | --- |
+| Automatic brightness | on | on or off |
+| Brightness (while automatic is off) | 70 | 40-100 perceived, steps of 10 |
+| Volume | 60% | 0-100%, steps of 10 |
+| Mute sounds | off | on or off |
+| LED lights | on | on or off |
+
+Each change applies at once. Controls that cannot do anything right now are disabled, so turning the encoder skips them: brightness steps while brightness is automatic, and a step at the end of its range. Turning the LEDs off keeps both outputs dark while their patterns keep running underneath, so turning them on shows the current one.
+
+Settings are saved a second after the last change, so stepping through several values writes flash once. They live in their own NVS namespace, `mosaic_device`, as one versioned record, separate from provisioning's `mosaic_net`. On first boot the defaults apply quietly. If the record is unreadable or not valid, the device logs a warning under `mosaic_settings` and uses the defaults; a failed save is logged and the change still applies until restart. Startup never waits on storage.
+
 ## Clock
 
 Home shows the time as 12-hour local time without AM/PM, such as `2:05`. Each time Wi-Fi joins, `main/features/clock/` syncs over SNTP from `pool.ntp.org`, and ESP-IDF re-syncs hourly while connected. Startup never waits for it.
@@ -168,7 +185,7 @@ Cues play through the board's ES8311 codec and the speaker connector, using the 
 | status `error` | `error`: two falling notes |
 | `pairing`, `disconnected` | none |
 
-Volume (default 60%) applies from the next cue. Muting, or volume 0, skips cues without opening the codec, and stops a playing cue within about 10 ms. Settings will store both (#88); until then they reset on restart. If cues arrive faster than they play, up to four wait and the rest are dropped.
+Volume (default 60%) applies from the next cue. Muting, or volume 0, skips cues without opening the codec, and stops a playing cue within about 10 ms. Both are [device settings](#device-settings). If cues arrive faster than they play, up to four wait and the rest are dropped.
 
 The cues are 22050 Hz mono 16-bit WAV files in `main/features/audio_cues/generated/`, synthesized from a spec in `platform/packages/assets` and original to Mosaic; change them there, not here. To check them on the board, flash the [debug triggers](#debug-triggers) image and run `trigger notification`, `trigger connected` and `trigger error`, with `volume` and `mute` in between.
 
@@ -185,7 +202,7 @@ A BH1750 light sensor sets the screen and LED brightness. It has its own I2C bus
 | 150 lux | 85 (66%) | 90 (76%) |
 | 600 lux or brighter | 100 (100%) | 100 (100%) |
 
-Between points, levels follow log(lux). Readings every 200 ms are smoothed over about a second. Levels change only once the light moves more than about 26% from where they were last set, so light wavering near a point never flickers them, and each change fades in equal perceived steps over a few seconds. The LED level only dims below the 30% ceiling, and the display driver never lets the backlight drop below 10%, because the setup credentials handshake treats a lit panel as visible.
+With automatic brightness off in [device settings](#device-settings), a manual level replaces the curve for the screen and LEDs alike, and fades in the same way. Between points, levels follow log(lux). Readings every 200 ms are smoothed over about a second. Levels change only once the light moves more than about 26% from where they were last set, so light wavering near a point never flickers them, and each change fades in equal perceived steps over a few seconds. The LED level only dims below the 30% ceiling, and the display driver never lets the backlight drop below 10%, because the setup credentials handshake treats a lit panel as visible.
 
 If the sensor is missing at startup or stops responding, the device logs one warning under `mosaic_brightness`, fades to fixed levels (perceived screen 85, LEDs 90) and retries every 5 s without logging; it logs `Ambient light sensor ready` when the sensor returns.
 
