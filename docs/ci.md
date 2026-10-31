@@ -150,7 +150,7 @@ cargo fmt --manifest-path platform/apps/companion/src-tauri/Cargo.toml
 ## Coverage requiring hardware
 
 Physical-board checks remain manual: flashing, display/touch behavior, QR scanning,
-real Wi-Fi/captive-portal behavior, and credential persistence/reboot/rejoin.
+real Wi-Fi/captive-portal behavior, credential persistence/reboot/rejoin, and LED output.
 See the [firmware guide](../firmware/README.md) for the board and procedures.
 
 ## Verify and require the checks
