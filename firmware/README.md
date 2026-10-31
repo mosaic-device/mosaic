@@ -147,6 +147,14 @@ The WS2812 ring (8 LEDs) takes data on GPIO 28 and the strip on GPIO 29, both dr
 
 To check them on the board, flash the [debug triggers](#debug-triggers) image and run each `trigger` command. The boot log shows `LEDs ready` under `mosaic_leds` with the pins, lengths and ceiling.
 
+## Clock
+
+Home shows the time as 12-hour local time without AM/PM, such as `2:05`. Each time Wi-Fi joins, `main/features/clock/` syncs over SNTP from `pool.ntp.org`, and ESP-IDF re-syncs hourly while connected. Startup never waits for it.
+
+Until a sync succeeds this boot, Home shows `--:--`, and it stays that way if sync never works. A time kept across a restart without Wi-Fi, or one earlier than 2026, is never shown as correct. Boot logs `Clock waiting for Wi-Fi` under `mosaic_clock`, and the first sync logs `Time synced`.
+
+**Time zone:** every device uses Arizona time (`MST7`: UTC-7 all year, no daylight saving), where Mosaic is developed. It is `kTimeZone` in `main/features/clock/clock.hpp`; the owner's zone can come from setup or the server later. To check it on the board, flash the [debug triggers](#debug-triggers) image, let Wi-Fi join, and run `trigger connected` to show Home.
+
 ## Speaker cues
 
 Cues play through the board's ES8311 codec and the speaker connector, using the BSP's `bsp_audio_codec_speaker_init()`. Opening the codec for a cue turns the amplifier on, and closing it afterwards turns it off, so the amplifier is on only while a cue plays. Each cue starts after 50 ms of silence, while the DAC and amplifier settle, and ends with 80 ms of silence that flushes the I2S buffers before the amplifier switches off. Every cue logs `i2s_channel_disable(…): the channel has not been enabled yet` from `i2s_common`: the codec library reconfigures I2S on each open without checking that the previous close already disabled it. It is harmless; avoiding it would mean keeping the codec, and so the amplifier, on between cues.
