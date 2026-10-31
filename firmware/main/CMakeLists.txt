@@ -31,6 +31,7 @@ idf_component_register(
          "drivers/display.cpp"
          "drivers/encoder.cpp"
          "drivers/encoder_logic.cpp"
+         "drivers/leds.cpp"
          "features/provisioning/presentation/presenter.cpp"
          "features/provisioning/ui/renderer.cpp"
          "features/provisioning/ui/setup_screen.cpp"

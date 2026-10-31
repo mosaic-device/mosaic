@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run rotary encoder detent and debounce host tests."""
+"""Run rotary encoder and LED brightness-limit host tests."""
 
 import os
 import shlex
@@ -11,6 +11,7 @@ drivers = Path(__file__).resolve().parents[1]
 compiler = shlex.split(os.environ.get("CXX", "c++"))
 cases = [
     ("encoder_logic", ["encoder_logic.cpp", "tests/encoder_logic_test.cpp"], []),
+    ("leds_logic", ["tests/leds_logic_test.cpp"], []),
 ]
 
 with tempfile.TemporaryDirectory(prefix="mosaic-drivers-") as work:
@@ -38,9 +39,9 @@ with tempfile.TemporaryDirectory(prefix="mosaic-drivers-") as work:
         subprocess.run([str(exe)], check=True, env=env, timeout=60)
         print(f"{name} tests passed", flush=True)
 
-# Encoder logic stays hardware-free so these tests exercise the code that ships.
-for path in drivers.glob("encoder_logic.*pp"):
+# Driver logic stays hardware-free so these tests exercise the code that ships.
+for path in drivers.glob("*_logic.*pp"):
     text = path.read_text()
     for forbidden in ('"driver/', '"esp_', '"lvgl', '"freertos/'):
         assert forbidden not in text, (path, forbidden)
-print("Encoder logic boundary checks passed", flush=True)
+print("Driver logic boundary checks passed", flush=True)

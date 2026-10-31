@@ -7,6 +7,7 @@
 #ifdef MOSAIC_UI_GALLERY
 #include "ui/gallery/gallery.hpp"
 #else
+#include "drivers/leds.hpp"
 #include "features/provisioning/service.hpp"
 #include "ui/runtime.hpp"
 #include "features/provisioning/ui/renderer.hpp"
@@ -26,6 +27,10 @@ extern "C" void app_main() {
     ESP_LOGW(kTag, "Development gallery: provisioning and networking are not started");
     ESP_ERROR_CHECK(mosaic::ui::start(mosaic::ui::gallery::renderer_callbacks()));
 #else
+    // First, so the LEDs stay dark from power-up until a feature sets them.
+    const esp_err_t leds_err = mosaic::drivers::leds::start();
+    if (leds_err != ESP_OK)
+        ESP_LOGE(kTag, "LEDs unavailable: %s", esp_err_to_name(leds_err));
     // Do not erase NVS on initialization errors: it may contain the owner's credentials.
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
