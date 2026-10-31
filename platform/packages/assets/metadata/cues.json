@@ -1,0 +1,22 @@
+[
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/notification.wav",
+    "bytes": 15482,
+    "sha256": "93f00b6285c1bef58b9d0d33564b70b4a51b11b89d9f8aa9eac4f9da9d45b363"
+  },
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/connected.wav",
+    "bytes": 17688,
+    "sha256": "f27604f740d09952c2679182af32e01fda4e2df481983d1eaf4115fcf55a55d2"
+  },
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/error.wav",
+    "bytes": 22538,
+    "sha256": "b2cc80caa5196f5f15b7d3525ac292f9e4233a03df8813261a807fb146ee881e"
+  },
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/README.md",
+    "bytes": 537,
+    "sha256": "72d26a59f25a55a137699ec338f30d26170c9efcb37b559517a5b5abfa4eae43"
+  }
+]

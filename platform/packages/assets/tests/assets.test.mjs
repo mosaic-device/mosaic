@@ -224,3 +224,54 @@ test('recorded coverage matches the committed static font inputs', () => {
     )
   }
 })
+test('audio cues match checksums, format and the cue spec', () => {
+  const prefix = '../../../firmware/main/features/audio_cues/generated/'
+  const spec = json('sources/cues.json')
+  const outputs = json('metadata/cues.json')
+  assert.equal(new Set(outputs.map((o) => o.file)).size, outputs.length)
+  for (const o of outputs) {
+    assert.equal(hash(o.file), o.sha256, o.file)
+    assert.equal(read(o.file).length, o.bytes, o.file)
+  }
+  const committed = fs
+    .readdirSync(new URL(prefix, root))
+    .filter((name) => name.endsWith('.wav'))
+  assert.deepEqual(
+    committed.sort(),
+    Object.keys(spec.cues)
+      .map((name) => `${name}.wav`)
+      .sort(),
+  )
+  for (const name of committed) {
+    const file = `${prefix}${name}`
+    assert.ok(
+      outputs.some((o) => o.file === file),
+      file,
+    )
+    const bytes = read(file)
+    assert.equal(bytes.toString('ascii', 0, 4), 'RIFF', name)
+    assert.equal(bytes.toString('ascii', 8, 12), 'WAVE', name)
+    assert.equal(bytes.readUInt16LE(20), 1, `${name}: PCM`)
+    assert.equal(bytes.readUInt16LE(22), 1, `${name}: mono`)
+    assert.equal(bytes.readUInt32LE(24), spec.sampleRate, name)
+    assert.equal(bytes.readUInt16LE(34), 16, `${name}: 16-bit`)
+    assert.equal(bytes.toString('ascii', 36, 40), 'data', name)
+    const size = bytes.readUInt32LE(40)
+    assert.equal(size, bytes.length - 44, name)
+    // Short, never louder than the spec's peak, and silent at both ends so the
+    // amplifier switching on and off does not click.
+    assert.ok(size / 2 / spec.sampleRate < 1, `${name}: under a second`)
+    let peak = 0
+    for (let i = 44; i < bytes.length; i += 2)
+      peak = Math.max(peak, Math.abs(bytes.readInt16LE(i)))
+    assert.ok(
+      peak > 0 && peak <= Math.round(spec.peak * 32767),
+      `${name}: peak ${peak}`,
+    )
+    assert.equal(bytes.readInt16LE(44), 0, `${name}: starts silent`)
+    assert.equal(bytes.readInt16LE(bytes.length - 2), 0, `${name}: ends silent`)
+  }
+  // Original work: no third-party audio, so no license sidecars to ship.
+  assert.ok(!fs.existsSync(new URL(`${prefix}licenses/`, root)))
+  assert.match(read(`${prefix}README.md`).toString(), /original to Mosaic/)
+})

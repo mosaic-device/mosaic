@@ -10,7 +10,8 @@
   "scripts": {
     "test": "node --test tests/assets.test.mjs",
     "build": "node --test tests/assets.test.mjs",
-    "generate": "python3 scripts/fonts.py && node scripts/generate.mjs"
+    "generate": "python3 scripts/fonts.py && node scripts/generate.mjs && node scripts/cues.mjs",
+    "generate:cues": "node scripts/cues.mjs"
   },
   "devDependencies": {
     "fontkit": "2.0.4",

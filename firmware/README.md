@@ -1,6 +1,6 @@
 # ESP32-P4 firmware
 
-Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 using ESP-IDF **5.5.4** and ESP32-C6-hosted Wi-Fi. Display/touch, phone setup, credential save, reboot, Wi-Fi join and recovery have been verified on the physical board. Audio, the production dashboard, pairing and backend transport are not implemented; device states can be injected with [debug triggers](#debug-triggers).
+Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 using ESP-IDF **5.5.4** and ESP32-C6-hosted Wi-Fi. Display/touch, phone setup, credential save, reboot, Wi-Fi join and recovery have been verified on the physical board. The production dashboard, pairing and backend transport are not implemented; device states can be injected with [debug triggers](#debug-triggers).
 
 ## Build and flash
 
@@ -60,7 +60,7 @@ python3 ../scripts/firmware.py -B build/debug-triggers -D SDKCONFIG=build/debug-
 python3 ../scripts/firmware.py -B build/debug-triggers flash monitor
 ```
 
-At the `mosaic>` prompt on the UART console, run `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected` or `trigger error`. Posted events log `Status: <name>` or `Notification` under `mosaic_events`; setting the current status again posts nothing. Provisioning and Wi-Fi run normally. The option is off by default and cannot be combined with the gallery; the CI firmware build checks that the normal image contains no trigger code.
+At the `mosaic>` prompt on the UART console, run `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected` or `trigger error`. Posted events log `Status: <name>` or `Notification` under `mosaic_events`; setting the current status again posts nothing. `volume [0-100]` and `mute [on|off]` show or change speaker cue output until restart. Provisioning and Wi-Fi run normally. The option is off by default and cannot be combined with the gallery; the CI firmware build checks that the normal image contains no trigger code.
 
 ## Tests and tooling
 
@@ -73,6 +73,7 @@ python3 main/ui/tests/run.py
 python3 main/events/tests/run.py
 python3 main/drivers/tests/run.py
 python3 main/features/led_feedback/tests/run.py
+python3 main/features/audio_cues/tests/run.py
 clang-tidy -p build main/app_main.cpp
 ```
 
@@ -143,6 +144,23 @@ The WS2812 ring (8 LEDs) takes data on GPIO 28 and the strip on GPIO 29, both dr
 | `notification` (3 s, then back to the status) | cool white, spinning | warm white, breathing |
 
 To check them on the board, flash the [debug triggers](#debug-triggers) image and run each `trigger` command. The boot log shows `LEDs ready` under `mosaic_leds` with the pins, lengths and ceiling.
+
+## Speaker cues
+
+Cues play through the board's ES8311 codec and the speaker connector, using the BSP's `bsp_audio_codec_speaker_init()`. Opening the codec for a cue turns the amplifier on, and closing it afterwards turns it off, so the amplifier is on only while a cue plays. Each cue starts after 50 ms of silence, while the DAC and amplifier settle, and ends with 80 ms of silence that flushes the I2S buffers before the amplifier switches off. Every cue logs `i2s_channel_disable(…): the channel has not been enabled yet` from `i2s_common`: the codec library reconfigures I2S on each open without checking that the previous close already disabled it. It is harmless; avoiding it would mean keeping the codec, and so the amplifier, on between cues.
+
+`main/features/audio_cues/cues.cpp` maps events to cues; the choices are provisional until #56:
+
+| Event | Cue |
+| --- | --- |
+| notification | `notification`: two rising notes |
+| status `connected` | `connected`: three rising notes |
+| status `error` | `error`: two falling notes |
+| `pairing`, `disconnected` | none |
+
+Volume (default 60%) applies from the next cue. Muting, or volume 0, skips cues without opening the codec, and stops a playing cue within about 10 ms. Settings will store both (#88); until then they reset on restart. If cues arrive faster than they play, up to four wait and the rest are dropped.
+
+The cues are 22050 Hz mono 16-bit WAV files in `main/features/audio_cues/generated/`, synthesized from a spec in `platform/packages/assets` and original to Mosaic; change them there, not here. To check them on the board, flash the [debug triggers](#debug-triggers) image and run `trigger notification`, `trigger connected` and `trigger error`, with `volume` and `mute` in between.
 
 ## Architecture and limits
 

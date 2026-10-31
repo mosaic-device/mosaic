@@ -124,6 +124,26 @@ Use `lv_image_set_src`, set `image_recolor` to the desired color (off-white for
 the wordmark), `image_recolor_opa` to `LV_OPA_COVER`, and `image_opa` for opacity.
 Validate tint and opacity on hardware before release.
 
+## Audio cues
+
+`sources/cues.json` defines the device's audio cues as short note sequences
+(frequency and length, or a rest), with the sample rate, peak level, attack,
+release and silent padding they share. `scripts/cues.mjs` synthesizes each cue
+into a 22050 Hz, mono, 16-bit PCM WAV in
+`firmware/main/features/audio_cues/generated/`, which the firmware embeds. The
+generator is dependency-free and deterministic. To change a cue, edit the spec
+and run:
+
+```sh
+pnpm --filter @mosaic/assets generate:cues
+```
+
+`pnpm generate-assets` also runs it after the fonts. Checksums of the cues and
+their notices are in `metadata/cues.json`; tests check the WAV format, peak
+level, silent ends and one file per cue in the spec. The cues are original to
+Mosaic, synthesized with no third-party audio, so they are covered by the
+project's license and need no separate notice.
+
 ## Footprint and validation boundary
 
 `metadata/outputs.json` records C source and web sizes, including font license
