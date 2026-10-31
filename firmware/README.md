@@ -75,6 +75,7 @@ python3 main/drivers/tests/run.py
 python3 main/features/led_feedback/tests/run.py
 python3 main/features/audio_cues/tests/run.py
 python3 main/features/brightness/tests/run.py
+python3 main/features/clock/tests/run.py
 clang-tidy -p build main/app_main.cpp
 ```
 
@@ -145,6 +146,14 @@ The WS2812 ring (8 LEDs) takes data on GPIO 28 and the strip on GPIO 29, both dr
 | `notification` (3 s, then back to the status) | cool white, spinning | warm white, breathing |
 
 To check them on the board, flash the [debug triggers](#debug-triggers) image and run each `trigger` command. The boot log shows `LEDs ready` under `mosaic_leds` with the pins, lengths and ceiling.
+
+## Clock
+
+Home shows the time as 12-hour local time without AM/PM, such as `2:05`. Each time Wi-Fi joins, `main/features/clock/` syncs over SNTP from `pool.ntp.org`, and ESP-IDF re-syncs hourly while connected. Startup never waits for it.
+
+Until a sync succeeds this boot, Home shows `--:--`, and it stays that way if sync never works. A time kept across a restart without Wi-Fi, or one earlier than 2026, is never shown as correct. Boot logs `Clock waiting for Wi-Fi` under `mosaic_clock`, and the first sync logs `Time synced`.
+
+**Time zone:** every device uses Arizona time (`MST7`: UTC-7 all year, no daylight saving), where Mosaic is developed. It is `kTimeZone` in `main/features/clock/clock.hpp`; the owner's zone can come from setup or the server later. To check it on the board, flash the [debug triggers](#debug-triggers) image, let Wi-Fi join, and run `trigger connected` to show Home.
 
 ## Speaker cues
 

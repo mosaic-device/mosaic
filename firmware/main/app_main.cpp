@@ -11,6 +11,7 @@
 #include "drivers/leds.hpp"
 #include "features/audio_cues/service.hpp"
 #include "features/brightness/service.hpp"
+#include "features/clock/service.hpp"
 #include "features/led_feedback/service.hpp"
 #include "features/provisioning/service.hpp"
 #include "ui/runtime.hpp"
@@ -39,6 +40,10 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+    // Before provisioning joins Wi-Fi, so the first join starts time sync.
+    const esp_err_t clock_err = mosaic::features::clock::start();
+    if (clock_err != ESP_OK)
+        ESP_LOGE(kTag, "Clock unavailable: %s", esp_err_to_name(clock_err));
     ESP_LOGI(kTag, "Starting setup display");
     ESP_ERROR_CHECK(mosaic::ui::start(mosaic::app::screens()));
     ESP_LOGI(kTag, "Setup display ready");
