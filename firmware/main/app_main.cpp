@@ -10,6 +10,7 @@
 #include "app/screens.hpp"
 #include "drivers/leds.hpp"
 #include "features/audio_cues/service.hpp"
+#include "features/brightness/service.hpp"
 #include "features/led_feedback/service.hpp"
 #include "features/provisioning/service.hpp"
 #include "ui/runtime.hpp"
@@ -54,6 +55,9 @@ extern "C" void app_main() {
     const esp_err_t cues_err = mosaic::features::audio_cues::start();
     if (cues_err != ESP_OK)
         ESP_LOGE(kTag, "Audio cues unavailable: %s", esp_err_to_name(cues_err));
+    const esp_err_t brightness_err = mosaic::features::brightness::start();
+    if (brightness_err != ESP_OK)
+        ESP_LOGE(kTag, "Ambient brightness unavailable: %s", esp_err_to_name(brightness_err));
 #ifdef MOSAIC_DEBUG_TRIGGERS
     ESP_LOGW(kTag, "Development debug triggers enabled");
     ESP_ERROR_CHECK(mosaic::features::debug_triggers::start());

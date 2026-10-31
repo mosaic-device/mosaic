@@ -9,6 +9,7 @@ bool fail_light = true;
 bool race_shutdown = false;
 int holds = 0;
 int on_calls = 0;
+int lit_percent = -1;
 int redraws = 0;
 void (*shutdown_callback)() = nullptr;
 }
@@ -27,11 +28,12 @@ esp_err_t bsp_display_backlight_off() {
     light = false;
     return ESP_OK;
 }
-esp_err_t bsp_display_backlight_on() {
+esp_err_t bsp_display_brightness_set(int percent) {
     ++on_calls;
     if (fail_light)
         return ESP_FAIL;
-    light = true;
+    light = percent > 0;
+    lit_percent = percent;
     if (race_shutdown)
         shutdown_callback();
     return ESP_OK;
@@ -79,10 +81,18 @@ int main() {
     tick();
     assert(redraws == 1);
     assert(!refresh_ready() && on_calls == 1 && !light); // backlight failure blocks acknowledgement
+    // A level set before the panel lights waits and is used when it lights. The
+    // lit panel is never fully dark: setup trusts it to show credentials.
+    assert(set_brightness(0) == ESP_OK && on_calls == 1 && s_brightness == kMinBrightness);
+    assert(set_brightness(150) == ESP_OK && s_brightness == 100);
+    assert(set_brightness(40) == ESP_OK && on_calls == 1);
     fail_light = false;
     race_shutdown = true;
     assert(!refresh_ready() && !light && held); // shutdown during enable is reblanked
+    assert(lit_percent == 40 && on_calls == 2);
     assert(holds == 1 && !available());
+    // During restart, a new level never relights the panel.
+    assert(set_brightness(80) == ESP_OK && on_calls == 2 && !light);
     const int enabled = on_calls;
     prepare_reboot();
     shutdown_callback();
