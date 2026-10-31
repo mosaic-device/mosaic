@@ -1,4 +1,6 @@
 #include "leds.hpp"
+#include <algorithm>
+#include <array>
 #include "led_strip.h"
 #include "esp_check.h"
 #include "esp_log.h"
@@ -18,6 +20,10 @@ namespace {
     // Serializes frames with the restart blanking, which runs on the restarting task.
     SemaphoreHandle_t s_lock = nullptr;
     bool s_shut_down = false;
+    // The last frame and the level it was sent at, so a new level can resend it. s_lock.
+    std::array<Color, kRingLength> s_ring_frame { };
+    std::array<Color, kStripLength> s_strip_frame { };
+    uint8_t s_level = kFullLevel;
 
     esp_err_t create(gpio_num_t pin, size_t length, led_strip_handle_t* handle) {
         led_strip_config_t config { };
@@ -30,9 +36,9 @@ namespace {
         ESP_RETURN_ON_ERROR(led_strip_new_rmt_device(&config, &rmt, handle), kTag, "RMT device on GPIO %d", pin);
         return led_strip_clear(*handle);
     }
-    template <size_t N> esp_err_t write(led_strip_handle_t handle, std::span<const Color, N> colors) {
+    template <size_t N> esp_err_t write(led_strip_handle_t handle, const std::array<Color, N>& colors) {
         for (size_t i = 0; i < N; ++i) {
-            const Color color = limit(colors[i]);
+            const Color color = limit(colors[i], s_level);
             ESP_RETURN_ON_ERROR(led_strip_set_pixel(handle, i, color.red, color.green, color.blue), kTag, "Pixel");
         }
         return led_strip_refresh(handle);
@@ -62,15 +68,33 @@ esp_err_t start() {
         static_cast<unsigned>(kRingLength), kStripPin, static_cast<unsigned>(kStripLength), kCeiling);
     return ESP_OK;
 }
+namespace {
+    // With s_lock held.
+    esp_err_t resend() {
+        if (s_shut_down)
+            return ESP_OK;
+        const esp_err_t err = write(s_ring, s_ring_frame);
+        return err == ESP_OK ? write(s_strip, s_strip_frame) : err;
+    }
+}
 esp_err_t show(std::span<const Color, kRingLength> ring, std::span<const Color, kStripLength> strip) {
     if (s_ring == nullptr || s_strip == nullptr)
         return ESP_ERR_INVALID_STATE;
     xSemaphoreTake(s_lock, portMAX_DELAY);
+    std::ranges::copy(ring, s_ring_frame.begin());
+    std::ranges::copy(strip, s_strip_frame.begin());
+    const esp_err_t err = resend();
+    xSemaphoreGive(s_lock);
+    return err;
+}
+esp_err_t set_level(uint8_t level) {
+    if (s_ring == nullptr || s_strip == nullptr)
+        return ESP_ERR_INVALID_STATE;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
     esp_err_t err = ESP_OK;
-    if (!s_shut_down) {
-        err = write(s_ring, ring);
-        if (err == ESP_OK)
-            err = write(s_strip, strip);
+    if (level != s_level) {
+        s_level = level;
+        err = resend();
     }
     xSemaphoreGive(s_lock);
     return err;
