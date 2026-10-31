@@ -4,6 +4,7 @@ ViewState present(StartupView startup, uint32_t session) {
     ViewState view;
     view.session = session;
     view.heading = "Mosaic";
+    view.starting = startup == StartupView::starting;
     view.recovery_prompt = "Enter setup mode";
     view.message = startup == StartupView::starting
         ? "Starting Wi-Fi setup..."
@@ -15,6 +16,7 @@ ViewState present(StartupView startup, uint32_t session) {
 ViewState present(const Snapshot& s, uint32_t session) {
     ViewState v = present(StartupView::starting);
     v.session = session;
+    v.starting = false;
     switch (s.phase) {
     case Phase::unstarted:
         return present(StartupView::starting);
@@ -43,6 +45,7 @@ ViewState present(const Snapshot& s, uint32_t session) {
     case Phase::online:
         v.heading = "Wi-Fi connected";
         v.message = "Waiting for device pairing.";
+        v.online = true;
         v.recovery_visible = true;
         break;
     case Phase::starting_saved:
