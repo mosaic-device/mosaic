@@ -1,0 +1,32 @@
+[
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/notification.wav",
+    "bytes": 15482,
+    "sha256": "93f00b6285c1bef58b9d0d33564b70b4a51b11b89d9f8aa9eac4f9da9d45b363"
+  },
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/connected.wav",
+    "bytes": 17688,
+    "sha256": "f27604f740d09952c2679182af32e01fda4e2df481983d1eaf4115fcf55a55d2"
+  },
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/error.wav",
+    "bytes": 22538,
+    "sha256": "b2cc80caa5196f5f15b7d3525ac292f9e4233a03df8813261a807fb146ee881e"
+  },
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/README.md",
+    "bytes": 607,
+    "sha256": "22f6c5f3ebf696a0634fb59dcca6e42c789d4921c141f8a209d3f7c8a343981b"
+  },
+  {
+    "file": "../../../firmware/main/features/audio_cues/generated/licenses/CC0-1.0.txt",
+    "bytes": 7048,
+    "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+  },
+  {
+    "file": "licenses/CC0-1.0.txt",
+    "bytes": 7048,
+    "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+  }
+]

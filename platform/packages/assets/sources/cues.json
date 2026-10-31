@@ -1,0 +1,23 @@
+{
+  "sampleRate": 22050,
+  "peak": 0.6,
+  "attackMs": 4,
+  "releaseMs": 12,
+  "padMs": 10,
+  "cues": {
+    "notification": [
+      { "hz": 880, "ms": 110 },
+      { "hz": 1320, "ms": 220 }
+    ],
+    "connected": [
+      { "hz": 660, "ms": 90 },
+      { "hz": 880, "ms": 90 },
+      { "hz": 1320, "ms": 200 }
+    ],
+    "error": [
+      { "hz": 494, "ms": 160 },
+      { "rest": 50 },
+      { "hz": 330, "ms": 280 }
+    ]
+  }
+}
