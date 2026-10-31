@@ -20,6 +20,7 @@ namespace {
     // Written by bus handlers, read by the LED task, which the handlers wake.
     std::atomic<events::Status> s_status = events::Status::disconnected;
     std::atomic<uint32_t> s_notifications = 0;
+    std::atomic_bool s_enabled = true;
 
     uint32_t now_ms() {
         return static_cast<uint32_t>(esp_timer_get_time() / 1000);
@@ -48,6 +49,11 @@ namespace {
                 feedback.notify(now);
             }
             feedback.render(now, ring, strip);
+            // Patterns keep running while off, so turning on shows the current one.
+            if (!s_enabled.load()) {
+                ring.fill({ });
+                strip.fill({ });
+            }
             if (ring != shown_ring || strip != shown_strip) {
                 const esp_err_t err = leds::show(ring, strip);
                 if (err == ESP_OK) {
@@ -61,6 +67,11 @@ namespace {
             ulTaskNotifyTake(pdTRUE, kFrameTicks);
         }
     }
+}
+void set_enabled(bool enabled) {
+    s_enabled = enabled;
+    if (s_task)
+        xTaskNotifyGive(s_task);
 }
 esp_err_t start() {
     if (xTaskCreate(run, "mosaic_leds", 3072, nullptr, 3, &s_task) != pdPASS)
