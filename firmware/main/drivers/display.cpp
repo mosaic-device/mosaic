@@ -1,4 +1,5 @@
 #include "display.hpp"
+#include <algorithm>
 #include <atomic>
 #include "bsp/display.h"
 #include "bsp/esp-bsp.h"
@@ -10,8 +11,13 @@ namespace mosaic::drivers::display {
 namespace {
     constexpr uint32_t kLockTimeoutMs = 250;
     constexpr int64_t kStartupSettleUs = 100'000;
+    // The setup handshake treats a lit backlight as a visible screen, so a running
+    // panel is never dimmed below this.
+    constexpr uint8_t kMinBrightness = 10;
     lv_display_t* s_display = nullptr;
-    bool s_backlight_on = false;
+    // Read by set_brightness() on other tasks; set only on the LVGL task.
+    std::atomic_bool s_backlight_on { false };
+    std::atomic<uint8_t> s_brightness { 100 };
     bool s_initial_screen_flushed = false;
     int64_t s_backlight_enable_at = 0;
     bool s_startup_redraw_requested = false;
@@ -102,18 +108,28 @@ bool refresh_ready() {
         }
         if (!s_startup_redraw_requested || esp_timer_get_time() < s_backlight_enable_at)
             return false;
-        const esp_err_t err = bsp_display_backlight_on();
+        // Mark the backlight on before reading the level: a concurrent set_brightness()
+        // either sees it on and applies its level, or stored that level before this read.
+        s_backlight_on = true;
+        const esp_err_t err = bsp_display_brightness_set(s_brightness.load());
         if (err != ESP_OK) {
+            s_backlight_on = false;
             ESP_LOGE("mosaic_display", "Backlight failed: %s", esp_err_to_name(err));
             return false;
         }
-        s_backlight_on = true;
         if (s_shutting_down.load()) {
             bsp_display_backlight_off();
             return false;
         }
     }
     return true;
+}
+esp_err_t set_brightness(uint8_t percent) {
+    s_brightness = std::clamp<uint8_t>(percent, kMinBrightness, 100);
+    // Before startup lights the panel, the level waits; during restart it stays dark.
+    if (!s_backlight_on.load() || s_shutting_down.load())
+        return ESP_OK;
+    return bsp_display_brightness_set(s_brightness.load());
 }
 void prepare_reboot() {
     blank_on_shutdown();
