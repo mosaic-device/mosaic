@@ -110,6 +110,24 @@ python3 ../scripts/firmware.py -B build/encoder-trace flash monitor
 
 Boot logs `Rotary encoder ready`; each click logs `Step +1`/`Step -1` (a fast spin may log larger steps) and each short press logs `Click` and each long press logs `Back` under `mosaic_encoder`. Do not raise the global default log level instead: early boot then logs long enough to trip the bootloader watchdog and reset in a loop.
 
+## Screens and navigation
+
+`main/ui/navigation/navigator.cpp` is the device's screen map, and `main/app/screens.cpp` connects it to the features:
+
+| Screen | Shown when | Back |
+| --- | --- | --- |
+| Boot | until provisioning reports its first state | nothing |
+| Setup | provisioning's screens: setup QR, connecting, offline, and "Wi-Fi connected · waiting for pairing" (unpaired) | nothing |
+| Home | Wi-Fi online and paired (status `connected`) | nothing |
+| Settings | opened from Home | Home, with focus back on Settings |
+| Notification | reserved for M3, above Home or Settings | the screen underneath |
+
+Home appears only once the device is paired; with debug triggers, `trigger connected` shows it and `trigger disconnected` returns to the unpaired screen. Losing Wi-Fi, or setup credentials appearing, brings provisioning's screens to the front and closes Settings. What opens from where is provisional until #56.
+
+Touch and the encoder share focus. Each screen has its own focus group, so turning moves through the visible screen's controls only (skipping disabled ones) and a screen remembers its focus when you return. A short press activates the focused control, the same as a tap. Holding the encoder button for 600 ms is Back, as is the on-screen Back button. Back with nowhere to go does nothing.
+
+`main/ui/navigation/host.cpp` gives each screen a container and focus group inside the runtime's single renderer. Provisioning's renderer keeps its setup credentials handshake: credentials bring its screen to the front before they render. M3 adds the notification screen as `Screens::notification` and opens it with `navigation::open()`.
+
 ## LED ring and strip
 
 The WS2812 ring (8 LEDs) takes data on GPIO 28 and the strip on GPIO 29, both driven directly from 3.3V GPIO by the RMT peripheral; see the [hardware wiki](https://github.com/mosaic-device/mosaic/wiki/Hardware-Wiring-and-Power) for power and the series resistor. The strip length is set to the planned 12 LEDs in `main/drivers/leds.hpp`; change it there once the strip is cut. The driver starts first in `app_main`, sends a dark frame and blanks the LEDs again on restart. Every value it sends passes through `limit()` in `main/drivers/leds_logic.hpp`, which scales full-scale colors onto the 30% ceiling (76/255 per channel).
