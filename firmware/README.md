@@ -147,7 +147,7 @@ To check them on the board, flash the [debug triggers](#debug-triggers) image an
 
 ## Speaker cues
 
-Cues play through the board's ES8311 codec and the speaker connector, using the BSP's `bsp_audio_codec_speaker_init()`. Opening the codec for a cue turns the amplifier on, and closing it afterwards turns it off, so the amplifier is on only while a cue plays. After each cue, 80 ms of silence flushes the I2S buffers before the amplifier switches off.
+Cues play through the board's ES8311 codec and the speaker connector, using the BSP's `bsp_audio_codec_speaker_init()`. Opening the codec for a cue turns the amplifier on, and closing it afterwards turns it off, so the amplifier is on only while a cue plays. Each cue starts after 50 ms of silence, while the DAC and amplifier settle, and ends with 80 ms of silence that flushes the I2S buffers before the amplifier switches off. Every cue logs `i2s_channel_disable(…): the channel has not been enabled yet` from `i2s_common`: the codec library reconfigures I2S on each open without checking that the previous close already disabled it. It is harmless; avoiding it would mean keeping the codec, and so the amplifier, on between cues.
 
 `main/features/audio_cues/cues.cpp` maps events to cues; the choices are provisional until #56:
 

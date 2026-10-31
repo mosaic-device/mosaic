@@ -28,8 +28,12 @@ namespace {
     constexpr UBaseType_t kQueueDepth = 4;
     // Written in small pieces so muting stops a cue within about 10 ms.
     constexpr size_t kChunkBytes = 512;
-    // Enough silence to push the cue's tail out of the I2S DMA buffers (about 65 ms
-    // at 22050 Hz) before the amplifier turns off.
+    // Silence after the codec opens, while the DAC and amplifier settle; without it
+    // the start of the first note is distorted.
+    constexpr uint32_t kLeadMs = 50;
+    // Enough silence to fill the I2S DMA buffers (about 70 ms at 22050 Hz) before the
+    // amplifier turns off. It plays out the cue's tail, and leaves the buffers silent
+    // so the next open does not replay stale samples.
     constexpr uint32_t kTailMs = 80;
 
     struct Sound {
@@ -65,11 +69,12 @@ namespace {
     void on_notification(void*, esp_event_base_t, int32_t, void*) {
         enqueue(kNotificationCue);
     }
-    // Writes bytes through a scratch copy: the codec may scale samples in place.
+    // Writes bytes through a scratch copy, since the codec may scale samples in place;
+    // null bytes write silence. Stops early when muted, unless writing silence.
     bool write(const uint8_t* bytes, size_t size) {
         std::array<uint8_t, kChunkBytes> chunk;
         for (size_t at = 0; at < size; at += chunk.size()) {
-            if (!output().audible())
+            if (bytes && !output().audible())
                 return false;
             const size_t count = std::min(chunk.size(), size - at);
             if (bytes)
@@ -98,12 +103,15 @@ namespace {
             ESP_LOGE(kTag, "Cannot open speaker: %d", err);
             return;
         }
+        const size_t frame = static_cast<size_t>(pcm.channels) * pcm.bits_per_sample / 8;
+        const auto silence = [&](uint32_t ms) { return write(nullptr, pcm.sample_rate * ms / 1000 * frame); };
         err = esp_codec_dev_set_out_vol(s_speaker, level.volume);
         if (err != ESP_CODEC_DEV_OK)
             ESP_LOGE(kTag, "Cannot set volume: %d", err);
-        else if (write(pcm.samples.data(), pcm.samples.size())) {
-            const size_t frame = static_cast<size_t>(pcm.channels) * pcm.bits_per_sample / 8;
-            write(nullptr, pcm.sample_rate * kTailMs / 1000 * frame);
+        else if (silence(kLeadMs)) {
+            // Muting may cut the cue short; the silent tail still flushes the buffers.
+            write(pcm.samples.data(), pcm.samples.size());
+            silence(kTailMs);
         }
         err = esp_codec_dev_close(s_speaker);
         if (err != ESP_CODEC_DEV_OK)
