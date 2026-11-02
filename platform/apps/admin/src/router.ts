@@ -3,8 +3,10 @@ import {
   createRoute,
   createRouter,
   Outlet,
+  redirect,
   type RouterHistory,
 } from '@tanstack/react-router'
+import { getSetupStatus } from '@/api/auth'
 import { PageError } from '@/components/PageError'
 import { PageLoading } from '@/components/PageLoading'
 import { AppShell } from '@/components/shell/AppShell'
@@ -12,16 +14,46 @@ import { PublicLayout } from '@/components/shell/PublicLayout'
 import { DevPreview } from '@/DevPreview'
 import { DevicesPage } from '@/pages/DevicesPage'
 import { HomePage } from '@/pages/HomePage'
+import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { SetupPage } from '@/pages/SetupPage'
 
 const rootRoute = createRootRoute({ component: Outlet })
 
-// Setup and login (#66) render here, outside the signed-in shell.
+// Setup and login render here, outside the signed-in shell. Each asks the
+// server whether an admin exists and sends the visitor to the right one.
 const publicRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'public',
   component: PublicLayout,
+})
+const setupRoute = createRoute({
+  getParentRoute: () => publicRoute,
+  path: 'setup',
+  loader: async ({ abortController }) => {
+    const { setupRequired } = await getSetupStatus(abortController.signal)
+    if (!setupRequired) {
+      throw redirect({
+        to: '/login',
+        search: { setup: 'complete' },
+        replace: true,
+      })
+    }
+  },
+  component: SetupPage,
+})
+const loginRoute = createRoute({
+  getParentRoute: () => publicRoute,
+  path: 'login',
+  /** `setup: 'complete'` says setup was tried after it was already done. */
+  validateSearch: (search: Record<string, unknown>): { setup?: 'complete' } =>
+    search.setup === 'complete' ? { setup: 'complete' } : {},
+  loader: async ({ abortController }) => {
+    const { setupRequired } = await getSetupStatus(abortController.signal)
+    if (setupRequired) throw redirect({ to: '/setup', replace: true })
+  },
+  component: LoginPage,
 })
 
 const appRoute = createRoute({
@@ -61,7 +93,7 @@ const previewRoutes = import.meta.env.DEV
   : []
 
 const routeTree = rootRoute.addChildren([
-  publicRoute,
+  publicRoute.addChildren([setupRoute, loginRoute]),
   appRoute.addChildren([homeRoute, devicesRoute, settingsRoute, notFoundRoute]),
   ...previewRoutes,
 ])
