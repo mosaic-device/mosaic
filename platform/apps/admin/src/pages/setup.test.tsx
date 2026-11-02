@@ -131,6 +131,40 @@ describe('setup page', () => {
     })
   })
 
+  it('sends values a password manager filled in without an input event', async () => {
+    const { calls } = stubFetch(
+      noAdmin(),
+      jsonResponse({ admin: { username: 'bridger' } }, 201),
+    )
+    await renderAppAt('/setup')
+    await screen.findByRole('heading', { name: 'Set up Mosaic' })
+
+    screen.getByLabelText<HTMLInputElement>('Username').value = 'bridger'
+    screen.getByLabelText<HTMLInputElement>('Password').value =
+      'generated-password'
+    fill('Setup code', 'k7qf-2m9x')
+    submit()
+
+    await screen.findByRole('heading', { level: 1, name: 'Welcome' })
+    expect(JSON.parse(String(calls[1]?.init.body))).toEqual({
+      username: 'bridger',
+      password: 'generated-password',
+      setupCode: 'k7qf-2m9x',
+    })
+  })
+
+  it('turns off autocorrect on the username and setup code', async () => {
+    stubFetch(noAdmin())
+    await renderAppAt('/setup')
+    await screen.findByRole('heading', { name: 'Set up Mosaic' })
+
+    for (const label of ['Username', 'Setup code']) {
+      expect(screen.getByLabelText(label).getAttribute('autocorrect')).toBe(
+        'off',
+      )
+    }
+  })
+
   it('keeps the button disabled while the server answers', async () => {
     stubFetch(noAdmin(), () => new Promise<Response>(() => {}))
     await renderAppAt('/setup')

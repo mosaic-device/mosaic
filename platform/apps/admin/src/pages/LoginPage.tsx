@@ -25,7 +25,8 @@ function LoginPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const input = { ...form.values, username: form.values.username.trim() }
+    const values = form.readValues()
+    const input = { ...values, username: values.username.trim() }
     form.clearMessages()
     const problems = validateLogin(input)
     if (hasMessages(problems)) {
@@ -44,11 +45,7 @@ function LoginPage() {
       await navigate({ to: '/setup', replace: true })
       return
     }
-    if (error.code === 'invalid_credentials') {
-      form.setValues((current) => ({ ...current, password: '' }))
-      const password = form.formRef.current?.elements.namedItem('password')
-      if (password instanceof HTMLInputElement) password.focus()
-    }
+    if (error.code === 'invalid_credentials') form.clearField('password')
     form.showError(error)
   }
 
@@ -79,6 +76,7 @@ function LoginPage() {
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
+          autoCorrect="off"
           required
           {...form.fieldProps('username')}
         />

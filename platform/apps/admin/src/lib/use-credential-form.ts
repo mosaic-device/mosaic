@@ -1,34 +1,38 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import type { FieldMessages } from '@/api/credential-rules'
 import type { ApiError } from '@/api/errors'
 import { useCountdown } from '@/lib/use-countdown'
 
 /**
- * Values, field messages and the form-level error for the setup and login
- * forms. Changing a field clears its message.
+ * Field messages and the form-level error for the setup and login forms.
+ * Changing a field clears its message. Inputs are uncontrolled, and values
+ * are read from the form on submit, so a password manager that fills a field
+ * without an input event still counts.
  */
 export function useCredentialForm<F extends string>(fields: readonly F[]) {
   const formRef = useRef<HTMLFormElement>(null)
-  const [values, setValues] = useState(
-    () =>
-      Object.fromEntries(fields.map((field) => [field, ''])) as Record<
-        F,
-        string
-      >,
-  )
   const [errors, setErrors] = useState<FieldMessages<F>>({})
   const [notice, setNotice] = useState<ApiError | null>(null)
   const wait = useCountdown()
 
+  function inputFor(field: F): HTMLInputElement | null {
+    const element = formRef.current?.elements.namedItem(field)
+    return element instanceof HTMLInputElement ? element : null
+  }
+
+  /** The fields as the browser has them right now. */
+  function readValues(): Record<F, string> {
+    return Object.fromEntries(
+      fields.map((field) => [field, inputFor(field)?.value ?? '']),
+    ) as Record<F, string>
+  }
+
   function fieldProps(field: F) {
     return {
       name: field,
-      value: values[field],
       error: errors[field],
-      onChange: (event: ChangeEvent<HTMLInputElement>) => {
-        const { value } = event.target
-        setValues((current) => ({ ...current, [field]: value }))
+      onChange: () => {
         setErrors((current) => {
           if (current[field] === undefined) return current
           const next = { ...current }
@@ -44,12 +48,19 @@ export function useCredentialForm<F extends string>(fields: readonly F[]) {
     setNotice(null)
   }
 
+  /** Empties a field and moves focus to it. */
+  function clearField(field: F) {
+    const input = inputFor(field)
+    if (!input) return
+    input.value = ''
+    input.focus()
+  }
+
   /** Shows field messages and moves focus to the first field with one. */
   function showFieldErrors(next: FieldMessages<F>) {
     flushSync(() => setErrors(next))
     const first = fields.find((field) => next[field] !== undefined)
-    const input = first && formRef.current?.elements.namedItem(first)
-    if (input instanceof HTMLInputElement) input.focus()
+    if (first) inputFor(first)?.focus()
   }
 
   /**
@@ -76,12 +87,12 @@ export function useCredentialForm<F extends string>(fields: readonly F[]) {
 
   return {
     formRef,
-    values,
-    setValues,
     notice,
     secondsLeft: wait.secondsLeft,
+    readValues,
     fieldProps,
     clearMessages,
+    clearField,
     showFieldErrors,
     showError,
   }

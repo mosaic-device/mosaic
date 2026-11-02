@@ -68,6 +68,29 @@ describe('login page', () => {
     })
   })
 
+  it('sends values a password manager filled in without an input event', async () => {
+    const { calls } = await openLogin(
+      jsonResponse({ admin: { username: 'bridger' } }),
+    )
+
+    screen.getByLabelText<HTMLInputElement>('Username').value = 'bridger'
+    screen.getByLabelText<HTMLInputElement>('Password').value = 'saved-password'
+    submit()
+
+    await screen.findByRole('heading', { level: 1, name: 'Welcome' })
+    expect(JSON.parse(String(calls[1]?.init.body))).toEqual({
+      username: 'bridger',
+      password: 'saved-password',
+    })
+  })
+
+  it('turns off autocorrect on the username', async () => {
+    await openLogin()
+    expect(screen.getByLabelText('Username').getAttribute('autocorrect')).toBe(
+      'off',
+    )
+  })
+
   it('clears the password after a wrong login and keeps the username', async () => {
     await openLogin(
       problemResponse({

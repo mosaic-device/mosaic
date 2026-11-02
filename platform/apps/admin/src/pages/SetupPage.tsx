@@ -23,7 +23,8 @@ function SetupPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     // Usernames never contain spaces, so a stray one is only a typo.
-    const input = { ...form.values, username: form.values.username.trim() }
+    const values = form.readValues()
+    const input = { ...values, username: values.username.trim() }
     form.clearMessages()
     const problems = validateSetup(input)
     if (hasMessages(problems)) {
@@ -71,6 +72,7 @@ function SetupPage() {
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
+          autoCorrect="off"
           required
           {...form.fieldProps('username')}
         />
@@ -90,6 +92,7 @@ function SetupPage() {
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
+          autoCorrect="off"
           required
           {...form.fieldProps('setupCode')}
         />
