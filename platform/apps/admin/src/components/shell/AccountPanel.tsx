@@ -1,7 +1,7 @@
 import { getRouteApi, useRouter } from '@tanstack/react-router'
 import { LogOut } from 'lucide-react'
+import { useState } from 'react'
 import { logout } from '@/api/auth'
-import { useApiAction } from '@/api/use-api-action'
 import { ApiErrorNotice } from '@/components/ApiErrorNotice'
 import { Button } from '@/components/ui/button'
 
@@ -11,17 +11,29 @@ const appRoute = getRouteApi('/app')
 function AccountPanel() {
   const { session, auth } = appRoute.useRouteContext()
   const router = useRouter()
-  const { run, pending, error } = useApiAction(
-    (_input: void, signal: AbortSignal) => logout(signal),
-  )
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<unknown>(null)
 
-  // A failed logout keeps the owner signed in and says so: the server still
-  // holds the session, so sending them to login would be misleading.
+  // Not `useApiAction`: closing the phone menu unmounts this panel, and the
+  // server may already have ended the session, so the request must finish
+  // and the app must follow it to login.
   async function handleLogout() {
-    const result = await run()
-    if (result.status !== 'success') return
+    setPending(true)
+    setError(null)
+    // Cleared first, so a page change during logout doesn't say the session ended.
     auth.wasSignedIn = false
+    try {
+      await logout()
+    } catch (caught) {
+      // The server never heard it, so the owner is still signed in. Say so
+      // rather than sending them to login.
+      auth.wasSignedIn = true
+      setPending(false)
+      setError(caught)
+      return
+    }
     router.clearCache()
+    // Stays pending until the login page replaces this one.
     await router.navigate({ to: '/login', replace: true })
   }
 

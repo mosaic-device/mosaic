@@ -101,6 +101,15 @@ function showTab() {
   visibility.mockRestore()
 }
 
+/** A fetch answer that waits until the test resolves it. */
+function deferred() {
+  let resolve!: (response: Response) => void
+  const promise = new Promise<Response>((done) => {
+    resolve = done
+  })
+  return { answer: () => promise, resolve }
+}
+
 function logOut() {
   fireEvent.click(screen.getByRole('button', { name: 'Log out' }))
 }
@@ -161,6 +170,48 @@ describe('account and logout', () => {
     )
     await screen.findByRole('heading', { level: 1, name: 'Log in' })
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull()
+    expect(screen.queryByText(ENDED)).toBeNull()
+  })
+
+  it('a page change during logout does not say the session ended', async () => {
+    const logoutAnswer = deferred()
+    stubFetch(
+      sessionResponse(),
+      logoutAnswer.answer,
+      ...loggedOut(),
+      adminExists(),
+      unauthenticatedResponse(),
+    )
+    const router = await renderAppAt('/')
+
+    logOut()
+    await act(() => router.navigate({ to: '/settings' }))
+    await screen.findByRole('heading', { level: 1, name: 'Log in' })
+    await act(async () => logoutAnswer.resolve(emptyResponse(204)))
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
+    expect(screen.queryByText(ENDED)).toBeNull()
+  })
+
+  it('closing the phone menu during logout still logs out', async () => {
+    const logoutAnswer = deferred()
+    stubFetch(
+      sessionResponse(),
+      logoutAnswer.answer,
+      adminExists(),
+      unauthenticatedResponse(),
+    )
+    const router = await renderAppAt('/')
+    fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Menu' })
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Log out' }))
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await act(async () => logoutAnswer.resolve(emptyResponse(204)))
+
+    await screen.findByRole('heading', { level: 1, name: 'Log in' })
+    expect(router.state.location.pathname).toBe('/login')
     expect(screen.queryByText(ENDED)).toBeNull()
   })
 
