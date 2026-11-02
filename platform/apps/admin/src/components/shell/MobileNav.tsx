@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { Menu } from 'lucide-react'
+import { AccountPanel } from '@/components/shell/AccountPanel'
 import { NavLinks } from '@/components/shell/NavLinks'
 import { Wordmark } from '@/components/shell/Wordmark'
 import { Button } from '@/components/ui/button'
@@ -39,6 +40,9 @@ function MobileNav() {
         <nav aria-label="Main">
           <NavLinks onNavigate={() => setOpen(false)} />
         </nav>
+        <div className="mt-auto">
+          <AccountPanel />
+        </div>
       </SheetContent>
     </Sheet>
   )
