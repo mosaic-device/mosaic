@@ -71,17 +71,25 @@ const setupRoute = createRoute({
 const loginRoute = createRoute({
   getParentRoute: () => publicRoute,
   path: 'login',
-  validateSearch: (search: Record<string, unknown>): LoginSearch => {
-    const result: LoginSearch = {}
-    if (search.setup === 'complete') result.setup = 'complete'
-    const returnPath = safeReturnPath(search.redirect)
-    if (returnPath) result.redirect = returnPath
-    if (search.session === 'ended') result.session = 'ended'
-    return result
-  },
-  loader: async ({ abortController }) => {
+  // Every key is set, even to undefined: the root route passes the raw search
+  // through, so a key left out would keep its unchecked value.
+  validateSearch: (search: Record<string, unknown>): LoginSearch => ({
+    setup: search.setup === 'complete' ? 'complete' : undefined,
+    redirect: safeReturnPath(search.redirect),
+    session: search.session === 'ended' ? 'ended' : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ returnPath: search.redirect }),
+  loader: async ({ abortController, deps }) => {
     const { setupRequired } = await getSetupStatus(abortController.signal)
     if (setupRequired) throw redirect({ to: '/setup', replace: true })
+    // Someone already signed in skips the form.
+    try {
+      await getSession(abortController.signal)
+    } catch (error) {
+      if (isUnauthenticated(error)) return
+      throw error
+    }
+    throw redirect({ href: deps.returnPath ?? '/', replace: true })
   },
   pendingComponent: PublicPageLoading,
   component: LoginPage,

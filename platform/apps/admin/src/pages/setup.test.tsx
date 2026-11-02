@@ -6,6 +6,7 @@ import {
   problemResponse,
   sessionResponse,
   stubFetch,
+  unauthenticatedResponse,
 } from '@/test/fetch-stub'
 import { renderAppAt } from '@/test/render-app'
 
@@ -58,7 +59,7 @@ describe('setup page', () => {
   })
 
   it('sends a visitor to login once an admin exists', async () => {
-    stubFetch(adminExists(), adminExists())
+    stubFetch(adminExists(), adminExists(), unauthenticatedResponse())
     const router = await renderAppAt('/setup')
 
     await screen.findByRole('heading', { level: 1, name: 'Log in' })
@@ -237,6 +238,7 @@ describe('setup page', () => {
         traceId: '00-c-01',
       }),
       adminExists(),
+      unauthenticatedResponse(),
     )
     const router = await renderAppAt('/setup')
     await screen.findByRole('heading', { name: 'Set up Mosaic' })

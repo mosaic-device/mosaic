@@ -5,6 +5,7 @@ import {
   problemResponse,
   sessionResponse,
   stubFetch,
+  unauthenticatedResponse,
 } from '@/test/fetch-stub'
 import { renderAppAt } from '@/test/render-app'
 
@@ -19,9 +20,19 @@ function submit() {
   fireEvent.click(screen.getByRole('button', { name: 'Log in' }))
 }
 
-async function openLogin(...answers: Parameters<typeof stubFetch>) {
-  const stub = stubFetch(adminExists(), ...answers)
-  const router = await renderAppAt('/login')
+const loginOk = () => jsonResponse({ admin: { username: 'bridger' } })
+
+function openLogin(...answers: Parameters<typeof stubFetch>) {
+  return openLoginAt('/login', ...answers)
+}
+
+/** Opens login with an admin and no session, then the given answers. */
+async function openLoginAt(
+  path: string,
+  ...answers: Parameters<typeof stubFetch>
+) {
+  const stub = stubFetch(adminExists(), unauthenticatedResponse(), ...answers)
+  const router = await renderAppAt(path)
   await screen.findByRole('heading', { level: 1, name: 'Log in' })
   return { ...stub, router }
 }
@@ -35,6 +46,62 @@ describe('login page', () => {
       'current-password',
     )
     expect(screen.queryByText(/already set up/)).toBeNull()
+    expect(screen.queryByText(/session ended/)).toBeNull()
+  })
+
+  it('explains a session that ended', async () => {
+    await openLoginAt('/login?session=ended')
+
+    expect(
+      screen.getByText('Your session ended. Log in again to continue.'),
+    ).toBeTruthy()
+  })
+
+  it('logs in and returns to the page you wanted', async () => {
+    const { router } = await openLoginAt(
+      '/login?redirect=/devices',
+      loginOk(),
+      sessionResponse(),
+    )
+
+    fill('Username', 'bridger')
+    fill('Password', 'a-long-password')
+    submit()
+
+    await screen.findByRole('heading', { level: 1, name: 'Devices' })
+    expect(router.state.location.pathname).toBe('/devices')
+  })
+
+  it('ignores a return path that leaves the app', async () => {
+    const { router } = await openLoginAt(
+      '/login?redirect=//evil.example',
+      loginOk(),
+      sessionResponse(),
+    )
+    expect(router.state.matches.at(-1)?.search).toEqual({})
+
+    fill('Username', 'bridger')
+    fill('Password', 'a-long-password')
+    submit()
+
+    await screen.findByRole('heading', { level: 1, name: 'Welcome' })
+    expect(router.state.location.pathname).toBe('/')
+  })
+
+  it('sends a signed-in visitor on to the page they wanted', async () => {
+    stubFetch(adminExists(), sessionResponse(), sessionResponse())
+    const router = await renderAppAt('/login?redirect=/settings')
+
+    await screen.findByRole('heading', { level: 1, name: 'Settings' })
+    expect(router.state.location.pathname).toBe('/settings')
+  })
+
+  it('sends a signed-in visitor to Home', async () => {
+    stubFetch(adminExists(), sessionResponse(), sessionResponse())
+    const router = await renderAppAt('/login')
+
+    await screen.findByRole('heading', { level: 1, name: 'Welcome' })
+    expect(router.state.location.pathname).toBe('/')
   })
 
   it('sends a visitor to setup while no admin exists', async () => {
@@ -52,7 +119,7 @@ describe('login page', () => {
 
     expect(screen.getAllByText('Required.')).toHaveLength(2)
     expect(document.activeElement).toBe(screen.getByLabelText('Username'))
-    expect(calls).toHaveLength(1)
+    expect(calls).toHaveLength(2)
   })
 
   it('logs in and opens Home', async () => {
@@ -67,8 +134,8 @@ describe('login page', () => {
 
     await screen.findByRole('heading', { level: 1, name: 'Welcome' })
     expect(router.state.location.pathname).toBe('/')
-    expect(calls[1]?.url).toBe('/api/auth/login')
-    expect(JSON.parse(String(calls[1]?.init.body))).toEqual({
+    expect(calls[2]?.url).toBe('/api/auth/login')
+    expect(JSON.parse(String(calls[2]?.init.body))).toEqual({
       username: 'Bridger',
       password: 'short',
     })
@@ -85,7 +152,7 @@ describe('login page', () => {
     submit()
 
     await screen.findByRole('heading', { level: 1, name: 'Welcome' })
-    expect(JSON.parse(String(calls[1]?.init.body))).toEqual({
+    expect(JSON.parse(String(calls[2]?.init.body))).toEqual({
       username: 'bridger',
       password: 'saved-password',
     })
