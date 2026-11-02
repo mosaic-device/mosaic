@@ -2,8 +2,8 @@
 
 Vite/React/Tailwind admin app. It has the signed-in shell (sidebar on wide screens,
 top bar and menu sheet on narrow ones) and Home, Devices, Settings and not-found pages
-in their empty states, plus the shared API client in `src/api/`. Setup, login and
-session handling come next (#66, #67). Routes live in `src/router.ts`, pages in
+in their empty states, the shared API client in `src/api/`, and the first-run setup
+and login pages. Session handling comes next (#67). Routes live in `src/router.ts`, pages in
 `src/pages/`, the shell in `src/components/shell/`. `/dev/components` is development-only and excluded from
 production. `pnpm build:admin-assets` copies `dist/` into the backend's `wwwroot/`;
 local `/api` and `/ws` proxies target `http://localhost:5000`.
@@ -17,7 +17,8 @@ pnpm web:check
 ```
 
 `test` runs the Vitest suite (`src/**/*.test.{ts,tsx}`: direct loading of every route,
-navigation, the phone menu, page states, the API client and its error states), then builds production and checks preview
+navigation, the phone menu, page states, the API client and its error states, setup
+and login), then builds production and checks preview
 exclusion, root-relative asset paths, local fonts, and font notices. After changing primitives, manually check keyboard focus,
 dialog trapping/restoration, pending/disabled states, field errors, mobile layout,
 forced colors, and reduced motion at `/dev/components`.
@@ -56,6 +57,18 @@ The backend must run with `--environment Development` for the dev proxy to work
 (non-Secure cookie, `http://localhost:5173` allowed by the Origin check). Vite is
 pinned to port 5173 (`strictPort`) for the same reason.
 
+## Setup and login
+
+`/setup` and `/login` sit outside the signed-in shell. Both ask the server whether
+an admin exists (`GET /api/setup`) and redirect to the other page when needed, so
+either address works. Setup needs the one-time code the server prints when it
+starts with no admin. The forms check fields with the server's rules first
+(`src/api/credential-rules.ts`; login only checks that fields are filled in, so
+it never reveals the password rules), then show server field messages under
+their fields and other errors above the form. After `too_many_requests` the
+submit button waits out `Retry-After`. Success goes to Home. Until #67 adds
+route guards, the shell still opens without logging in.
+
 ## UI constraints
 
 - `src/components/ui/` uses locally adapted shadcn primitives backed by `radix-ui`.
@@ -75,7 +88,9 @@ pinned to port 5173 (`strictPort`) for the same reason.
   behavior. Status text must convey meaning without color alone.
 - Text utilities: `text-title`, `text-heading`, `text-caption`. For empty, status,
   loading and error states use `EmptyState`, `StatusIndicator`, `PageLoading`,
-  `PageError` and `ApiErrorNotice` from `src/components/`.
+  `PageError` and `ApiErrorNotice` from `src/components/`. Form inputs use
+  `TextField`, which links the label, hint and error, and gives
+  `type="password"` a "Show password" toggle.
 
 ## Maintaining primitives
 
