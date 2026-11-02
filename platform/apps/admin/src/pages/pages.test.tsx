@@ -1,10 +1,10 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { renderAppAt } from '@/test/render-app'
+import { renderSignedInAt } from '@/test/render-app'
 
 describe('page content', () => {
   it('Home shows every connection as not set up, with no actions', async () => {
-    await renderAppAt('/')
+    await renderSignedInAt('/')
     const main = screen.getByRole('main')
     expect(within(main).getByText('Not paired')).toBeTruthy()
     expect(within(main).getAllByText('Not connected')).toHaveLength(2)
@@ -18,7 +18,7 @@ describe('page content', () => {
   })
 
   it('Devices shows the empty state without a pair action', async () => {
-    await renderAppAt('/devices')
+    await renderSignedInAt('/devices')
     const main = screen.getByRole('main')
     expect(
       within(main).getByRole('heading', { level: 2, name: 'No devices yet' }),
@@ -27,14 +27,14 @@ describe('page content', () => {
   })
 
   it('Settings shows its empty state', async () => {
-    await renderAppAt('/settings')
+    await renderSignedInAt('/settings')
     expect(
       screen.getByRole('heading', { level: 2, name: 'Nothing to set up yet' }),
     ).toBeTruthy()
   })
 
   it('Not found links back to Home', async () => {
-    await renderAppAt('/no-such-page')
+    await renderSignedInAt('/no-such-page')
     expect(
       screen.getByRole('link', { name: 'Go to Home' }).getAttribute('href'),
     ).toBe('/')

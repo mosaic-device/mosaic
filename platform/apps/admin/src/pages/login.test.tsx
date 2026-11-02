@@ -1,6 +1,11 @@
 import { fireEvent, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { jsonResponse, problemResponse, stubFetch } from '@/test/fetch-stub'
+import {
+  jsonResponse,
+  problemResponse,
+  sessionResponse,
+  stubFetch,
+} from '@/test/fetch-stub'
 import { renderAppAt } from '@/test/render-app'
 
 const noAdmin = () => jsonResponse({ setupRequired: true })
@@ -53,6 +58,7 @@ describe('login page', () => {
   it('logs in and opens Home', async () => {
     const { calls, router } = await openLogin(
       jsonResponse({ admin: { username: 'bridger' } }),
+      sessionResponse(),
     )
 
     fill('Username', 'Bridger ')
@@ -71,6 +77,7 @@ describe('login page', () => {
   it('sends values a password manager filled in without an input event', async () => {
     const { calls } = await openLogin(
       jsonResponse({ admin: { username: 'bridger' } }),
+      sessionResponse(),
     )
 
     screen.getByLabelText<HTMLInputElement>('Username').value = 'bridger'

@@ -4,6 +4,7 @@ import {
   emptyResponse,
   jsonResponse,
   problemResponse,
+  sessionResponse,
   stubFetch,
 } from '@/test/fetch-stub'
 import { renderAppAt } from '@/test/render-app'
@@ -113,6 +114,7 @@ describe('setup page', () => {
     const { calls } = stubFetch(
       noAdmin(),
       jsonResponse({ admin: { username: 'bridger' } }, 201),
+      sessionResponse(),
     )
     const router = await renderAppAt('/setup')
     await screen.findByRole('heading', { name: 'Set up Mosaic' })
@@ -135,6 +137,7 @@ describe('setup page', () => {
     const { calls } = stubFetch(
       noAdmin(),
       jsonResponse({ admin: { username: 'bridger' } }, 201),
+      sessionResponse(),
     )
     await renderAppAt('/setup')
     await screen.findByRole('heading', { name: 'Set up Mosaic' })

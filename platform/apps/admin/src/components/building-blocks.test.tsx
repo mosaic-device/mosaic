@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { Monitor } from 'lucide-react'
 import { describe, expect, it } from 'vitest'
 import { EmptyState } from '@/components/EmptyState'
@@ -44,6 +44,15 @@ describe('page building blocks', () => {
       'true',
     )
     expect(container.querySelectorAll('div')).toHaveLength(1)
+  })
+
+  it('the signed-in area waits on a centered spinner, not the shell', () => {
+    const Pending =
+      createAppRouter().routesById['/app'].options.pendingComponent!
+    render(<Pending />)
+    const main = screen.getByRole('main')
+    expect(within(main).getByRole('status').textContent).toBe('Loading…')
+    expect(screen.queryByRole('navigation')).toBeNull()
   })
 
   it('setup and login show the spinner instead of the page skeleton', () => {
