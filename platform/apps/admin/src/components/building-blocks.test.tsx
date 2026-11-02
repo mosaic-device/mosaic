@@ -3,6 +3,7 @@ import { Monitor } from 'lucide-react'
 import { describe, expect, it } from 'vitest'
 import { EmptyState } from '@/components/EmptyState'
 import { PageLoading } from '@/components/PageLoading'
+import { PublicPageLoading } from '@/components/PublicPageLoading'
 import { StatusIndicator } from '@/components/StatusIndicator'
 import { createAppRouter } from '@/router'
 
@@ -33,5 +34,25 @@ describe('page building blocks', () => {
 
   it('the router shows PageLoading while a route is pending', () => {
     expect(createAppRouter().options.defaultPendingComponent).toBe(PageLoading)
+  })
+
+  it('PublicPageLoading is only a spinner that announces loading', () => {
+    const { container } = render(<PublicPageLoading />)
+    const status = screen.getByRole('status')
+    expect(status.textContent).toBe('Loading…')
+    expect(status.querySelector('svg')?.getAttribute('aria-hidden')).toBe(
+      'true',
+    )
+    expect(container.querySelectorAll('div')).toHaveLength(1)
+  })
+
+  it('setup and login show the spinner instead of the page skeleton', () => {
+    const { routesById } = createAppRouter()
+    expect(routesById['/public/setup'].options.pendingComponent).toBe(
+      PublicPageLoading,
+    )
+    expect(routesById['/public/login'].options.pendingComponent).toBe(
+      PublicPageLoading,
+    )
   })
 })

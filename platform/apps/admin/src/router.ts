@@ -9,6 +9,7 @@ import {
 import { getSetupStatus } from '@/api/auth'
 import { PageError } from '@/components/PageError'
 import { PageLoading } from '@/components/PageLoading'
+import { PublicPageLoading } from '@/components/PublicPageLoading'
 import { AppShell } from '@/components/shell/AppShell'
 import { PublicLayout } from '@/components/shell/PublicLayout'
 import { DevPreview } from '@/DevPreview'
@@ -41,6 +42,7 @@ const setupRoute = createRoute({
       })
     }
   },
+  pendingComponent: PublicPageLoading,
   component: SetupPage,
 })
 const loginRoute = createRoute({
@@ -53,6 +55,7 @@ const loginRoute = createRoute({
     const { setupRequired } = await getSetupStatus(abortController.signal)
     if (setupRequired) throw redirect({ to: '/setup', replace: true })
   },
+  pendingComponent: PublicPageLoading,
   component: LoginPage,
 })
 
