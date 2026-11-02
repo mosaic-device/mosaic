@@ -7,6 +7,10 @@ describe('safeReturnPath', () => {
     expect(safeReturnPath('/devices?tab=a#x')).toBe('/devices?tab=a#x')
   })
 
+  it('keeps encoded slashes as a path inside the app', () => {
+    expect(safeReturnPath('/%2F%2Fevil.example')).toBe('/%2F%2Fevil.example')
+  })
+
   it('drops Home, since login goes there anyway', () => {
     expect(safeReturnPath('/')).toBeUndefined()
   })
@@ -21,6 +25,9 @@ describe('safeReturnPath', () => {
     '//evil.example',
     '/\\evil.example',
     '/\t/evil.example',
+    '/.//evil.example',
+    '/..//evil.example',
+    '/%2e%2e//evil.example',
     'https://evil.example/x',
     'javascript:alert(1)',
     'devices',

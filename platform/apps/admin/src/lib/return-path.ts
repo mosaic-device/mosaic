@@ -15,7 +15,10 @@ export function safeReturnPath(value: unknown): string | undefined {
   } catch {
     return undefined
   }
-  if (url.origin !== BASE || NO_RETURN.has(url.pathname)) return undefined
+  // A dot segment can leave "//host" behind (`/.//evil.example`), which a
+  // browser reads as another site even though the origin check passed.
+  if (url.origin !== BASE || url.pathname.startsWith('//')) return undefined
+  if (NO_RETURN.has(url.pathname)) return undefined
   return url.pathname + url.search + url.hash
 }
 
