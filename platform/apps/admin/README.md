@@ -66,8 +66,22 @@ starts with no admin. The forms check fields with the server's rules first
 (`src/api/credential-rules.ts`; login only checks that fields are filled in, so
 it never reveals the password rules), then show server field messages under
 their fields and other errors above the form. After `too_many_requests` the
-submit button waits out `Retry-After`. Success goes to Home. Until #67 adds
-route guards, the shell still opens without logging in.
+submit button waits out `Retry-After`. Success goes to the page the owner was
+trying to open, or Home.
+
+## Sessions and logout
+
+The session cookie is `HttpOnly`, so the app asks the server instead of reading
+it: the `app` route's `beforeLoad` calls `GET /api/auth/session` on every
+navigation in the signed-in shell. Until it answers, only a centered spinner
+shows, and a server that can't be reached shows the error page without the
+shell. A `401` sends the owner to `/login?redirect=<page>`; `redirect` is kept
+only when it is a path inside the app (`src/lib/return-path.ts`). When this tab
+was signed in and lost its session, login also says the session ended. Login
+skips the form for someone already signed in. The shell checks again when the
+tab comes back into view, acting only on a `401`. Logout sits at the bottom of
+the sidebar and the phone menu; if the server never hears it, the owner stays
+signed in and sees the error.
 
 ## UI constraints
 
