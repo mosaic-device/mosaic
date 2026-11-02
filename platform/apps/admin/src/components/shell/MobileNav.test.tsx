@@ -1,17 +1,17 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { renderAppAt } from '@/test/render-app'
+import { renderSignedInAt } from '@/test/render-app'
 
 describe('phone menu', () => {
   it('opens with the main links', async () => {
-    await renderAppAt('/')
+    await renderSignedInAt('/')
     fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
     const dialog = await screen.findByRole('dialog', { name: 'Menu' })
     expect(within(dialog).getByRole('link', { name: 'Devices' })).toBeTruthy()
   })
 
   it('navigates and closes when a link is chosen', async () => {
-    await renderAppAt('/')
+    await renderSignedInAt('/')
     fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
     const dialog = await screen.findByRole('dialog', { name: 'Menu' })
     fireEvent.click(within(dialog).getByRole('link', { name: 'Settings' }))
@@ -22,7 +22,7 @@ describe('phone menu', () => {
   })
 
   it('closes when the page changes without a menu link, like Back', async () => {
-    const router = await renderAppAt('/')
+    const router = await renderSignedInAt('/')
     await act(() => router.navigate({ to: '/settings' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
     await screen.findByRole('dialog', { name: 'Menu' })
@@ -34,7 +34,7 @@ describe('phone menu', () => {
   })
 
   it('stays closed after Back then Forward', async () => {
-    const router = await renderAppAt('/')
+    const router = await renderSignedInAt('/')
     await act(() => router.navigate({ to: '/settings' }))
     fireEvent.click(screen.getByRole('button', { name: 'Open menu' }))
     await screen.findByRole('dialog', { name: 'Menu' })
@@ -49,7 +49,7 @@ describe('phone menu', () => {
   })
 
   it('closes on Escape and returns focus to the menu button', async () => {
-    await renderAppAt('/')
+    await renderSignedInAt('/')
     const button = screen.getByRole('button', { name: 'Open menu' })
     fireEvent.click(button)
     await screen.findByRole('dialog', { name: 'Menu' })

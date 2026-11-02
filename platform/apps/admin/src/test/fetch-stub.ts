@@ -79,3 +79,36 @@ export function textResponse(
     headers: { 'Content-Type': contentType },
   })
 }
+
+export function sessionResponse(username = 'bridger'): Response {
+  return jsonResponse({
+    admin: { username },
+    expiresAt: '2026-11-09T12:00:00Z',
+  })
+}
+
+export function unauthenticatedResponse(): Response {
+  return problemResponse({
+    status: 401,
+    code: 'unauthenticated',
+    title: 'Log in to continue.',
+  })
+}
+
+/**
+ * Answers every session check as signed in, for tests about the signed-in
+ * pages. Any other request fails the test.
+ */
+export function stubSignedIn(username = 'bridger'): { calls: FetchCall[] } {
+  const calls: FetchCall[] = []
+  vi.stubGlobal(
+    'fetch',
+    async (input: RequestInfo | URL, init: RequestInit = {}) => {
+      const call = { url: String(input), init }
+      calls.push(call)
+      if (call.url === '/api/auth/session') return sessionResponse(username)
+      throw new Error(`Unexpected fetch: ${call.url}`)
+    },
+  )
+  return { calls }
+}

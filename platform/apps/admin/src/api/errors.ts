@@ -85,3 +85,8 @@ export function isAbortError(error: unknown): boolean {
     (error as { name?: unknown }).name === 'AbortError'
   )
 }
+
+/** True when the server says there is no signed-in session. */
+export function isUnauthenticated(error: unknown): boolean {
+  return isApiError(error) && error.code === 'unauthenticated'
+}

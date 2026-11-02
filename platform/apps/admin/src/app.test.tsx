@@ -1,6 +1,6 @@
 import { fireEvent, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { renderAppAt } from '@/test/render-app'
+import { renderSignedInAt } from '@/test/render-app'
 
 describe('direct load', () => {
   it.each([
@@ -11,7 +11,7 @@ describe('direct load', () => {
     ['/no-such-page', 'Page not found', 'Page not found · Mosaic Admin'],
     ['/a/b/c', 'Page not found', 'Page not found · Mosaic Admin'],
   ])('%s renders its page', async (path, heading, title) => {
-    await renderAppAt(path)
+    await renderSignedInAt(path)
     expect(
       screen.getByRole('heading', { level: 1, name: heading }),
     ).toBeTruthy()
@@ -26,7 +26,7 @@ describe('navigation', () => {
     ['/devices/', 'Devices'],
     ['/settings', 'Settings'],
   ])('on %s only %s is current', async (path, label) => {
-    await renderAppAt(path)
+    await renderSignedInAt(path)
     const nav = screen.getByRole('navigation', { name: 'Main' })
     for (const link of within(nav).getAllByRole('link')) {
       expect(link.getAttribute('aria-current')).toBe(
@@ -36,7 +36,7 @@ describe('navigation', () => {
   })
 
   it('clicking a link changes the page and the current link', async () => {
-    await renderAppAt('/')
+    await renderSignedInAt('/')
     const nav = screen.getByRole('navigation', { name: 'Main' })
     fireEvent.click(within(nav).getByRole('link', { name: 'Devices' }))
     expect(
@@ -55,7 +55,7 @@ describe('navigation', () => {
   })
 
   it('marks no link current on a not-found page under a section', async () => {
-    await renderAppAt('/devices/no-such-device')
+    await renderSignedInAt('/devices/no-such-device')
     expect(
       screen.getByRole('heading', { level: 1, name: 'Page not found' }),
     ).toBeTruthy()
@@ -66,12 +66,12 @@ describe('navigation', () => {
   })
 
   it('keeps the navigation on the not-found page', async () => {
-    await renderAppAt('/no-such-page')
+    await renderSignedInAt('/no-such-page')
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeTruthy()
   })
 
   it('skip link targets the focusable main content', async () => {
-    await renderAppAt('/')
+    await renderSignedInAt('/')
     expect(
       screen
         .getByRole('link', { name: 'Skip to content' })

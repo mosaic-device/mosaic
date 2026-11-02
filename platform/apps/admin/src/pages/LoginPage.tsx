@@ -1,6 +1,6 @@
 import { getRouteApi, useNavigate } from '@tanstack/react-router'
 import { Info } from 'lucide-react'
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { login } from '@/api/auth'
 import { validateLogin } from '@/api/credential-rules'
 import { useApiAction } from '@/api/use-api-action'
@@ -18,7 +18,7 @@ const route = getRouteApi('/public/login')
 const fields = ['username', 'password'] as const
 
 function LoginPage() {
-  const { setup } = route.useSearch()
+  const { setup, session, redirect: returnPath } = route.useSearch()
   const navigate = useNavigate()
   const { run, pending } = useApiAction(login)
   const form = useCredentialForm(fields)
@@ -37,7 +37,7 @@ function LoginPage() {
     const result = await run(input)
     if (result.status === 'cancelled') return
     if (result.status === 'success') {
-      await navigate({ to: '/', replace: true })
+      await navigate({ href: returnPath ?? '/', replace: true })
       return
     }
     const { error } = result
@@ -61,13 +61,12 @@ function LoginPage() {
         onSubmit={(event) => void handleSubmit(event)}
       >
         {setup === 'complete' && (
-          <p className="border-border bg-surface-raised flex gap-3 rounded-md border px-4 py-3">
-            <Info
-              aria-hidden="true"
-              className="text-info mt-0.5 size-5 shrink-0"
-            />
+          <LoginNote>
             This server is already set up. Log in with its admin account.
-          </p>
+          </LoginNote>
+        )}
+        {session === 'ended' && (
+          <LoginNote>Your session ended. Log in again to continue.</LoginNote>
         )}
         <ApiErrorNotice error={form.notice} />
         <TextField
@@ -102,6 +101,15 @@ function LoginPage() {
         </Button>
       </form>
     </AuthCard>
+  )
+}
+
+function LoginNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="border-border bg-surface-raised flex gap-3 rounded-md border px-4 py-3">
+      <Info aria-hidden="true" className="text-info mt-0.5 size-5 shrink-0" />
+      {children}
+    </p>
   )
 }
 

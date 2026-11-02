@@ -1,9 +1,13 @@
 import { Outlet } from '@tanstack/react-router'
+import { AccountPanel } from '@/components/shell/AccountPanel'
 import { MobileNav } from '@/components/shell/MobileNav'
 import { NavLinks } from '@/components/shell/NavLinks'
 import { Wordmark } from '@/components/shell/Wordmark'
+import { useSessionRecheck } from '@/lib/use-session-recheck'
 
 function AppShell() {
+  useSessionRecheck()
+
   return (
     <div className="flex min-h-dvh">
       <a
@@ -17,8 +21,9 @@ function AppShell() {
         <nav aria-label="Main">
           <NavLinks />
         </nav>
-        {/* Signed-in account and logout arrive with session handling (#67). */}
-        <div data-slot="account" className="mt-auto" />
+        <div data-slot="account" className="mt-auto">
+          <AccountPanel />
+        </div>
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-border bg-surface flex h-16 items-center justify-between border-b pr-2 pl-5 md:hidden">
