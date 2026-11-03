@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <cstdlib>
 #include <initializer_list>
 
 using namespace mosaic::features::led_feedback;
@@ -24,26 +25,27 @@ bool all(std::span<const Color> leds, Color color) {
     return std::ranges::all_of(leds, [color](Color led) { return led == color; });
 }
 
-void check_animation_is_defined(const Animation& animation) {
-    if (animation.effect != Effect::off && animation.effect != Effect::solid)
-        assert(animation.period_ms > 0);
+bool dark(std::span<const Color> leds) {
+    return all(leds, kOff);
 }
 
-void check_pattern_is_defined(const Pattern& pattern) {
-    check_animation_is_defined(pattern.ring);
-    check_animation_is_defined(pattern.strip);
+int distance(Color a, Color b) {
+    return std::abs(a.red - b.red) + std::abs(a.green - b.green) + std::abs(a.blue - b.blue);
 }
+
+// Long enough for any fade to finish.
+constexpr uint32_t kSettled = kFadeMs + 1;
 
 void off_and_solid() {
     Ring leds;
     leds.fill(kRed);
     render({ .effect = Effect::off, .color = kRed }, 123, leds);
-    assert(all(leds, kOff));
+    assert(dark(leds));
     render({ .effect = Effect::solid, .color = kRed }, 123, leds);
     assert(all(leds, kRed));
 }
 
-void breathe_fades_up_then_down() {
+void breathe_fades_between_dim_and_full_without_going_dark() {
     const Animation animation { .effect = Effect::breathe, .color = kRed, .period_ms = 1000 };
     Ring leds;
     uint8_t previous = 0;
@@ -54,7 +56,7 @@ void breathe_fades_up_then_down() {
         previous = leds[0].red;
     }
     render(animation, 0, leds);
-    assert(all(leds, kOff));
+    assert(!dark(leds) && leds[0].red < kRed.red / 2);
     render(animation, 500, leds);
     assert(all(leds, kRed));
     for (uint32_t t = 500; t <= 1000; t += 10) {
@@ -69,166 +71,206 @@ void breathe_fades_up_then_down() {
     assert(rising == falling);
     render(animation, 3200, falling);
     assert(rising == falling);
+    // A missing period holds the color steady instead of dividing by zero.
+    render({ .effect = Effect::breathe, .color = kRed, .period_ms = 0 }, 123, leds);
+    assert(all(leds, kRed));
 }
 
-void blink_is_on_for_half_of_each_period() {
-    const Animation animation { .effect = Effect::blink, .color = kRed, .period_ms = 1000 };
-    Ring leds;
-    for (uint32_t t : { 0u, 499u, 1000u, 1499u }) {
-        render(animation, t, leds);
-        assert(all(leds, kRed));
-    }
-    for (uint32_t t : { 500u, 999u, 1500u }) {
-        render(animation, t, leds);
-        assert(all(leds, kOff));
-    }
-}
-
-void spin_moves_one_bright_led_around_every_position() {
-    const Animation animation { .effect = Effect::spin, .color = kRed, .period_ms = 800 };
-    Ring leds;
-    std::array<bool, 8> visited { };
-    for (uint32_t t = 0; t < 800; t += 10) {
-        render(animation, t, leds);
-        const auto brightest = std::ranges::count(leds, kRed);
-        assert(brightest == 1);
-        const size_t head = static_cast<size_t>(std::ranges::find(leds, kRed) - leds.begin());
-        visited[head] = true;
-        // The LED just behind the head is dimmer but lit; the one ahead is dark.
-        const Color behind = leds[(head + 7) % 8];
-        assert(behind != kOff && behind.red < kRed.red);
-        assert(leds[(head + 1) % 8] == kOff);
-    }
-    assert(std::ranges::all_of(visited, [](bool seen) { return seen; }));
-    // Works on any length, including the strip.
-    Strip strip;
-    render(animation, 400, strip);
-    assert(std::ranges::count(strip, kRed) == 1);
-}
-
-void animated_effects_without_a_period_hold_steady() {
-    Ring leds;
-    for (Effect effect : { Effect::breathe, Effect::blink, Effect::spin }) {
-        render({ .effect = effect, .color = kRed, .period_ms = 0 }, 123, leds);
-        assert(all(leds, kRed));
-    }
-}
-
-void every_pattern_is_defined_and_distinct() {
-    for (Status status : kStatuses)
-        check_pattern_is_defined(pattern(status));
-    check_pattern_is_defined(notification().pattern);
-    assert(notification().duration_ms > 0);
-    // Idle, pairing, error and a new notification must each look different.
-    const std::array distinct {
-        pattern(Status::connected),
-        pattern(Status::pairing),
-        pattern(Status::error),
-        notification().pattern,
+void each_status_means_one_thing() {
+    // Nothing paired yet: the device is being set up, and the screen explains it.
+    assert(pattern(Status::disconnected, false) == Pattern { });
+    // Pairing asks for the owner at the knob; the room light stays off until paired.
+    assert(pattern(Status::pairing, false).ring.effect == Effect::breathe);
+    assert(pattern(Status::pairing, false).strip.effect == Effect::off);
+    // Idle and paired: only the ambient strip is on.
+    const Pattern idle = pattern(Status::connected, true);
+    assert(idle.ring.effect == Effect::off && idle.strip.effect == Effect::solid);
+    // Losing the server lights the ring steadily, never blinking, and keeps the room
+    // light on if the device was paired.
+    const Pattern trouble = pattern(Status::error, true);
+    assert(trouble.ring.effect == Effect::solid);
+    assert(trouble.strip == idle.strip);
+    assert(pattern(Status::error, false).ring == trouble.ring);
+    assert(pattern(Status::error, false).strip.effect == Effect::off);
+    // Trouble, pairing and a notification each use their own ring color.
+    const std::array colors {
+        trouble.ring.color,
+        pattern(Status::pairing, false).ring.color,
+        kNotificationRing.color,
     };
-    for (size_t i = 0; i < distinct.size(); ++i)
-        for (size_t j = i + 1; j < distinct.size(); ++j)
-            assert(distinct[i] != distinct[j]);
+    for (size_t i = 0; i < colors.size(); ++i)
+        for (size_t j = i + 1; j < colors.size(); ++j)
+            assert(distance(colors[i], colors[j]) > 150);
 }
 
 // The driver sends every frame through limit(); check the result for every pattern over time.
 void no_pattern_exceeds_the_ceiling() {
-    std::array<Pattern, kStatuses.size() + 1> patterns;
-    for (size_t i = 0; i < kStatuses.size(); ++i)
-        patterns[i] = pattern(kStatuses[i]);
-    patterns.back() = notification().pattern;
     Ring ring;
     Strip strip;
-    for (const Pattern& shown : patterns) {
-        for (uint32_t t = 0; t < 10'000; t += 7) {
-            render(shown.ring, t, ring);
-            render(shown.strip, t, strip);
-            for (std::span<const Color> leds : { std::span<const Color>(ring), std::span<const Color>(strip) }) {
-                for (Color led : leds) {
-                    const Color sent = limit(led);
-                    assert(sent.red <= kCeiling && sent.green <= kCeiling && sent.blue <= kCeiling);
+    for (Status status : kStatuses) {
+        for (bool paired : { false, true }) {
+            Feedback feedback(status, paired);
+            feedback.notify(500);
+            for (uint32_t t = 0; t < 10'000; t += 7) {
+                feedback.render(t, ring, strip);
+                for (std::span<const Color> leds : { std::span<const Color>(ring), std::span<const Color>(strip) }) {
+                    for (Color led : leds) {
+                        const Color sent = limit(led);
+                        assert(sent.red <= kCeiling && sent.green <= kCeiling && sent.blue <= kCeiling);
+                    }
                 }
             }
         }
     }
 }
 
-void feedback_shows_the_status_pattern() {
-    Feedback feedback(Status::pairing, 1000);
-    Ring ring, expected_ring;
-    Strip strip, expected_strip;
-    feedback.render(1300, ring, strip);
-    render(pattern(Status::pairing).ring, 300, expected_ring);
-    render(pattern(Status::pairing).strip, 300, expected_strip);
-    assert(ring == expected_ring && strip == expected_strip);
+void changes_crossfade_without_jumping() {
+    Feedback feedback(Status::disconnected, false);
+    Ring ring;
+    Strip strip;
+    feedback.render(0, ring, strip);
+    assert(dark(ring) && dark(strip));
 
-    // A new status starts its animation from the beginning.
-    feedback.set_status(Status::error, 2000);
-    feedback.render(2100, ring, strip);
-    render(pattern(Status::error).ring, 100, expected_ring);
-    render(pattern(Status::error).strip, 100, expected_strip);
-    assert(ring == expected_ring && strip == expected_strip);
+    // Connecting fades the strip up from dark over kFadeMs, a little at a time.
+    feedback.set_status(Status::connected, true);
+    feedback.render(1000, ring, strip);
+    assert(dark(strip));
+    Strip previous = strip;
+    for (uint32_t t = 1000; t <= 1000 + kFadeMs; t += 20) {
+        feedback.render(t, ring, strip);
+        assert(distance(strip[0], previous[0]) < 60);
+        assert(strip[0].red >= previous[0].red);
+        previous = strip;
+    }
+    Strip settled;
+    render(pattern(Status::connected, true).strip, kSettled, settled);
+    feedback.render(1000 + kSettled, ring, strip);
+    assert(strip == settled && dark(ring));
 
-    // Setting the same status again does not restart it.
-    feedback.set_status(Status::error, 2050);
-    feedback.render(2100, ring, strip);
-    assert(ring == expected_ring && strip == expected_strip);
+    // A change in the middle of a fade starts from what is showing, not from the old target.
+    feedback.set_status(Status::error, true);
+    feedback.render(5000, ring, strip);
+    feedback.render(5000 + kFadeMs / 2, ring, strip);
+    const Color halfway = ring[0];
+    assert(halfway != kOff && halfway != pattern(Status::error, true).ring.color);
+    feedback.set_status(Status::disconnected, false);
+    feedback.render(5000 + kFadeMs / 2 + 1, ring, strip);
+    assert(distance(ring[0], halfway) < 20);
+    feedback.render(5000 + kFadeMs / 2 + kSettled, ring, strip);
+    assert(dark(ring) && dark(strip));
+
+    // Setting the same status again changes nothing.
+    feedback.set_status(Status::connected, true);
+    feedback.render(9000 + kSettled, ring, strip);
+    const Strip steady = strip;
+    feedback.set_status(Status::connected, true);
+    feedback.render(9000 + kSettled + 1, ring, strip);
+    assert(strip == steady);
 }
 
-void notification_interrupts_then_returns_to_the_status() {
-    const uint32_t duration = notification().duration_ms;
-    Feedback feedback(Status::connected, 0);
-    Ring ring, expected_ring;
-    Strip strip, expected_strip;
+void a_notification_waits_on_the_ring_until_acknowledged() {
+    Feedback feedback(Status::connected, true);
+    Ring ring;
+    Strip strip;
+    feedback.render(0, ring, strip);
+    feedback.render(kSettled, ring, strip);
+    const Strip idle = strip;
 
     feedback.notify(1000);
-    feedback.render(1100, ring, strip);
-    render(notification().pattern.ring, 100, expected_ring);
-    render(notification().pattern.strip, 100, expected_strip);
-    assert(ring == expected_ring && strip == expected_strip);
+    assert(feedback.waiting());
+    feedback.render(1000, ring, strip);
+    feedback.render(1000 + kSettled, ring, strip);
+    assert(all(ring, kNotificationColor));
+    // Long after the strip's swell, the ring still holds the color.
+    feedback.render(600'000, ring, strip);
+    assert(all(ring, kNotificationColor));
+    assert(strip == idle);
 
-    // A status change during a notification shows once the notification ends.
-    feedback.set_status(Status::error, 1200);
-    feedback.render(1000 + duration - 1, ring, strip);
-    render(notification().pattern.ring, duration - 1, expected_ring);
-    assert(ring == expected_ring);
-    feedback.render(1000 + duration, ring, strip);
-    render(pattern(Status::error).ring, 1000 + duration - 1200, expected_ring);
-    render(pattern(Status::error).strip, 1000 + duration - 1200, expected_strip);
-    assert(ring == expected_ring && strip == expected_strip);
+    feedback.acknowledge();
+    assert(!feedback.waiting());
+    feedback.render(600'000, ring, strip);
+    feedback.render(600'000 + kSettled, ring, strip);
+    assert(dark(ring));
 
-    // Another notification while one plays restarts it.
+    // While the server is out of reach, a waiting notification still wins the ring,
+    // and acknowledging it shows the trouble color again.
+    feedback.set_status(Status::error, true);
+    feedback.notify(700'000);
+    feedback.render(700'000, ring, strip);
+    feedback.render(700'000 + kSettled, ring, strip);
+    assert(all(ring, kNotificationColor));
+    feedback.acknowledge();
+    feedback.render(700'000 + kSettled, ring, strip);
+    feedback.render(700'000 + 2 * kSettled, ring, strip);
+    assert(all(ring, pattern(Status::error, true).ring.color));
+
+    // Unpairing clears it.
+    feedback.notify(800'000);
+    feedback.set_status(Status::disconnected, false);
+    assert(!feedback.waiting());
+    feedback.render(800'001, ring, strip);
+    feedback.render(800'001 + kSwellMs + kSettled, ring, strip);
+    assert(dark(ring) && dark(strip));
+}
+
+void the_strip_swells_once_then_settles() {
+    Feedback feedback(Status::connected, true);
+    Ring ring;
+    Strip strip;
+    feedback.render(0, ring, strip);
+    feedback.render(kSettled, ring, strip);
+    const Strip idle = strip;
+
+    feedback.notify(1000);
+    feedback.render(1000, ring, strip);
+    assert(strip == idle);
+    // At the peak the strip shows the notification color.
+    feedback.render(1000 + kSwellMs / 2, ring, strip);
+    assert(all(strip, kNotificationColor));
+    // It never jumps along the way.
+    Strip previous = idle;
+    for (uint32_t t = 1000; t <= 1000 + kSwellMs; t += 20) {
+        feedback.render(t, ring, strip);
+        assert(distance(strip[0], previous[0]) < 60);
+        previous = strip;
+    }
+    feedback.render(1000 + kSwellMs, ring, strip);
+    assert(strip == idle);
+
+    // Another notification while it falls rises again from where it is.
     feedback.notify(10'000);
-    feedback.notify(10'000 + duration - 10);
-    feedback.render(10'000 + duration + 10, ring, strip);
-    render(notification().pattern.ring, 20, expected_ring);
-    assert(ring == expected_ring);
+    feedback.render(10'000 + kSwellMs - 300, ring, strip);
+    const Color falling = strip[0];
+    feedback.notify(10'000 + kSwellMs - 300);
+    feedback.render(10'000 + kSwellMs - 299, ring, strip);
+    assert(distance(strip[0], falling) < 20);
+    feedback.render(10'000 + kSwellMs + 1000, ring, strip);
+    assert(all(strip, kNotificationColor));
 }
 
 void times_may_wrap_around() {
     const uint32_t start = UINT32_MAX - 50;
-    Feedback feedback(Status::connected, 0);
-    feedback.notify(start);
-    Ring ring, expected;
+    Feedback feedback(Status::connected, true);
+    Ring ring;
     Strip strip;
-    feedback.render(start + 100, ring, strip); // Wrapped past zero.
-    render(notification().pattern.ring, 100, expected);
-    assert(ring == expected);
-    feedback.render(start + notification().duration_ms, ring, strip);
-    render(pattern(Status::connected).ring, start + notification().duration_ms, expected);
-    assert(ring == expected);
+    feedback.render(start, ring, strip);
+    feedback.notify(start);
+    feedback.render(start + kSwellMs / 2, ring, strip); // Wrapped past zero.
+    assert(all(strip, kNotificationColor));
+    feedback.render(start + kSwellMs + kSettled, ring, strip);
+    Strip idle;
+    render(pattern(Status::connected, true).strip, 0, idle);
+    assert(strip == idle && all(ring, kNotificationColor));
 }
 } // namespace
 
 int main() {
     off_and_solid();
-    breathe_fades_up_then_down();
-    blink_is_on_for_half_of_each_period();
-    spin_moves_one_bright_led_around_every_position();
-    animated_effects_without_a_period_hold_steady();
-    every_pattern_is_defined_and_distinct();
+    breathe_fades_between_dim_and_full_without_going_dark();
+    each_status_means_one_thing();
     no_pattern_exceeds_the_ceiling();
-    feedback_shows_the_status_pattern();
-    notification_interrupts_then_returns_to_the_status();
+    changes_crossfade_without_jumping();
+    a_notification_waits_on_the_ring_until_acknowledged();
+    the_strip_swells_once_then_settles();
     times_may_wrap_around();
 }
