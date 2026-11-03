@@ -256,8 +256,8 @@ void render_level(const Level& level, int step, const char* value, std::string_v
         lv_slider_set_value(level.slider, step, LV_ANIM_OFF);
     lv_obj_set_state(level.slider, LV_STATE_DISABLED, unavailable);
     lv_label_set_text(level.value, value);
-    lv_obj_set_style_text_color(level.value,
-        lv_color_hex(unavailable ? TOKEN_COLOR_MUTED_FOREGROUND_DARK : TOKEN_COLOR_FOREGROUND_DARK), 0);
+    lv_obj_set_style_text_color(
+        level.value, lv_color_hex(unavailable ? TOKEN_COLOR_MUTED_FOREGROUND_DARK : TOKEN_COLOR_FOREGROUND_DARK), 0);
     if (unavailable) {
         // Reasons are short literals; copy into the label anyway, since a view may not end in NUL.
         char text[48] { };

@@ -5,8 +5,8 @@
 namespace mosaic::features::clock {
 namespace {
     // Spelled out here rather than by strftime, so the text never depends on a C locale.
-    constexpr const char* kWeekdays[] = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-        "Saturday" };
+    constexpr const char* kWeekdays[]
+        = { "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday" };
     constexpr const char* kMonths[] = { "January", "February", "March", "April", "May", "June", "July", "August",
         "September", "October", "November", "December" };
 

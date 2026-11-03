@@ -30,9 +30,8 @@ namespace {
 
     // a at 0, b at 255.
     constexpr Color mix(Color a, Color b, uint32_t t) {
-        const auto channel = [t](uint8_t from, uint8_t to) {
-            return static_cast<uint8_t>((from * (255 - t) + to * t + 127) / 255);
-        };
+        const auto channel
+            = [t](uint8_t from, uint8_t to) { return static_cast<uint8_t>((from * (255 - t) + to * t + 127) / 255); };
         return { channel(a.red, b.red), channel(a.green, b.green), channel(a.blue, b.blue) };
     }
 
