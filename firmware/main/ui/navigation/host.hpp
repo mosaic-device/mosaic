@@ -24,6 +24,10 @@ struct Screens {
     // Read every tick in the LVGL context, after setup's routine.
     Conditions (*conditions)(void* context) = nullptr;
     void* conditions_context = nullptr;
+    // Called in the LVGL context on a tick after any touch, turn or press, including Back.
+    // Optional.
+    void (*input)(void* context) = nullptr;
+    void* input_context = nullptr;
 };
 // The runtime renderer hosting every screen, for ui::start(). Call once; the runtime
 // creates the screens once.

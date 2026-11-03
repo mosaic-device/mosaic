@@ -19,6 +19,7 @@ namespace {
     // reported state catches up and says Wi-Fi is no longer online.
     bool s_setup_forced = false;
     uint32_t s_backs_seen = 0;
+    uint32_t s_inactive_ms = 0;
 
     Slot slot(Screen screen) {
         switch (screen) {
@@ -112,13 +113,21 @@ namespace {
         follow_conditions();
         // Each Back press counts once. While a value is being adjusted, Back finishes
         // adjusting it and stays on the screen; Back with nowhere to go does nothing.
-        for (const uint32_t backs = drivers::encoder::back_presses(); s_backs_seen != backs; ++s_backs_seen) {
+        const uint32_t backs = drivers::encoder::back_presses();
+        const bool pressed_back = backs != s_backs_seen;
+        for (; s_backs_seen != backs; ++s_backs_seen) {
             lv_group_t* group = s_shown < kSlots ? s_containers[s_shown].group : nullptr;
             if (group && lv_group_get_editing(group))
                 lv_group_set_editing(group, false);
             else
                 s_navigator.back();
         }
+        // LVGL resets the inactivity time on any touch, turn or press; Back never
+        // reaches LVGL, so it counts separately.
+        const uint32_t inactive = lv_display_get_inactive_time(nullptr);
+        if ((pressed_back || inactive < s_inactive_ms) && s_screens.input)
+            s_screens.input(s_screens.input_context);
+        s_inactive_ms = inactive;
         show_active();
         if (s_shown < kSlots)
             ensure_focus(s_containers[s_shown].group);

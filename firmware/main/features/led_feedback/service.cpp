@@ -21,6 +21,7 @@ namespace {
     std::atomic<events::Status> s_status = events::Status::disconnected;
     std::atomic_bool s_paired = false;
     std::atomic<uint32_t> s_notifications = 0;
+    std::atomic<uint32_t> s_acknowledgements = 0;
     std::atomic_bool s_enabled = true;
 
     uint32_t now_ms() {
@@ -38,6 +39,7 @@ namespace {
     void run(void*) {
         Feedback feedback(s_status.load(), s_paired.load());
         uint32_t notifications = s_notifications.load();
+        uint32_t acknowledgements = s_acknowledgements.load();
         // The driver starts the LEDs dark, so a dark frame needs no write.
         std::array<Color, leds::kRingLength> ring { }, shown_ring { };
         std::array<Color, leds::kStripLength> strip { }, shown_strip { };
@@ -45,6 +47,12 @@ namespace {
         while (true) {
             const uint32_t now = now_ms();
             feedback.set_status(s_status.load(), s_paired.load());
+            // Seen before arriving counts for nothing: acknowledge first, then notify.
+            const uint32_t seen = s_acknowledgements.load();
+            if (seen != acknowledgements) {
+                acknowledgements = seen;
+                feedback.acknowledge();
+            }
             const uint32_t received = s_notifications.load();
             if (received != notifications) {
                 notifications = received;
@@ -69,6 +77,11 @@ namespace {
             ulTaskNotifyTake(pdTRUE, kFrameTicks);
         }
     }
+}
+void acknowledge() {
+    s_acknowledgements.fetch_add(1);
+    if (s_task)
+        xTaskNotifyGive(s_task);
 }
 void set_enabled(bool enabled) {
     s_enabled = enabled;
