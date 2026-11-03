@@ -45,4 +45,7 @@ esp_err_t start() {
 std::string_view now_text(std::span<char, kTextSize> buffer) {
     return text(s_synced.load(), std::time(nullptr), buffer);
 }
+std::string_view today_text(std::span<char, kDateSize> buffer) {
+    return date(s_synced.load(), std::time(nullptr), buffer);
+}
 }

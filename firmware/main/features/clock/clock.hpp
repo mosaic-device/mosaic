@@ -27,4 +27,11 @@ inline constexpr size_t kTextSize = 6;
 // process time zone (TZ); the clock service sets it to kTimeZone.
 std::string_view text(bool synced, std::time_t now, std::span<char, kTextSize> buffer);
 
+// Room for the longest date text, "Wednesday, September 30", and its terminator.
+inline constexpr size_t kDateSize = 24;
+
+// The date under the Home clock, such as "Tuesday, November 3", or empty whenever
+// text() would show the placeholder, so an untrusted clock shows no date either.
+std::string_view date(bool synced, std::time_t now, std::span<char, kDateSize> buffer);
+
 }
