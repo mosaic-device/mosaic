@@ -9,7 +9,7 @@ if(MOSAIC_DEBUG_TRIGGERS)
     if(MOSAIC_UI_GALLERY)
         message(FATAL_ERROR "MOSAIC_DEBUG_TRIGGERS needs the normal app; the gallery does not start the event bus")
     endif()
-    list(APPEND debug_sources "features/debug_triggers/console.cpp")
+    list(APPEND debug_sources "features/debug_triggers/console.cpp" "features/debug_triggers/commands.cpp")
 endif()
 
 option(MOSAIC_DISPLAY_DIAGNOSTICS "Trace the display's PPA and frame-buffer waits" OFF)
