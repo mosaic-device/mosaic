@@ -1,14 +1,12 @@
 #include "service.hpp"
 #include "cues.hpp"
+#include "playback.hpp"
 #include "wav.hpp"
+#include "../../drivers/speaker.hpp"
 #include "../../events/bus.hpp"
-#include <algorithm>
 #include <array>
 #include <atomic>
-#include <cstring>
-#include "bsp/esp-bsp.h"
 #include "esp_check.h"
-#include "esp_codec_dev.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h" // IWYU pragma: keep
 #include "freertos/queue.h"
@@ -24,15 +22,6 @@ namespace {
     constexpr const char* kTag = "mosaic_audio_cues";
     // Cues wait here while one plays; a burst beyond this is dropped, not queued up.
     constexpr UBaseType_t kQueueDepth = 4;
-    // Written in small pieces so muting stops a cue within about 10 ms.
-    constexpr size_t kChunkBytes = 512;
-    // Silence after the codec opens, while the DAC and amplifier settle; without it
-    // the start of the first note is distorted.
-    constexpr uint32_t kLeadMs = 50;
-    // Enough silence to fill the I2S DMA buffers (about 70 ms at 22050 Hz) before the
-    // amplifier turns off. It plays out the cue's tail, and leaves the buffers silent
-    // so the next open does not replay stale samples.
-    constexpr uint32_t kTailMs = 80;
 
     struct Sound {
         const uint8_t* start;
@@ -45,7 +34,6 @@ namespace {
         { notification_wav_start, notification_wav_end, { } },
         { connected_wav_start, connected_wav_end, { } },
     } };
-    esp_codec_dev_handle_t s_speaker = nullptr;
     QueueHandle_t s_queue = nullptr;
     std::atomic<uint8_t> s_volume = kDefaultVolume;
     std::atomic<bool> s_muted = false;
@@ -68,54 +56,26 @@ namespace {
     void on_notification(void*, esp_event_base_t, int32_t, void*) {
         enqueue(kNotificationCue);
     }
-    // Writes bytes through a scratch copy, since the codec may scale samples in place;
-    // null bytes write silence. Stops early when muted, unless writing silence.
-    bool write(const uint8_t* bytes, size_t size) {
-        std::array<uint8_t, kChunkBytes> chunk;
-        for (size_t at = 0; at < size; at += chunk.size()) {
-            if (bytes && !output().audible())
-                return false;
-            const size_t count = std::min(chunk.size(), size - at);
-            if (bytes)
-                std::memcpy(chunk.data(), bytes + at, count);
-            else
-                chunk.fill(0);
-            const int err = esp_codec_dev_write(s_speaker, chunk.data(), static_cast<int>(count));
-            if (err != ESP_CODEC_DEV_OK) {
-                ESP_LOGE(kTag, "Speaker write failed: %d", err);
-                return false;
-            }
-        }
-        return true;
+    bool audible() {
+        return output().audible();
     }
-    void play(const Pcm& pcm) {
-        const Output level = output();
-        if (!level.audible())
-            return;
-        esp_codec_dev_sample_info_t format { };
-        format.bits_per_sample = static_cast<uint8_t>(pcm.bits_per_sample);
-        format.channel = static_cast<uint8_t>(pcm.channels);
-        format.sample_rate = pcm.sample_rate;
-        // Opening the codec turns the amplifier on and closing it turns it off.
-        int err = esp_codec_dev_open(s_speaker, &format);
-        if (err != ESP_CODEC_DEV_OK) {
-            ESP_LOGE(kTag, "Cannot open speaker: %d", err);
-            return;
+    // Forwards playback to the speaker driver.
+    class DriverSpeaker final : public Speaker {
+    public:
+        bool open(const Pcm& format) override {
+            return drivers::speaker::open(format.sample_rate, format.channels, format.bits_per_sample);
         }
-        const size_t frame = static_cast<size_t>(pcm.channels) * pcm.bits_per_sample / 8;
-        const auto silence = [&](uint32_t ms) { return write(nullptr, pcm.sample_rate * ms / 1000 * frame); };
-        err = esp_codec_dev_set_out_vol(s_speaker, level.volume);
-        if (err != ESP_CODEC_DEV_OK)
-            ESP_LOGE(kTag, "Cannot set volume: %d", err);
-        else if (silence(kLeadMs)) {
-            // Muting may cut the cue short; the silent tail still flushes the buffers.
-            write(pcm.samples.data(), pcm.samples.size());
-            silence(kTailMs);
+        bool set_volume(uint8_t percent) override {
+            return drivers::speaker::set_volume(percent);
         }
-        err = esp_codec_dev_close(s_speaker);
-        if (err != ESP_CODEC_DEV_OK)
-            ESP_LOGE(kTag, "Cannot close speaker: %d", err);
-    }
+        bool write(uint8_t* bytes, size_t size) override {
+            return drivers::speaker::write(bytes, size);
+        }
+        void close() override {
+            drivers::speaker::close();
+        }
+    };
+    DriverSpeaker s_speaker;
     void run(void*) {
         Cue cue;
         while (true) {
@@ -123,7 +83,7 @@ namespace {
                 continue;
             const Sound& sound = s_sounds[static_cast<size_t>(cue)];
             if (sound.valid)
-                play(sound.pcm);
+                play(sound.pcm, output().volume, s_speaker, audible);
         }
     }
 }
@@ -133,10 +93,7 @@ esp_err_t start() {
         if (!sound.valid)
             ESP_LOGE(kTag, "Embedded cue is not a PCM WAV file; it will not play");
     }
-    // Sets up I2S and the ES8311 with its amplifier off until a cue opens the codec.
-    s_speaker = bsp_audio_codec_speaker_init();
-    if (s_speaker == nullptr)
-        return ESP_FAIL;
+    ESP_RETURN_ON_ERROR(drivers::speaker::start(), kTag, "Speaker");
     s_queue = xQueueCreate(kQueueDepth, sizeof(Cue));
     if (s_queue == nullptr)
         return ESP_ERR_NO_MEM;
