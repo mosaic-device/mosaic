@@ -123,6 +123,17 @@ python3 firmware/main/features/debug_triggers/tests/run.py
 python3 firmware/preview/platform/tests/run.py
 ```
 
+### Firmware preview
+
+CI builds the host preview on Linux, macOS and Windows and boots the real firmware
+into prepared states; a state the firmware never reaches fails the job. It needs
+CMake, SDL2 and a C++23 compiler (see the [firmware guide](../firmware/README.md#device-screen-preview)):
+
+```sh
+python3 firmware/preview/run.py --state setup --screenshot firmware/build/preview-ci/setup.bmp
+python3 firmware/preview/run.py --state settings --screenshot firmware/build/preview-ci/settings.bmp
+```
+
 ### Firmware build
 
 In an activated ESP-IDF 5.5.4 environment with Node on `PATH`:
