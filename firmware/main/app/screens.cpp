@@ -12,8 +12,8 @@ namespace {
         return {
             .starting = provisioning::starting(),
             .online = provisioning::online(),
-            // Connected implies paired until M3 stores the pairing itself.
-            .paired = events::status() == events::Status::connected,
+            // Until M3 stores the pairing itself, connecting proves it.
+            .paired = events::paired(),
         };
     }
 } // namespace

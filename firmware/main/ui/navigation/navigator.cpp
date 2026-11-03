@@ -10,7 +10,7 @@ namespace {
         return Screen::home;
     }
 
-    // Provisional until #56: Settings opens from Home, and a notification from either.
+    // Settings opens from Home, and a notification from either.
     bool can_open(Screen from, Screen to) {
         switch (to) {
         case Screen::settings:

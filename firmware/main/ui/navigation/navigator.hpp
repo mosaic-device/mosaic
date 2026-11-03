@@ -22,13 +22,14 @@ struct Conditions {
     bool starting = true;
     // Wi-Fi joined and setup is not in progress.
     bool online = false;
-    // Paired and connected to the server.
+    // Paired, even if the server is out of reach for now (events::paired()).
     bool paired = false;
 };
 
 // The device's screen map: which screen shows, what can be opened from it, and what
 // Back does. Home appears only once paired; until then the unpaired state is
-// provisioning's "Wi-Fi connected" screen. The rest is provisional until #56.
+// provisioning's "Wi-Fi connected" screen. A paired device that loses the server stays
+// on Home, which says so; losing Wi-Fi brings back provisioning's screens, which offer setup.
 class Navigator {
 public:
     Screen active() const;
