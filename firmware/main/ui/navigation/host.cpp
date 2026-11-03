@@ -34,6 +34,14 @@ namespace {
         }
         return kSetup;
     }
+    // Screens are built hidden, and LVGL never focuses a hidden control, so a screen's
+    // first visit would otherwise start with nothing focused and a press would do nothing
+    // until the encoder was turned. The same holds for a control that only appears later,
+    // such as "Enter setup mode". Focus stays where it is once something has it.
+    void ensure_focus(lv_group_t* group) {
+        if (group && !lv_group_get_focused(group))
+            lv_group_focus_next(group);
+    }
     // Shows the active screen's container and gives the encoder its focus group,
     // which remembers the focused control from the last visit.
     void show_active() {
@@ -48,6 +56,7 @@ namespace {
             else
                 lv_obj_add_flag(s_containers[i].object, LV_OBJ_FLAG_HIDDEN);
         }
+        ensure_focus(s_containers[active].group);
         drivers::encoder::set_group(s_containers[active].group);
         s_shown = active;
     }
@@ -100,6 +109,8 @@ namespace {
         for (const uint32_t backs = drivers::encoder::back_presses(); s_backs_seen != backs; ++s_backs_seen)
             s_navigator.back();
         show_active();
+        if (s_shown < kSlots)
+            ensure_focus(s_containers[s_shown].group);
     }
     bool credentials(const void* bytes, size_t size, void*) {
         s_setup_forced = true;
