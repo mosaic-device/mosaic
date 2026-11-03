@@ -49,11 +49,11 @@ namespace {
     };
 } // namespace
 
-int Text::width(const lv_font_t* font, std::string_view text) {
+int Text::width(const lv_font_t* font, std::string_view text, float scale) {
     const FontLock lock;
     Layout layout;
     layout.each(font, text, [](const lv_font_glyph_dsc_t&, int) { });
-    return layout.width;
+    return static_cast<int>(static_cast<float>(layout.width) * scale);
 }
 
 Text::Rendered Text::render(SDL_Renderer* renderer, const lv_font_t* font, std::string_view text) {
@@ -88,8 +88,8 @@ Text::Rendered Text::render(SDL_Renderer* renderer, const lv_font_t* font, std::
     return { texture, width, height };
 }
 
-int Text::draw(
-    SDL_Renderer* renderer, const lv_font_t* font, std::string_view text, int x, int y, SDL_Color color, Align align) {
+int Text::draw(SDL_Renderer* renderer, const lv_font_t* font, std::string_view text, int x, int y, SDL_Color color,
+    Align align, float scale) {
     if (text.empty())
         return 0;
     // Readouts change every frame; keep the cache from growing without bound.
@@ -102,15 +102,17 @@ int Text::draw(
     const Rendered& rendered = found->second;
     if (!rendered.texture)
         return 0;
+    const int width = static_cast<int>(static_cast<float>(rendered.width) * scale);
+    const int height = static_cast<int>(static_cast<float>(rendered.height) * scale);
     if (align == Align::center)
-        x -= rendered.width / 2;
+        x -= width / 2;
     else if (align == Align::right)
-        x -= rendered.width;
+        x -= width;
     SDL_SetTextureColorMod(rendered.texture, color.r, color.g, color.b);
     SDL_SetTextureAlphaMod(rendered.texture, color.a);
-    const SDL_Rect target { x, y, rendered.width, rendered.height };
+    const SDL_Rect target { x, y, width, height };
     SDL_RenderCopy(renderer, rendered.texture, nullptr, &target);
-    return rendered.width;
+    return width;
 }
 
 void Text::clear() {

@@ -312,11 +312,15 @@ int main(int argc, char** argv) {
         return 1;
     }
     DeviceView view;
-    view.start(renderer);
-    std::puts("Left/Right or the wheel on the knob: turn. Enter/Space or a click on the knob: press; hold for Back.\n"
-              "Backspace: Back. The mouse on the screen: touch. N: notification, E: server trouble, R: restart.\n"
-              "F1: console, F12: screenshot, Esc: quit. 1-7: restart into setup, connecting, offline, unpaired,\n"
-              "home, trouble, settings. Commands typed here work too; \"help\" lists them.");
+    DeviceView::Options options;
+    for (const auto& prepared : kStates)
+        options.states.emplace_back(prepared.name);
+    options.current = state ? state->name : "";
+    options.start_as = [](const std::string& name) { restart_into(*find_state(name)); };
+    view.start(renderer, std::move(options));
+    std::puts("The panel under the device drives everything around it. Turn the knob with the wheel over it or\n"
+              "Left/Right; press it with a click, Enter or Space, and hold for Back (or Backspace). The mouse on\n"
+              "the screen is touch. F1: console, F12: screenshot, Esc: quit.");
 
     bool running = true;
     int shot_number = 0;
@@ -330,10 +334,7 @@ int main(int argc, char** argv) {
             if (view.handle(event))
                 continue;
             if (event.type == SDL_KEYDOWN && !event.key.repeat) {
-                const auto key = event.key.keysym.sym;
-                if (key >= SDLK_1 && key < SDLK_1 + static_cast<int>(kStates.size()))
-                    restart_into(kStates[static_cast<size_t>(key - SDLK_1)]);
-                switch (key) {
+                switch (event.key.keysym.sym) {
                 case SDLK_F1:
                     view.open_console();
                     break;
@@ -349,18 +350,6 @@ int main(int argc, char** argv) {
                     break;
                 case SDLK_BACKSPACE:
                     device::back();
-                    break;
-                case SDLK_n:
-                    std::thread([] { mosaic::preview::run_command("trigger notification"); }).detach();
-                    break;
-                case SDLK_e:
-                    std::thread([] {
-                        const bool trouble = mosaic::events::status() == mosaic::events::Status::error;
-                        mosaic::preview::run_command(trouble ? "trigger connected" : "trigger error");
-                    }).detach();
-                    break;
-                case SDLK_r:
-                    std::thread([] { mosaic::preview::run_command("restart"); }).detach();
                     break;
                 case SDLK_F12:
                     screenshot = true;

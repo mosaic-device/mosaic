@@ -14,10 +14,11 @@ namespace mosaic::preview {
 class Text {
 public:
     enum class Align : uint8_t { left, center, right };
-    // Draws text with its top at y; returns its width. Window thread only.
+    // Draws text with its top at y, scaled from the font's size; returns its width. Window
+    // thread only.
     int draw(SDL_Renderer* renderer, const lv_font_t* font, std::string_view text, int x, int y, SDL_Color color,
-        Align align = Align::left);
-    int width(const lv_font_t* font, std::string_view text);
+        Align align = Align::left, float scale = 1.0F);
+    int width(const lv_font_t* font, std::string_view text, float scale = 1.0F);
     void clear();
 
 private:

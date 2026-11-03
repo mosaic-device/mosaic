@@ -3,10 +3,12 @@
 #include "console.hpp"
 #include "console_log.hpp"
 #include "device.hpp"
+#include "events/bus.hpp"
 #include "mosaic_platform.hpp"
 #include "ui/generated/assets/assets.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <thread>
@@ -32,26 +34,48 @@ namespace {
     constexpr int kBodyHeight = kStripY + kStripHeight + kBottom;
     constexpr int kSensorX = kBodyWidth / 2, kSensorY = kTop / 2;
 
-    // The bench panel under the device.
+    // The bench panel under the device: a row per thing around it, label on the left.
     constexpr int kPanelY = kBodyHeight + 28;
-    constexpr int kPad = 32;
-    constexpr int kReadoutY = kPanelY + 20;
-    constexpr int kSliderY = kReadoutY + 128;
-    constexpr int kSliderLeft = kPad + 210, kSliderRight = kBodyWidth - kPad - 230;
-    constexpr int kUnplugX = kSliderRight + 40, kUnplugW = 190, kUnplugH = 52;
-    constexpr int kLogY = kSliderY + 60;
-    constexpr int kLogLines = 7;
-    constexpr int kLineHeight = 38;
+    constexpr int kPad = 40;
+    constexpr int kLabelWidth = 370;
+    constexpr int kControlsX = kPad + kLabelWidth;
+    constexpr int kRight = kBodyWidth - kPad;
+    constexpr int kStatusY = kPanelY + 26;
+    constexpr int kFirstRowY = kStatusY + 64;
+    constexpr int kRowHeight = 64;
+    constexpr int kRowStep = kRowHeight + 26;
+    constexpr int kButtonGap = 10;
+    constexpr int kGroupGap = 40;
+    constexpr int kStartRow = kFirstRowY;
+    constexpr int kDeviceRow = kStartRow + kRowStep;
+    constexpr int kServerRow = kDeviceRow + kRowStep;
+    constexpr int kNetworkRow = kServerRow + kRowStep;
+    constexpr int kPhoneRow = kNetworkRow + kRowStep;
+    constexpr int kRoomRow = kPhoneRow + kRowStep;
+    constexpr int kSliderY = kRoomRow + kRowHeight / 2;
+    // Room for either label of the sensor button.
+    constexpr int kUnplugW = 270;
+    constexpr int kUnplugX = kRight - kUnplugW;
+    constexpr int kSliderLeft = kControlsX + 16, kSliderRight = kUnplugX - 48;
+    // The console: a few quiet lines of output and a command line.
+    constexpr int kLogY = kRoomRow + kRowHeight + 40;
+    constexpr int kLogLines = 5;
+    constexpr int kLineHeight = 27;
+    constexpr float kLogScale = 0.7F;
     constexpr int kInputY = kLogY + kLogLines * kLineHeight + 12;
-    constexpr int kInputH = 56;
-    constexpr int kHeight = kInputY + kInputH + kPad;
+    constexpr int kInputH = 46;
+    constexpr int kHeight = kInputY + kInputH + 32;
 
     constexpr float kMaxLux = 600.0F;
 
     constexpr SDL_Color kInk { 238, 236, 230, 255 };
     constexpr SDL_Color kMuted { 150, 152, 160, 255 };
     constexpr SDL_Color kFaint { 96, 99, 108, 255 };
-    constexpr SDL_Color kAccent { 160, 120, 230, 255 };
+    constexpr SDL_Color kAccent { 116, 68, 184, 255 };
+    constexpr SDL_Color kAccentHover { 132, 86, 200, 255 };
+    constexpr SDL_Color kButton { 44, 46, 54, 255 };
+    constexpr SDL_Color kButtonHover { 56, 58, 68, 255 };
+    constexpr SDL_Color kButtonDisabled { 34, 35, 41, 255 };
 
     void set(SDL_Renderer* renderer, SDL_Color color) {
         SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
@@ -110,15 +134,10 @@ namespace {
         const float t = lux <= 1 ? 0 : std::clamp(std::log(lux) / std::log(kMaxLux), 0.0F, 1.0F);
         return kSliderLeft + static_cast<int>(std::lround(t * (kSliderRight - kSliderLeft)));
     }
-    const char* network_name(device::Network network) {
-        switch (network) {
-        case device::Network::joins:
-            return "joins";
-        case device::Network::rejects:
-            return "rejects";
-        default:
-            return "silent";
-        }
+    std::string title_case(std::string text) {
+        if (!text.empty())
+            text[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(text[0])));
+        return text;
     }
     void run_in_background(std::string line) {
         std::thread([line] { run_command(line); }).detach();
@@ -132,8 +151,9 @@ int DeviceView::height() {
     return kHeight;
 }
 
-bool DeviceView::start(SDL_Renderer* renderer) {
+bool DeviceView::start(SDL_Renderer* renderer, Options options) {
     renderer_ = renderer;
+    options_ = std::move(options);
     return renderer_ != nullptr;
 }
 
@@ -199,66 +219,148 @@ void DeviceView::draw_device(SDL_Texture* screen) {
     }
 }
 
+int DeviceView::button_width(const std::string& label) {
+    return std::max(150, text_.width(&mosaic_manrope_28_500, label) + 56);
+}
+
+int DeviceView::button(
+    int x, int y, const std::string& label, bool selected, bool enabled, std::function<void()> action) {
+    const SDL_Rect rect { x, y, button_width(label), kRowHeight };
+    const bool hover = enabled && inside(mouse_x_, mouse_y_, rect);
+    const bool held = hover && pressing_ && pressed_.x == rect.x && pressed_.y == rect.y;
+    SDL_Color fill_color = !enabled ? kButtonDisabled
+        : selected                  ? (hover ? kAccentHover : kAccent)
+        : hover                     ? kButtonHover
+                                    : kButton;
+    if (held)
+        fill_color = { static_cast<uint8_t>(fill_color.r - 8), static_cast<uint8_t>(fill_color.g - 8),
+            static_cast<uint8_t>(fill_color.b - 8), 255 };
+    rounded(renderer_, rect, 14, fill_color);
+    text_.draw(renderer_, &mosaic_manrope_28_500, label, rect.x + rect.w / 2, rect.y + (kRowHeight - 38) / 2,
+        enabled ? kInk : kFaint, Text::Align::center);
+    if (enabled)
+        buttons_.push_back({ rect, std::move(action) });
+    return rect.x + rect.w;
+}
+
+void DeviceView::row_label(int y, const char* title, const char* hint) {
+    text_.draw(renderer_, &mosaic_manrope_28_500, title, kPad, y + 2, kInk, Text::Align::left, 0.95F);
+    text_.draw(renderer_, &mosaic_manrope_28_400, hint, kPad, y + 36, kFaint, Text::Align::left, 0.78F);
+}
+
 void DeviceView::draw_panel() {
-    const auto* label = &mosaic_manrope_28_500;
     const auto* body = &mosaic_manrope_28_400;
     rounded(renderer_, { 0, kPanelY, kBodyWidth, kHeight - kPanelY }, 24, { 30, 31, 36, 255 });
+    buttons_.clear();
 
-    // Readouts.
-    char value[64];
+    // What the device is doing, in one quiet line.
     const auto lux = device::lux();
     const auto leds = device::leds();
-    struct Readout {
-        const char* name;
-        std::string text;
-    };
+    char light[32] = "unplugged";
     if (lux)
-        std::snprintf(value, sizeof(value), "%.0f lux", *lux);
-    const Readout readouts[] = {
-        { "Light", lux ? value : "unplugged" },
-        { "Screen", device::backlight() ? std::to_string(device::backlight()) + "%" : "off" },
-        { "LEDs", std::to_string(leds.level * 100 / 255) + "%" },
-        { "Speaker", device::speaker_on() ? "playing" : "quiet" },
-        { "Saved network", network_name(device::network()) },
-        { "Storage", platform::nvs_write_failure() ? "full" : "ok" },
+        std::snprintf(light, sizeof(light), "%.0f lux", *lux);
+    const std::string status = "Screen " + (device::backlight() ? std::to_string(device::backlight()) + "%" : "off")
+        + "      LEDs " + std::to_string(leds.level * 100 / 255) + "%      Speaker "
+        + (device::speaker_on() ? "playing" : "quiet") + "      Light sensor " + light;
+    text_.draw(renderer_, body, status, kPad, kStatusY, kMuted, Text::Align::left, 0.8F);
+
+    // Restart into a prepared device, or restart this one.
+    row_label(kStartRow, "Start as", "Restarts into a prepared device");
+    int x = kControlsX;
+    for (const auto& state : options_.states)
+        x = button(x, kStartRow, title_case(state), state == options_.current, true, [this, state] {
+            options_.start_as(state);
+        }) + kButtonGap;
+
+    // This device: restart it, erase it, or make its storage fail.
+    row_label(kDeviceRow, "This device", "Keeps or erases what it saved");
+    x = button(kControlsX, kDeviceRow, "Restart", false, true, [] { run_in_background("restart"); }) + kButtonGap;
+    x = button(x, kDeviceRow, "Factory reset", false, true, [] { run_in_background("erase"); });
+    const bool full = platform::nvs_write_failure();
+    x += kGroupGap + 40;
+    x += text_.draw(renderer_, body, "Storage", x, kDeviceRow + 13, kMuted, Text::Align::left, 0.85F) + 24;
+    x = button(x, kDeviceRow, "Works", !full, true, [] { run_in_background("storage ok"); }) + kButtonGap;
+    button(x, kDeviceRow, "Full", full, true, [] { run_in_background("storage full"); });
+
+    // What the server tells the device.
+    row_label(kServerRow, "Server", "What the connection reports");
+    x = kControlsX;
+    const auto current = events::status();
+    for (const auto status_choice :
+        { events::Status::pairing, events::Status::connected, events::Status::disconnected, events::Status::error }) {
+        const std::string name = events::name(status_choice);
+        x = button(x, kServerRow, title_case(name), current == status_choice, true, [name] {
+            run_in_background("trigger " + name);
+        }) + kButtonGap;
+    }
+    button(x + kGroupGap - kButtonGap, kServerRow, "Send notification", false, true,
+        [] { run_in_background("trigger notification"); });
+
+    // How the saved network answers.
+    row_label(kNetworkRow, "Saved Wi-Fi", "How the network answers");
+    x = kControlsX;
+    const auto network = device::network();
+    const struct {
+        const char* label;
+        const char* command;
+        device::Network value;
+    } networks[] = {
+        { "Joins", "wifi joins", device::Network::joins },
+        { "Rejects", "wifi rejects", device::Network::rejects },
+        { "No answer", "wifi silent", device::Network::silent },
     };
-    const int column = (kBodyWidth - 2 * kPad) / static_cast<int>(std::size(readouts));
-    for (size_t i = 0; i < std::size(readouts); ++i) {
-        const int x = kPad + static_cast<int>(i) * column;
-        text_.draw(renderer_, body, readouts[i].name, x, kReadoutY, kMuted);
-        text_.draw(renderer_, label, readouts[i].text, x, kReadoutY + 36, kInk);
+    for (const auto& choice : networks) {
+        const std::string command = choice.command;
+        x = button(x, kNetworkRow, choice.label, network == choice.value, true, [command] {
+            run_in_background(command);
+        }) + kButtonGap;
     }
+    button(x + kGroupGap - kButtonGap, kNetworkRow, "Drop connection", false, true,
+        [] { run_in_background("wifi drop"); });
 
-    // Room light.
-    text_.draw(renderer_, body, "Room light", kPad, kSliderY - 18, kMuted);
-    fill(renderer_, { kSliderLeft, kSliderY - 3, kSliderRight - kSliderLeft, 6 }, { 70, 72, 82, 255 });
+    // A phone on the setup network.
+    row_label(kPhoneRow, "Phone", "Uses the setup page");
+    const std::string setup = device::setup_status();
+    const bool open = !setup.starts_with("No setup");
+    x = button(kControlsX, kPhoneRow, "Submit Wi-Fi \"Home\"", false, open,
+        [] { run_in_background("setup Home home-password wss://mosaic.example.org/device"); });
+    text_.draw(renderer_, body, open ? setup : "Available while the device shows setup", x + 28, kPhoneRow + 13,
+        open ? kMuted : kFaint, Text::Align::left, 0.85F);
+
+    // The room's light at the sensor.
+    row_label(kRoomRow, "Room light", "At the sensor on top");
+    fill(renderer_, { kSliderLeft, kSliderY - 4, kSliderRight - kSliderLeft, 8 }, { 58, 60, 70, 255 });
     if (lux) {
-        fill(renderer_, { kSliderLeft, kSliderY - 3, x_of(*lux) - kSliderLeft, 6 }, kAccent);
+        fill(renderer_, { kSliderLeft, kSliderY - 4, x_of(*lux) - kSliderLeft, 8 }, kAccent);
         set(renderer_, kInk);
-        disc(renderer_, x_of(*lux), kSliderY, 13);
+        disc(renderer_, x_of(*lux), kSliderY, 15);
+        text_.draw(renderer_, body, "dark", kSliderLeft, kSliderY + 16, kFaint, Text::Align::left, 0.7F);
+        text_.draw(renderer_, body, "bright", kSliderRight, kSliderY + 16, kFaint, Text::Align::right, 0.7F);
+    } else {
+        text_.draw(renderer_, body, "The sensor is unplugged; the device uses a fixed brightness",
+            (kSliderLeft + kSliderRight) / 2, kSliderY - 40, kFaint, Text::Align::center, 0.8F);
     }
-    rounded(renderer_, { kUnplugX, kSliderY - kUnplugH / 2, kUnplugW, kUnplugH }, 12,
-        lux ? SDL_Color { 48, 50, 58, 255 } : kAccent);
-    text_.draw(renderer_, label, lux ? "Unplug" : "Plug in", kUnplugX + kUnplugW / 2, kSliderY - 18, kInk,
-        Text::Align::center);
+    const std::string sensor_label = lux ? "Unplug sensor" : "Plug in sensor";
+    button(kRight - button_width(sensor_label), kRoomRow, sensor_label, !lux, true,
+        [plugged = lux.has_value()] { device::set_lux(plugged ? std::nullopt : std::optional<float>(150.0F)); });
 
-    // Console.
-    const auto* mono = &mosaic_manrope_28_400;
+    // Console: recent output, quietly, and a command line for anything the buttons do not cover.
+    fill(renderer_, { kPad, kLogY - 20, kRight - kPad, 1 }, { 46, 48, 55, 255 });
     const auto lines = console_log::lines(kLogLines);
     for (size_t i = 0; i < lines.size(); ++i)
-        text_.draw(renderer_, mono, lines[i], kPad, kLogY + static_cast<int>(i) * kLineHeight,
-            lines[i].starts_with("mosaic>") ? kInk : kMuted);
-    const SDL_Rect input { kPad, kInputY, kBodyWidth - 2 * kPad, kInputH };
-    rounded(renderer_, input, 12, typing_ ? SDL_Color { 64, 52, 92, 255 } : SDL_Color { 40, 41, 47, 255 });
-    rounded(renderer_, { input.x + 2, input.y + 2, input.w - 4, input.h - 4 }, 11, { 18, 19, 22, 255 });
+        text_.draw(renderer_, body, lines[i], kPad, kLogY + static_cast<int>(i) * kLineHeight,
+            lines[i].starts_with("mosaic>") ? kMuted : kFaint, Text::Align::left, kLogScale);
+    const SDL_Rect input { kPad, kInputY, kRight - kPad, kInputH };
+    rounded(renderer_, input, 10, typing_ ? kAccent : SDL_Color { 40, 41, 47, 255 });
+    rounded(renderer_, { input.x + 2, input.y + 2, input.w - 4, input.h - 4 }, 9, { 20, 21, 25, 255 });
     if (typing_) {
-        const int typed = text_.draw(renderer_, body, "mosaic> " + line_, input.x + 18, input.y + 10, kInk);
-        // A blinking caret.
+        const int typed
+            = text_.draw(renderer_, body, "mosaic> " + line_, input.x + 16, input.y + 8, kInk, Text::Align::left, 0.8F);
         if ((SDL_GetTicks() / 500) % 2 == 0)
-            fill(renderer_, { input.x + 22 + typed, input.y + 12, 3, input.h - 24 }, kInk);
+            fill(renderer_, { input.x + 20 + typed, input.y + 10, 2, input.h - 20 }, kInk);
     } else {
-        text_.draw(renderer_, body, "F1 or click here to type a command. \"help\" lists them.", input.x + 18,
-            input.y + 10, kFaint);
+        text_.draw(renderer_, body, "Type a console command (F1); \"help\" lists them", input.x + 16, input.y + 8,
+            kFaint, Text::Align::left, 0.8F);
     }
 }
 
@@ -321,6 +423,8 @@ bool DeviceView::handle(const SDL_Event& event) {
     const bool up = event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT;
     const int x = event.type == SDL_MOUSEMOTION ? event.motion.x : event.button.x;
     const int y = event.type == SDL_MOUSEMOTION ? event.motion.y : event.button.y;
+    mouse_x_ = x;
+    mouse_y_ = y;
     const SDL_Rect screen { kScreenX, kScreenY, device::kWidth, device::kHeight };
 
     if (up) {
@@ -328,6 +432,14 @@ bool DeviceView::handle(const SDL_Event& event) {
             device::touch(false, x - kScreenX, y - kScreenY);
         if (knob_down_)
             device::button(false);
+        // A button acts when released over it, like any desktop button.
+        if (pressing_)
+            for (const auto& released : buttons_)
+                if (released.rect.x == pressed_.x && released.rect.y == pressed_.y && inside(x, y, released.rect)) {
+                    released.action();
+                    break;
+                }
+        pressing_ = false;
         touching_ = knob_down_ = dragging_light_ = false;
         return true;
     }
@@ -340,18 +452,23 @@ bool DeviceView::handle(const SDL_Event& event) {
     }
     if (!down)
         return false;
+    for (size_t i = 0; i < buttons_.size(); ++i)
+        if (inside(x, y, buttons_[i].rect)) {
+            pressing_ = true;
+            pressed_ = buttons_[i].rect;
+            return true;
+        }
     if (inside(x, y, screen)) {
         touching_ = true;
         device::touch(true, x - kScreenX, y - kScreenY);
     } else if (on_knob(x, y)) {
         knob_down_ = true;
         device::button(true);
-    } else if (inside(x, y, { kUnplugX, kSliderY - kUnplugH / 2, kUnplugW, kUnplugH })) {
-        device::set_lux(device::lux() ? std::nullopt : std::optional<float>(150.0F));
-    } else if (y >= kSliderY - 24 && y <= kSliderY + 24 && x >= kSliderLeft - 20 && x <= kSliderRight + 20) {
+    } else if (device::lux() && y >= kSliderY - 28 && y <= kSliderY + 28 && x >= kSliderLeft - 20
+        && x <= kSliderRight + 20) {
         dragging_light_ = true;
         device::set_lux(lux_at(x));
-    } else if (inside(x, y, { kPad, kInputY, kBodyWidth - 2 * kPad, kInputH })) {
+    } else if (inside(x, y, { kPad, kInputY, kRight - kPad, kInputH })) {
         open_console();
     }
     return true;
