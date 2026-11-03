@@ -41,6 +41,7 @@ idf_component_register(
          "features/brightness/service.cpp"
          "features/clock/clock.cpp"
          "features/clock/service.cpp"
+         "features/clock/sync.cpp"
          "features/home/screen.cpp"
          "features/settings/screen.cpp"
          "features/settings/service.cpp"
