@@ -60,6 +60,7 @@ idf_component_register(
          "features/provisioning/ui/status_screen.cpp"
          "features/provisioning/state_machine.cpp"
          "features/provisioning/wifi_observation.cpp"
+         "features/provisioning/portal_replies.cpp"
          "features/provisioning/service.cpp"
          "features/provisioning/settings_validation.cpp"
          "features/provisioning/adapters/captive_portal.cpp"

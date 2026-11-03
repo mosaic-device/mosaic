@@ -6,6 +6,7 @@ Phone-based Wi-Fi setup and on-device recovery. See the [setup guide](../../../R
 
 - `state_machine.*`: IDF-free C++23 policy and ordered effects.
 - `wifi_observation.*`: IDF-free rules for stale and lost Wi-Fi events.
+- `portal_replies.*`: IDF-free setup page status replies and submission admission.
 - `service`: owner task, event queue, adapter lifecycle and effect execution. It calls no radio or netif APIs directly.
 - `presentation/`: bounded, owned, nonsecret view state.
 - `ui/`: passive screens and renderer; callbacks emit typed actions.

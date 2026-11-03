@@ -1,6 +1,7 @@
 #include "captive_portal.hpp"
 #include "../../../support/secure_erase.hpp"
 #include "dns_lifecycle.hpp"
+#include "../portal_replies.hpp"
 #include "../settings_validation.hpp"
 
 #include <atomic>
@@ -116,36 +117,14 @@ namespace {
             && std::strstr(accept, "application/json") != nullptr;
         httpd_resp_set_type(req, json ? "application/json" : "text/plain; charset=utf-8");
         httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-        // Submission may be queued before the owner publishes its saving state.
-        // This is transport admission, not a second authoritative feature state.
-        const char* plain = "Ready for setup.";
-        const char* structured = "{\"state\":\"ready\"}";
-        const PortalStatus state = pending.load() ? PortalStatus::saving : context.status->load();
-        switch (state) {
-        case PortalStatus::saving:
-            plain = "Saving settings. Refresh in a moment.";
-            structured = "{\"state\":\"saving\"}";
-            break;
-        case PortalStatus::saved:
-            plain = "Wi-Fi saved. Mosaic will reboot in about six seconds, then try connecting. Device pairing is "
-                    "still required.";
-            structured = "{\"state\":\"saved\"}";
-            break;
-        case PortalStatus::storage_error:
-            plain = "Saving failed. Settings were not confirmed saved. Retry setup.";
-            structured = "{\"state\":\"storage_error\"}";
-            break;
-        default:
-            break;
-        }
-        return httpd_resp_sendstr(req, json ? structured : plain);
+        const StatusReply reply = status_reply(context.status->load(), pending.load());
+        return httpd_resp_sendstr(req, json ? reply.structured : reply.plain);
     }
 
     esp_err_t save(httpd_req_t* req) {
         if (!from_ap(req) || !same_host(req))
             return httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Use the displayed URL");
-        const PortalStatus state = context.status->load();
-        if (pending.load() || state == PortalStatus::saving || state == PortalStatus::saved) {
+        if (!accepts_submission(context.status->load(), pending.load())) {
             httpd_resp_set_status(req, "409 Conflict");
             return httpd_resp_sendstr(req, "Setup already in progress");
         }
