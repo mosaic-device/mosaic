@@ -80,6 +80,7 @@
 #define TOKEN_FIRMWARE_ICON_MD 40
 #define TOKEN_FIRMWARE_WORDMARK_MD 40
 #define TOKEN_FIRMWARE_WORDMARK_LG 60
+#define TOKEN_FIRMWARE_DISPLAY_CLOCK 200
 
 /* Manrope: unsupported weights use 400; unknown sizes use body 36/400. */
 #include "assets/assets.h"
