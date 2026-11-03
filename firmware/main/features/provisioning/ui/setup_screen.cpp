@@ -3,70 +3,62 @@
 #include <cstring>
 
 #include "../../../support/secure_erase.hpp"
+#include "../../../ui/components/controls.hpp"
 #include "../../../ui/generated/design_tokens.h"
 
 namespace mosaic::features::provisioning {
 namespace {
+    namespace components = ui::components;
+    namespace styles = ui::styles;
+
     constexpr int32_t kQrSize = 320;
     lv_color_t color(uint32_t rgb) {
         return lv_color_hex(rgb);
     }
 
-    lv_obj_t* plain_panel(lv_obj_t* parent) {
-        auto* panel = lv_obj_create(parent);
-        lv_obj_set_style_bg_opa(panel, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_border_width(panel, 0, 0);
-        lv_obj_set_style_shadow_width(panel, 0, 0);
-        lv_obj_set_style_pad_all(panel, 0, 0);
-        lv_obj_remove_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
-        return panel;
+    lv_obj_t* column(lv_obj_t* parent) {
+        auto* object = lv_obj_create(parent);
+        lv_obj_remove_style_all(object);
+        lv_obj_remove_flag(object, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_flex_flow(object, LV_FLEX_FLOW_COLUMN);
+        return object;
     }
-
-    lv_obj_t* text(lv_obj_t* parent, const char* value, uint32_t rgb) {
-        auto* label = lv_label_create(parent);
-        lv_obj_set_width(label, lv_pct(100));
-        lv_label_set_long_mode(label, LV_LABEL_LONG_WRAP);
-        lv_obj_set_style_text_color(label, color(rgb), 0);
-        lv_obj_set_style_text_font(label, GET_FONT(TOKEN_TEXT_LG), 0);
-        lv_label_set_text(label, value);
-        return label;
-    }
-
 } // namespace
 
 void SetupScreen::create(lv_obj_t* parent) {
-    panel = plain_panel(parent);
-    lv_obj_set_size(panel, lv_pct(94), lv_pct(90));
-    lv_obj_set_flex_flow(panel, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(panel, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(panel, TOKEN_SPACE_8, 0);
+    panel = lv_obj_create(parent);
+    lv_obj_remove_style_all(panel);
+    lv_obj_remove_flag(panel, LV_OBJ_FLAG_SCROLLABLE);
+    components::page(panel);
+    auto* header = components::header(panel, nullptr);
+    components::text(header, "Wi-Fi setup", styles::Text::label, true);
+    lv_obj_set_width(lv_obj_get_child(header, 1), LV_SIZE_CONTENT);
 
-    auto* instructions = plain_panel(panel);
-    lv_obj_set_width(instructions, lv_pct(60));
+    auto* body = components::fill(panel);
+    lv_obj_set_flex_flow(body, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(body, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(body, TOKEN_SPACE_12, 0);
+
+    auto* instructions = column(body);
     lv_obj_set_height(instructions, LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(instructions, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(instructions, TOKEN_SPACE_4, 0);
-
-    auto* eyebrow = text(instructions, "MOSAIC  /  WI-FI SETUP", TOKEN_COLOR_PRIMARY_DARK);
-    lv_obj_set_style_text_font(eyebrow, GET_FONT(TOKEN_TEXT_SM), 0);
-    auto* title = text(instructions, "Connect your phone to Mosaic", TOKEN_COLOR_FOREGROUND_DARK);
-    lv_obj_set_style_text_font(title, GET_FONT(TOKEN_TEXT_XL), 0);
-    failure_label = text(instructions, "", TOKEN_COLOR_PRIMARY_DARK);
+    lv_obj_set_flex_grow(instructions, 1);
+    lv_obj_set_style_pad_row(instructions, TOKEN_SPACE_3, 0);
+    components::text(instructions, "Connect your phone", styles::Text::heading);
+    failure_label = components::text(instructions, "", styles::Text::body);
+    lv_obj_set_style_text_color(failure_label, color(TOKEN_COLOR_DANGER_DARK), 0);
     lv_obj_add_flag(failure_label, LV_OBJ_FLAG_HIDDEN);
-    text(instructions, "Scan to join Wi-Fi. The setup page should open automatically.", TOKEN_COLOR_FOREGROUND_DARK);
-    auto* fallback = text(instructions, "If it doesn't, open:", TOKEN_COLOR_MUTED_FOREGROUND_DARK);
-    lv_obj_set_style_text_font(fallback, GET_FONT(TOKEN_TEXT_MD), 0);
-    url = text(instructions, "", TOKEN_COLOR_PRIMARY_DARK);
-    auto* manual = text(instructions, "JOIN MANUALLY", TOKEN_COLOR_MUTED_FOREGROUND_DARK);
-    lv_obj_set_style_text_font(manual, GET_FONT(TOKEN_TEXT_SM), 0);
-    ssid = text(instructions, "", TOKEN_COLOR_FOREGROUND_DARK);
-    lv_obj_set_style_text_font(ssid, GET_FONT(TOKEN_TEXT_MD), 0);
-    password = text(instructions, "", TOKEN_COLOR_FOREGROUND_DARK);
-    lv_obj_set_style_text_font(password, GET_FONT(TOKEN_TEXT_MD), 0);
+    components::text(instructions, "Scan the code to join Mosaic's Wi-Fi. Setup opens on its own.", styles::Text::body);
+    auto* fallback = components::text(instructions, "If it doesn't, open", styles::Text::body, true);
+    lv_obj_set_style_margin_top(fallback, TOKEN_SPACE_3, 0);
+    url = components::text(instructions, "", styles::Text::body);
+    lv_obj_set_style_text_color(url, color(TOKEN_COLOR_FOCUS_DARK), 0);
+    auto* manual = components::text(instructions, "Or join manually", styles::Text::body, true);
+    lv_obj_set_style_margin_top(manual, TOKEN_SPACE_3, 0);
+    ssid = components::text(instructions, "", styles::Text::body);
+    password = components::text(instructions, "", styles::Text::body);
 
-    auto* qr_column = plain_panel(panel);
+    auto* qr_column = column(body);
     lv_obj_set_size(qr_column, kQrSize + 2 * TOKEN_SPACE_4, LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(qr_column, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(qr_column, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(qr_column, TOKEN_SPACE_4, 0);
     qr_frame = lv_obj_create(qr_column);
@@ -77,8 +69,7 @@ void SetupScreen::create(lv_obj_t* parent) {
     lv_obj_set_style_radius(qr_frame, TOKEN_RADIUS_LG, 0);
     lv_obj_set_style_pad_all(qr_frame, TOKEN_SPACE_4, 0);
     lv_obj_remove_flag(qr_frame, LV_OBJ_FLAG_SCROLLABLE);
-    qr_caption = text(qr_column, "Scan to join Wi-Fi", TOKEN_COLOR_MUTED_FOREGROUND_DARK);
-    lv_obj_set_style_text_font(qr_caption, GET_FONT(TOKEN_TEXT_MD), 0);
+    qr_caption = components::text(qr_column, "Scan to join Wi-Fi", styles::Text::label, true);
     lv_obj_set_style_text_align(qr_caption, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_add_flag(panel, LV_OBJ_FLAG_HIDDEN);
 }
