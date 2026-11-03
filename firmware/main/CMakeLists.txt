@@ -50,6 +50,7 @@ idf_component_register(
          "features/audio_cues/cues.cpp"
          "features/audio_cues/playback.cpp"
          "features/audio_cues/service.cpp"
+         "features/audio_cues/sounds.cpp"
          "features/audio_cues/wav.cpp"
          "features/led_feedback/patterns.cpp"
          "features/led_feedback/service.cpp"

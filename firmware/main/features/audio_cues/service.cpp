@@ -1,6 +1,7 @@
 #include "service.hpp"
 #include "cues.hpp"
 #include "playback.hpp"
+#include "sounds.hpp"
 #include "wav.hpp"
 #include "../../drivers/speaker.hpp"
 #include "../../events/bus.hpp"
@@ -12,11 +13,6 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
-extern const uint8_t notification_wav_start[] asm("_binary_notification_wav_start");
-extern const uint8_t notification_wav_end[] asm("_binary_notification_wav_end");
-extern const uint8_t connected_wav_start[] asm("_binary_connected_wav_start");
-extern const uint8_t connected_wav_end[] asm("_binary_connected_wav_end");
-
 namespace mosaic::features::audio_cues {
 namespace {
     constexpr const char* kTag = "mosaic_audio_cues";
@@ -24,16 +20,11 @@ namespace {
     constexpr UBaseType_t kQueueDepth = 4;
 
     struct Sound {
-        const uint8_t* start;
-        const uint8_t* end;
         Pcm pcm;
         bool valid = false;
     };
     // Indexed by Cue.
-    std::array<Sound, 2> s_sounds { {
-        { notification_wav_start, notification_wav_end, { } },
-        { connected_wav_start, connected_wav_end, { } },
-    } };
+    std::array<Sound, 2> s_sounds;
     QueueHandle_t s_queue = nullptr;
     std::atomic<uint8_t> s_volume = kDefaultVolume;
     std::atomic<bool> s_muted = false;
@@ -88,8 +79,9 @@ namespace {
     }
 }
 esp_err_t start() {
-    for (Sound& sound : s_sounds) {
-        sound.valid = parse_wav({ sound.start, static_cast<size_t>(sound.end - sound.start) }, sound.pcm);
+    for (size_t i = 0; i < s_sounds.size(); ++i) {
+        Sound& sound = s_sounds[i];
+        sound.valid = parse_wav(sound_file(static_cast<Cue>(i)), sound.pcm);
         if (!sound.valid)
             ESP_LOGE(kTag, "Embedded cue is not a PCM WAV file; it will not play");
     }
