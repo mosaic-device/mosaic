@@ -4,16 +4,34 @@ Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 using ESP-IDF **5.5.4** an
 
 ## Device screen preview
 
-On macOS or Linux, install CMake, a C++23 compiler, and SDL2 development files
-(`brew install cmake sdl2` or `sudo apt-get install cmake libsdl2-dev`). From
-the repository root, run:
+The preview runs the firmware itself on your computer: `app_main()`, every feature
+service, provisioning, the event bus and the screens are the same code the board
+runs. Only the hardware and radio adapters are replaced, by simulated ones in
+`preview/adapters/`, and `preview/platform/` stands in for the ESP-IDF and
+FreeRTOS APIs. A change to firmware behavior shows up in the preview without
+preview changes.
+
+Install CMake, a C++23 compiler and SDL2 development files: `brew install cmake sdl2`
+on macOS, `sudo apt-get install cmake libsdl2-dev` on Linux, or on Windows Visual
+Studio 2022 with SDL2 from vcpkg (`vcpkg install sdl2`, then set
+`CMAKE_TOOLCHAIN_FILE` to vcpkg's toolchain). From the repository root, run:
 
 ```sh
 pnpm fw:preview
-pnpm fw:preview --state qr
+pnpm fw:preview --fresh
 pnpm fw:preview --state settings
-pnpm fw:preview --state home --server-error --screenshot firmware/build/trouble.bmp
+pnpm fw:preview --state trouble --screenshot firmware/build/trouble.bmp
 ```
+
+Without `--state`, the preview is one device that keeps its NVS in
+`firmware/build/device-preview/device.nvs`: a first start opens Wi-Fi setup, and
+what you save survives restarts. `--fresh` erases it. `--state` starts from a
+prepared device instead, using its own NVS: `setup`, `connecting`, `offline`,
+`unpaired`, `home`, `trouble` or `settings`. States set up what the device finds
+at boot (saved Wi-Fi, how the network answers) and the triggers it receives;
+the firmware gets itself to the screen. `--screenshot` waits for that, saves
+the frame and exits; `offline` takes about 20 seconds, the firmware's real
+Wi-Fi test timeout.
 
 The first build uses the managed LVGL 9.4.0 component if present, otherwise it
 downloads that release into `firmware/build/device-preview`. Set `LVGL_DIR` to use another
@@ -22,20 +40,25 @@ to open at approximately the board's 5-inch diagonal. If the monitor reports
 an inaccurate size, use `pnpm fw:preview --window-width 600` to calibrate
 against the board. The firmware screen and screenshots stay at 1280×720 in
 RGB565; the window uses the monitor's high-DPI output for a sharp image.
-Left and Right turn the knob, Enter or Space presses it, and Backspace
-is its long-press Back action. The mouse acts as touch. Keys 1–7 select boot,
-setup QR, connecting, offline, unpaired, Home, and Settings; `[` and `]` cycle
-them. Press E to toggle server trouble, L for a long Wi-Fi name, and F for a
-setup failure. Settings values change through their normal controls. The same
-variants can be set at startup with `--server-error`, `--long-network`, and
-`--setup-failure`. Press F12 to save the current frame as a BMP screenshot in
-`firmware/build/preview-shots`, or set a different directory with `--shots`. Use
-`--screenshot` to save a selected state without opening a window.
 
-The small entry-point table in `preview/main.cpp` supplies simulated device
-conditions to the firmware's real presenter, navigation, and screen code.
-Screen variants come from those conditions and from interacting with the UI,
-so each new variant does not need its own preview preset.
+Left and Right turn the knob, and Enter or Space presses it; holding past the
+long-press time is Back, as is Backspace. The mouse acts as touch. A second
+window shows the LED ring and strip, the light sensor (drag its slider) and
+the speaker. N posts a notification, E toggles server trouble, R restarts,
+and keys 1–7 restart into the states above. Press F12 to save a BMP screenshot
+in `firmware/build/preview-shots`, or set a different directory with `--shots`.
+
+The terminal is the device's debug console, and F1 opens it in the window. It
+has the [debug triggers](#debug-triggers) plus controls for the simulated world:
+
+| Command | Simulates |
+| --- | --- |
+| `setup <ssid> <password\|-> <wss-url>` | A phone submitting the setup page; `setup` alone shows the page's status |
+| `wifi joins\|rejects\|silent` | How the saved network answers; `wifi drop` drops a joined network |
+| `lux <0-100000>\|off` | The light sensor's reading, or unplugging it |
+| `storage ok\|full` | NVS writes failing, as on a full partition |
+| `screen settings\|back` | Opening Settings or going back, as the controls would |
+| `restart`, `erase` | A restart keeping NVS, or a factory reset |
 
 ## Build and flash
 

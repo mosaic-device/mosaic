@@ -1,20 +1,20 @@
 #pragma once
 
-#include "hardware.hpp"
-
 #include <SDL.h>
 
 namespace mosaic::preview {
 
-// Draws the outputs of Hardware beside the device screen. The slider supplies
-// a simulated sensor reading; it does not compute brightness or LED patterns.
+// Draws the simulated LEDs, light sensor and speaker beside the device screen. The
+// slider sets the sensor's reading; the firmware does everything else.
 class HardwareView {
 public:
     bool start(SDL_Window* device_window);
-    void render(const Hardware& hardware, bool speaker_playing);
-    void handle(const SDL_Event& event, Hardware& hardware);
+    void render();
+    void handle(const SDL_Event& event);
     void close();
-    uint32_t window_id() const { return window_ ? SDL_GetWindowID(window_) : 0; }
+    uint32_t window_id() const {
+        return window_ ? SDL_GetWindowID(window_) : 0;
+    }
 
 private:
     SDL_Window* window_ = nullptr;

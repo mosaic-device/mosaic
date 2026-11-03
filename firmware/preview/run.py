@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Build and run the host preview using the pinned LVGL release."""
+"""Build and run the firmware on the host, against simulated hardware."""
 import argparse
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 here = Path(__file__).resolve().parent
 firmware = here.parent
 build = firmware / "build" / "device-preview"
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--state", default="home", help="initial interactive screen")
-parser.add_argument("--server-error", action="store_true", help="start Home with a server error")
-parser.add_argument("--long-network", action="store_true", help="show a long setup Wi-Fi name")
-parser.add_argument("--setup-failure", action="store_true", help="show a setup save error")
-parser.add_argument("--command", action="append", default=[], help="run a debug-trigger command before opening")
+parser.add_argument("--state", help="start from a prepared device: setup, connecting, offline, unpaired, home, "
+                    "trouble or settings; without it, the preview is one device that keeps its NVS")
+parser.add_argument("--fresh", action="store_true", help="erase the device's NVS first, like a factory reset")
+parser.add_argument("--command", action="append", default=[], help="run a console command once the device is up")
 parser.add_argument("--window-width", type=int, help="override the automatic physical-size estimate")
 parser.add_argument("--shots", type=Path, default=firmware / "build" / "preview-shots", help="F12 screenshot directory")
-parser.add_argument("--screenshot", type=Path, help="save the selected state as BMP and exit")
+parser.add_argument("--screenshot", type=Path, help="save the screen once the device settles, then exit")
 args = parser.parse_args()
 
 lvgl = Path(os.environ.get("LVGL_DIR", firmware / "managed_components" / "lvgl__lvgl")).resolve()
@@ -29,14 +29,18 @@ if not (lvgl / "lvgl.h").exists():
                         "https://github.com/lvgl/lvgl.git", str(lvgl)], check=True)
 
 subprocess.run(["cmake", "-S", str(here), "-B", str(build), f"-DLVGL_DIR={lvgl}"], check=True)
-subprocess.run(["cmake", "--build", str(build), "--parallel", str(min(8, os.cpu_count() or 2))], check=True)
-command = [str(build / "mosaic-preview"), "--state", args.state, "--shots", str(args.shots.resolve())]
-if args.server_error:
-    command.append("--server-error")
-if args.long_network:
-    command.append("--long-network")
-if args.setup_failure:
-    command.append("--setup-failure")
+subprocess.run(["cmake", "--build", str(build), "--config", "Release",
+                "--parallel", str(min(8, os.cpu_count() or 2))], check=True)
+name = "mosaic-preview.exe" if sys.platform == "win32" else "mosaic-preview"
+# Multi-config generators (Visual Studio) put the program in a per-config directory.
+program = next((path for path in (build / name, build / "Release" / name) if path.exists()), build / name)
+
+nvs = build / "device.nvs"
+if args.fresh:
+    nvs.unlink(missing_ok=True)
+command = [str(program), "--nvs", str(nvs), "--shots", str(args.shots.resolve())]
+if args.state:
+    command += ["--state", args.state]
 for requested in args.command:
     command += ["--command", requested]
 if args.window_width:
@@ -47,4 +51,4 @@ if args.screenshot:
 environment = os.environ.copy()
 if args.screenshot:
     environment.setdefault("SDL_VIDEODRIVER", "dummy")
-subprocess.run(command, check=True, env=environment)
+sys.exit(subprocess.run(command, env=environment).returncode)
