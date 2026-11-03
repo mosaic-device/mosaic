@@ -277,6 +277,12 @@
         "$type": "dimension",
         "$value": "60px"
       }
+    },
+    "display": {
+      "clock": {
+        "$type": "dimension",
+        "$value": "200px"
+      }
     }
   }
 }

@@ -75,6 +75,11 @@
     "sha256": "3ef43934912e0fcb7345e00bb919d41605222a21121ea26689921804357718a1"
   },
   {
+    "file": "../../../firmware/main/ui/generated/assets/mosaic_clock_200.c",
+    "bytes": 411411,
+    "sha256": "3d9e4cad02649eb43d79688af2a900a217de8369b251108a1b77a92a030de5cb"
+  },
+  {
     "file": "../../../firmware/main/ui/generated/assets/mosaic_icon_settings_40.c",
     "bytes": 4950,
     "sha256": "208d969b58d2f467cb5902717956f3639f285967aaa9571bd5de511b1abeb11f"
@@ -91,18 +96,18 @@
   },
   {
     "file": "../../../firmware/main/ui/generated/assets/assets.h",
-    "bytes": 852,
-    "sha256": "171e2ddea19b5a8b6b552ec30a972978318f356874974c166f2063d535b3003a"
+    "bytes": 887,
+    "sha256": "7fb8ec197e640eee93ea482930649985bd2a44e22d8d51ccf1f19fb0ab33b5b3"
   },
   {
     "file": "../../../firmware/main/ui/generated/assets/sources.cmake",
-    "bytes": 979,
-    "sha256": "ed6377b76e1f6c4d0435ae288a4a50519252e61bccfc5e6df7b44c0cdaa6aa22"
+    "bytes": 1024,
+    "sha256": "74d1540e709d48982fc2a7b76895a51c0d6b36955b3707a502b9dfe92fc83be5"
   },
   {
     "file": "../../../firmware/main/ui/generated/assets/README.md",
-    "bytes": 1497,
-    "sha256": "f90e2a89686605c08d2efbee45a7176efbae81ec399fd436e379fc38f8a30752"
+    "bytes": 1518,
+    "sha256": "606d2e4adc96f8fc554e70bddbbaeb46cc20f4675399814d608ac6075430572b"
   },
   {
     "file": "../../../firmware/main/ui/generated/assets/licenses/Manrope-OFL.txt",

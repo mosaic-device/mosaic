@@ -109,6 +109,7 @@ test('generated declarations, source list and manifest match firmware token size
     ...[...new Set(Object.values(firmware.text).map(px))].flatMap((size) =>
       [400, 500, 600].map((weight) => `mosaic_manrope_${size}_${weight}.c`),
     ),
+    `mosaic_clock_${px(firmware.display.clock)}.c`,
     ...generatedFiles.filter((name) => /^mosaic_icon_.*\.c$/.test(name)),
     ...[...new Set(Object.values(firmware.wordmark).map(px))].map(
       (size) => `mosaic_wordmark_${size}.c`,

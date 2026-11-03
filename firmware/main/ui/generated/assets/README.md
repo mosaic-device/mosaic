@@ -16,9 +16,9 @@ asset source packages. For firmware binary/device releases, include these full
 notices in the accompanying release documentation or third-party notices.
 The build does not embed these text sidecars in the firmware image.
 
-- mosaic_manrope_*.c: derived from Manrope, SIL Open Font License 1.1;
-  copyright and full terms in licenses/Manrope-OFL.txt. Conversion changes
-  weight/size, normalizes digit advances and rasterizes glyphs.
+- mosaic_manrope_*.c and mosaic_clock_*.c: derived from Manrope, SIL Open Font
+  License 1.1; copyright and full terms in licenses/Manrope-OFL.txt. Conversion
+  changes weight/size, normalizes digit advances and rasterizes glyphs.
 - mosaic_wordmark_*.c: outlined/rasterized Outfit 500 MOSAIC wordmark;
   source font copyright and SIL OFL 1.1 in licenses/Outfit-OFL.txt.
 - mosaic_icon_settings_40.c: Lucide settings, release 0.468.0;

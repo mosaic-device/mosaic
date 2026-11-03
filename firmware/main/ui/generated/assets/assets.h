@@ -19,6 +19,7 @@ LV_FONT_DECLARE(mosaic_manrope_32_600);
 LV_FONT_DECLARE(mosaic_manrope_36_600);
 LV_FONT_DECLARE(mosaic_manrope_48_600);
 LV_FONT_DECLARE(mosaic_manrope_60_600);
+LV_FONT_DECLARE(mosaic_clock_200);
 LV_IMAGE_DECLARE(mosaic_icon_settings_40);
 LV_IMAGE_DECLARE(mosaic_wordmark_40);
 LV_IMAGE_DECLARE(mosaic_wordmark_60);
