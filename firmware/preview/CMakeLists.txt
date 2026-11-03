@@ -25,6 +25,9 @@ target_include_directories(preview_assets PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../
 set(MAIN "${CMAKE_CURRENT_LIST_DIR}/../main")
 add_executable(mosaic-preview
   main.cpp
+  hardware.cpp
+  audio.cpp
+  hardware_view.cpp
   "${MAIN}/ui/styles/styles.cpp"
   "${MAIN}/ui/components/controls.cpp"
   "${MAIN}/ui/navigation/host.cpp"
@@ -32,6 +35,10 @@ add_executable(mosaic-preview
   "${MAIN}/features/home/screen.cpp"
   "${MAIN}/features/settings/screen.cpp"
   "${MAIN}/features/settings/settings.cpp"
+  "${MAIN}/features/led_feedback/patterns.cpp"
+  "${MAIN}/features/brightness/policy.cpp"
+  "${MAIN}/features/audio_cues/cues.cpp"
+  "${MAIN}/features/audio_cues/wav.cpp"
   "${MAIN}/features/clock/clock.cpp"
   "${MAIN}/features/provisioning/ui/status_screen.cpp"
   "${MAIN}/features/provisioning/ui/setup_screen.cpp"
@@ -39,6 +46,7 @@ add_executable(mosaic-preview
   "${MAIN}/features/provisioning/state_machine.cpp"
   "${MAIN}/events/status.cpp")
 target_include_directories(mosaic-preview PRIVATE "${MAIN}" "${MAIN}/ui/generated" fakes ${SDL2_INCLUDE_DIRS})
+target_compile_definitions(mosaic-preview PRIVATE MOSAIC_PREVIEW_AUDIO_DIR="${MAIN}/features/audio_cues/generated")
 target_link_libraries(mosaic-preview PRIVATE preview_assets preview_lvgl ${SDL2_LIBRARIES})
 if(APPLE)
   find_library(COREGRAPHICS_FRAMEWORK CoreGraphics REQUIRED)

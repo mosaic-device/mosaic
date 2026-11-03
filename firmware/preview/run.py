@@ -14,6 +14,7 @@ parser.add_argument("--state", default="home", help="initial interactive screen"
 parser.add_argument("--server-error", action="store_true", help="start Home with a server error")
 parser.add_argument("--long-network", action="store_true", help="show a long setup Wi-Fi name")
 parser.add_argument("--setup-failure", action="store_true", help="show a setup save error")
+parser.add_argument("--command", action="append", default=[], help="run a debug-trigger command before opening")
 parser.add_argument("--window-width", type=int, help="override the automatic physical-size estimate")
 parser.add_argument("--shots", type=Path, default=firmware / "build" / "preview-shots", help="F12 screenshot directory")
 parser.add_argument("--screenshot", type=Path, help="save the selected state as BMP and exit")
@@ -36,6 +37,8 @@ if args.long_network:
     command.append("--long-network")
 if args.setup_failure:
     command.append("--setup-failure")
+for requested in args.command:
+    command += ["--command", requested]
 if args.window_width:
     command += ["--window-width", str(args.window_width)]
 if args.screenshot:

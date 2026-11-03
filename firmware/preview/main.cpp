@@ -11,6 +11,9 @@
 #include "features/provisioning/ui/status_screen.hpp"
 #include "features/provisioning/ui/setup_screen.hpp"
 #include "events/bus.hpp"
+#include "audio.hpp"
+#include "hardware.hpp"
+#include "hardware_view.hpp"
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
@@ -20,12 +23,14 @@
 #include <array>
 #include <cmath>
 #include <filesystem>
+#include <sstream>
 #ifdef __APPLE__
 #include <CoreGraphics/CoreGraphics.h>
 #endif
 
 using namespace mosaic;
 namespace prov = features::provisioning;
+namespace pv = mosaic::preview;
 
 // ---- stubs for device services --------------------------------------------------------
 namespace {
@@ -35,9 +40,9 @@ bool g_pressed = false;
 bool g_touch = false;
 int g_touch_x = 0, g_touch_y = 0;
 uint32_t g_backs = 0;
-events::Status g_status = events::Status::disconnected;
-bool g_paired = false;
 features::settings::Settings g_settings;
+pv::Hardware g_hardware;
+pv::Audio g_audio;
 }
 namespace mosaic::drivers::encoder {
 void set_group(lv_group_t* group) {
@@ -49,10 +54,20 @@ uint32_t back_presses() {
 }
 namespace mosaic::events {
 Status status() {
-    return g_status;
+    return g_hardware.status();
 }
 bool paired() {
-    return g_paired;
+    return g_hardware.paired();
+}
+esp_err_t set_status(Status status) {
+    if (const auto cue = g_hardware.set_status(status))
+        g_audio.play(*cue, g_hardware.settings_effects());
+    return ESP_OK;
+}
+esp_err_t post_notification() {
+    const auto cue = g_hardware.notification(lv_tick_get());
+    g_audio.play(cue, g_hardware.settings_effects());
+    return ESP_OK;
 }
 }
 namespace mosaic::features::clock {
@@ -72,16 +87,21 @@ Settings current() {
 }
 void toggle(Control c) {
     g_settings = normalize(settings::toggle(g_settings, c));
+    g_hardware.set_settings(g_settings);
 }
 void set_level(Control c, int v) {
     g_settings = normalize(settings::set_level(g_settings, c, v));
+    g_hardware.set_settings(g_settings);
 }
 void set(const Settings& s) {
     g_settings = normalize(s);
+    g_hardware.set_settings(g_settings);
 }
 }
 namespace mosaic::features::led_feedback {
-void acknowledge() { }
+void acknowledge() {
+    g_hardware.acknowledge();
+}
 }
 
 // ---- display ------------------------------------------------------------------------
@@ -148,7 +168,10 @@ void setup_routine(void*) {
     }
 }
 ui::navigation::Conditions conditions(void*) {
-    return { .starting = g_view.starting && !g_qr, .online = g_view.online && !g_qr, .paired = g_paired };
+    return { .starting = g_view.starting && !g_qr, .online = g_view.online && !g_qr, .paired = g_hardware.paired() };
+}
+void on_input(void*) {
+    features::led_feedback::acknowledge();
 }
 
 ui::Renderer g_renderer;
@@ -157,6 +180,7 @@ void run(int ms) {
         lv_tick_inc(5);
         lv_timer_handler();
         g_renderer.routine(g_renderer.context);
+        g_hardware.tick(lv_tick_get());
     }
 }
 prov::ViewState view(prov::Phase phase, prov::VisibleReason reason = prov::VisibleReason::connecting,
@@ -166,6 +190,76 @@ prov::ViewState view(prov::Phase phase, prov::VisibleReason reason = prov::Visib
     s.reason = reason;
     s.recovery = recovery;
     return prov::present(s);
+}
+void command(const std::string& line) {
+    std::istringstream stream(line);
+    std::vector<std::string> args;
+    for (std::string word; stream >> word;)
+        args.push_back(word);
+    if (args.empty())
+        return;
+    if (args[0] == "trigger" && args.size() == 2) {
+        if (args[1] == "notification") {
+            events::post_notification();
+            std::puts("Notification");
+            return;
+        }
+        events::Status status;
+        if (events::parse(args[1], status)) {
+            events::set_status(status);
+            std::printf("Status: %s\n", events::name(status));
+            return;
+        }
+    } else if (args[0] == "volume" && args.size() <= 2) {
+        if (args.size() == 2) {
+            char* end = nullptr;
+            const long value = std::strtol(args[1].c_str(), &end, 10);
+            if (*args[1].c_str() != '\0' && *end == '\0' && value >= features::settings::kVolumeMin
+                && value <= 100) {
+                auto settings = features::settings::current();
+                settings.volume = static_cast<uint8_t>(value);
+                features::settings::set(settings);
+            } else {
+                std::puts("usage: volume [10-100]");
+                return;
+            }
+        }
+        std::printf("volume %u%%\n", features::settings::current().volume);
+        return;
+    } else if (args[0] == "mute" && args.size() <= 2) {
+        if (args.size() == 2) {
+            if (args[1] != "on" && args[1] != "off") {
+                std::puts("usage: mute [on|off]");
+                return;
+            }
+            auto settings = features::settings::current();
+            settings.muted = args[1] == "on";
+            features::settings::set(settings);
+        }
+        std::printf("mute %s\n", features::settings::current().muted ? "on" : "off");
+        return;
+    } else if (args[0] == "lux" && args.size() <= 2) {
+        if (args.size() == 2) {
+            if (args[1] == "off") {
+                g_hardware.set_lux(std::nullopt);
+            } else {
+                char* end = nullptr;
+                const float value = std::strtof(args[1].c_str(), &end);
+                if (*args[1].c_str() == '\0' || *end != '\0' || value < 0 || value > 100000) {
+                    std::puts("usage: lux [0-100000|off]");
+                    return;
+                }
+                g_hardware.set_lux(value);
+            }
+        }
+        if (g_hardware.lux())
+            std::printf("lux %.1f\n", *g_hardware.lux());
+        else
+            std::puts("lux sensor unavailable");
+        return;
+    }
+    std::puts("commands: trigger notification|pairing|connected|disconnected|error; volume [10-100]; "
+              "mute [on|off]; lux [0-100000|off]");
 }
 }
 
@@ -177,6 +271,7 @@ int main(int argc, char** argv) {
     bool initial_error = false;
     bool initial_long_network = false;
     bool initial_setup_failure = false;
+    std::vector<std::string> startup_commands;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--shots" && i + 1 < argc)
@@ -191,6 +286,8 @@ int main(int argc, char** argv) {
             initial_long_network = true;
         else if (arg == "--setup-failure")
             initial_setup_failure = true;
+        else if (arg == "--command" && i + 1 < argc)
+            startup_commands.emplace_back(argv[++i]);
         else if (arg == "--window-width" && i + 1 < argc) {
             requested_window_width = std::atoi(argv[++i]);
             if (requested_window_width < 200 || requested_window_width > 2560) {
@@ -199,7 +296,7 @@ int main(int argc, char** argv) {
             }
         } else {
             std::fprintf(stderr,
-                "Usage: preview [--state NAME] [--server-error] [--long-network] [--setup-failure] "
+                "Usage: preview [--state NAME] [--command TEXT] [--server-error] [--long-network] [--setup-failure] "
                 "[--window-width PIXELS] [--shots DIR] [--screenshot FILE.bmp]\n");
             return 2;
         }
@@ -233,6 +330,8 @@ int main(int argc, char** argv) {
         .notification = { },
         .conditions = conditions,
         .conditions_context = nullptr,
+        .input = on_input,
+        .input_context = nullptr,
     });
     if (!g_renderer.create(screen, nullptr)) {
         std::puts("create failed");
@@ -286,8 +385,7 @@ int main(int argc, char** argv) {
             const auto& scenario = kScenarios[state_index];
             g_view = view(scenario.phase, scenario.reason);
             g_qr = scenario.qr;
-            g_paired = scenario.paired;
-            g_status = g_paired ? events::Status::connected : events::Status::disconnected;
+            events::set_status(scenario.paired ? events::Status::connected : events::Status::disconnected);
             run(50);
             if (scenario.settings)
                 ui::navigation::open(ui::navigation::Screen::settings);
@@ -332,19 +430,23 @@ int main(int argc, char** argv) {
             std::fprintf(stderr, "%s\n", SDL_GetError());
             return 1;
         }
+        if (screenshot_path.empty())
+            g_audio.start();
         int window_width = 0, window_height = 0;
         int output_width = 0, output_height = 0;
         SDL_GetWindowSize(window, &window_width, &window_height);
         SDL_GetRendererOutputSize(renderer, &output_width, &output_height);
         std::printf("Preview window: %dx%d; display output: %dx%d; framebuffer: %dx%d RGB565\n", window_width,
             window_height, output_width, output_height, W, H);
+        std::string selected_state;
         auto choose = [&](const std::string& state) {
             select(state);
+            selected_state = state;
             SDL_SetWindowTitle(window, ("Mosaic preview: " + state).c_str());
         };
         choose(initial);
-        if (initial_error && g_paired)
-            g_status = events::Status::error;
+        if (initial_error && g_hardware.paired())
+            events::set_status(events::Status::error);
         if (g_qr) {
             g_setup_failure = initial_setup_failure;
             if (initial_long_network) {
@@ -353,6 +455,8 @@ int main(int argc, char** argv) {
                 g_qr_shown = false;
             }
         }
+        for (const auto& requested : startup_commands)
+            command(requested);
         auto save_frame = [&](const std::filesystem::path& path) {
             auto* image = SDL_CreateRGBSurfaceWithFormatFrom(
                 g_draw.data(), W, H, 16, W * sizeof(uint16_t), SDL_PIXELFORMAT_RGB565);
@@ -367,26 +471,62 @@ int main(int argc, char** argv) {
         if (!screenshot_path.empty()) {
             run(300);
             const bool saved = save_frame(screenshot_path);
+            g_audio.close();
             SDL_DestroyTexture(texture);
             SDL_DestroyRenderer(renderer);
             SDL_DestroyWindow(window);
             SDL_Quit();
             return saved ? 0 : 1;
         }
+        pv::HardwareView hardware_view;
+        if (!hardware_view.start(window))
+            std::fprintf(stderr, "Hardware panel unavailable: %s\n", SDL_GetError());
         std::puts("Left/Right: turn, Enter/Space: press, Backspace: Back, mouse: touch, [ ]: switch screens.\n"
                   "1 boot, 2 QR, 3 connecting, 4 offline, 5 unpaired, 6 Home, 7 Settings.\n"
-                  "E: toggle server trouble, L: toggle long Wi-Fi name, F: toggle setup failure, F12: screenshot, Esc: "
-                  "quit.");
+                  "F1: debug commands (trigger, volume, mute, lux); N: notification; E: server trouble.\n"
+                  "L: long Wi-Fi name, F: setup failure, F12: screenshot, Esc: quit.");
         bool running = true;
+        bool command_mode = false;
+        std::string command_line;
         int shot_number = 0;
         while (running) {
             bool screenshot = false;
             SDL_Event event;
             while (SDL_PollEvent(&event)) {
-                if (event.type == SDL_QUIT)
+                if (event.type == SDL_QUIT || (event.type == SDL_WINDOWEVENT
+                        && event.window.event == SDL_WINDOWEVENT_CLOSE))
                     running = false;
+                if (event.type == SDL_TEXTINPUT && command_mode) {
+                    command_line += event.text.text;
+                    SDL_SetWindowTitle(window, ("mosaic> " + command_line).c_str());
+                    continue;
+                }
+                if (event.type == SDL_KEYDOWN && command_mode) {
+                    if (event.key.keysym.sym == SDLK_BACKSPACE && !command_line.empty())
+                        command_line.pop_back();
+                    else if (event.key.keysym.sym == SDLK_RETURN) {
+                        command(command_line);
+                        command_line.clear();
+                        command_mode = false;
+                        SDL_StopTextInput();
+                        SDL_SetWindowTitle(window, ("Mosaic preview: " + selected_state).c_str());
+                    } else if (event.key.keysym.sym == SDLK_ESCAPE) {
+                        command_line.clear();
+                        command_mode = false;
+                        SDL_StopTextInput();
+                        SDL_SetWindowTitle(window, ("Mosaic preview: " + selected_state).c_str());
+                    }
+                    if (command_mode)
+                        SDL_SetWindowTitle(window, ("mosaic> " + command_line).c_str());
+                    continue;
+                }
                 if (event.type == SDL_KEYDOWN && !event.key.repeat) {
                     switch (event.key.keysym.sym) {
+                    case SDLK_F1:
+                        command_mode = true;
+                        SDL_StartTextInput();
+                        SDL_SetWindowTitle(window, "mosaic> ");
+                        break;
                     case SDLK_LEFT:
                         g_enc_diff = -1;
                         break;
@@ -423,9 +563,12 @@ int main(int argc, char** argv) {
                         choose("settings");
                         break;
                     case SDLK_e:
-                        if (g_paired)
-                            g_status
-                                = g_status == events::Status::error ? events::Status::connected : events::Status::error;
+                        if (g_hardware.paired())
+                            events::set_status(g_hardware.status() == events::Status::error ? events::Status::connected
+                                                                                            : events::Status::error);
+                        break;
+                    case SDLK_n:
+                        events::post_notification();
                         break;
                     case SDLK_l:
                         if (g_qr) {
@@ -459,6 +602,14 @@ int main(int argc, char** argv) {
                 }
                 if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP
                     || event.type == SDL_MOUSEMOTION) {
+                    const uint32_t event_window
+                        = event.type == SDL_MOUSEMOTION ? event.motion.windowID : event.button.windowID;
+                    if (event_window == hardware_view.window_id()) {
+                        hardware_view.handle(event, g_hardware);
+                        continue;
+                    }
+                    if (event_window != SDL_GetWindowID(window))
+                        continue;
                     // SDL_RenderSetLogicalSize already maps window events to
                     // the framebuffer's coordinates, including Retina scaling.
                     g_touch_x = event.type == SDL_MOUSEMOTION ? event.motion.x : event.button.x;
@@ -477,7 +628,11 @@ int main(int argc, char** argv) {
             SDL_UpdateTexture(texture, nullptr, g_draw.data(), W * sizeof(uint16_t));
             SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+            SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, (100 - g_hardware.screen_percent()) * 255 / 100);
+            SDL_RenderFillRect(renderer, nullptr);
             SDL_RenderPresent(renderer);
+            hardware_view.render(g_hardware, g_audio.playing());
             if (screenshot) {
                 std::filesystem::create_directories(shots);
                 char time_text[32];
@@ -490,6 +645,8 @@ int main(int argc, char** argv) {
             SDL_Delay(16);
         }
         SDL_DestroyTexture(texture);
+        hardware_view.close();
+        g_audio.close();
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         SDL_Quit();
