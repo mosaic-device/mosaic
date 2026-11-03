@@ -8,12 +8,12 @@
 namespace mosaic::features::audio_cues {
 
 // One per generated WAV file in generated/.
-enum class Cue : uint8_t { notification, connected, error };
+enum class Cue : uint8_t { notification, connected };
 
 // Which status changes are heard. Connecting chimes when pairing completes, and the first
 // time the device connects after starting, so the owner hears that it is ready. A
 // reconnect after the server or Wi-Fi drops is silent, so a blip at night never wakes
-// anyone. Errors have their own cue; pairing and disconnecting are explained on screen.
+// anyone. Nothing else chimes: errors and pairing are explained on screen.
 class StatusCues {
 public:
     // The cue for a change to this status, if any.

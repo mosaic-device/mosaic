@@ -5,8 +5,6 @@ namespace mosaic::features::audio_cues {
 std::optional<Cue> StatusCues::on_status(events::Status status) {
     const events::Status previous = previous_;
     previous_ = status;
-    if (status == events::Status::error)
-        return Cue::error;
     if (status != events::Status::connected)
         return std::nullopt;
     const bool first = !connected_before_;

@@ -18,8 +18,6 @@ extern const uint8_t notification_wav_start[] asm("_binary_notification_wav_star
 extern const uint8_t notification_wav_end[] asm("_binary_notification_wav_end");
 extern const uint8_t connected_wav_start[] asm("_binary_connected_wav_start");
 extern const uint8_t connected_wav_end[] asm("_binary_connected_wav_end");
-extern const uint8_t error_wav_start[] asm("_binary_error_wav_start");
-extern const uint8_t error_wav_end[] asm("_binary_error_wav_end");
 
 namespace mosaic::features::audio_cues {
 namespace {
@@ -43,10 +41,9 @@ namespace {
         bool valid = false;
     };
     // Indexed by Cue.
-    std::array<Sound, 3> s_sounds { {
+    std::array<Sound, 2> s_sounds { {
         { notification_wav_start, notification_wav_end, { } },
         { connected_wav_start, connected_wav_end, { } },
-        { error_wav_start, error_wav_end, { } },
     } };
     esp_codec_dev_handle_t s_speaker = nullptr;
     QueueHandle_t s_queue = nullptr;

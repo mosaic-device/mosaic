@@ -74,7 +74,6 @@ idf_component_register(
     EMBED_TXTFILES "features/provisioning/assets/setup.html" "features/provisioning/assets/setup.js"
     EMBED_FILES "features/audio_cues/generated/notification.wav"
                 "features/audio_cues/generated/connected.wav"
-                "features/audio_cues/generated/error.wav"
 )
 
 if(MOSAIC_UI_GALLERY)

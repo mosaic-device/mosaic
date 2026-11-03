@@ -124,7 +124,7 @@ void rejects_anything_else() {
 
 // The firmware embeds these files; each must parse into the format playback opens.
 void committed_cues_parse(int count, char** paths) {
-    assert(count == 3);
+    assert(count == 2);
     for (int i = 0; i < count; ++i) {
         std::FILE* file = std::fopen(paths[i], "rb");
         assert(file);
@@ -142,9 +142,9 @@ void committed_cues_parse(int count, char** paths) {
 void status_cues() {
     // The first connection after starting chimes; reconnecting after a drop does not.
     StatusCues cues;
-    assert(cues.on_status(Status::error) == Cue::error);
+    assert(!cues.on_status(Status::error));
     assert(cues.on_status(Status::connected) == Cue::connected);
-    assert(cues.on_status(Status::error) == Cue::error);
+    assert(!cues.on_status(Status::error));
     assert(!cues.on_status(Status::connected));
     assert(!cues.on_status(Status::disconnected));
     assert(!cues.on_status(Status::connected));
@@ -155,10 +155,10 @@ void status_cues() {
     StatusCues fresh;
     assert(!fresh.on_status(Status::pairing));
     assert(fresh.on_status(Status::connected) == Cue::connected);
-    // Pairing and disconnecting are never heard.
-    for (Status status : { Status::pairing, Status::disconnected })
+    // Errors and pairing are never heard.
+    for (Status status : { Status::error, Status::pairing, Status::disconnected })
         assert(!StatusCues { }.on_status(status));
-    assert(kNotificationCue != Cue::connected && kNotificationCue != Cue::error);
+    assert(kNotificationCue != Cue::connected);
 }
 
 void volume_and_mute() {

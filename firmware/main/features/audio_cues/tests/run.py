@@ -16,7 +16,7 @@ sources = [
     main / "events/status.cpp",
     feature / "tests/audio_cues_test.cpp",
 ]
-cues = [feature / "generated" / f"{name}.wav" for name in ("notification", "connected", "error")]
+cues = [feature / "generated" / f"{name}.wav" for name in ("notification", "connected")]
 
 with tempfile.TemporaryDirectory(prefix="mosaic-audio-cues-") as work:
     env = {**os.environ, "TMPDIR": work, "TMP": work, "TEMP": work}
