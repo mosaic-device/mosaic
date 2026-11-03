@@ -11,6 +11,10 @@ build = firmware / "build" / "device-preview"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--state", default="home", help="initial interactive screen")
+parser.add_argument("--server-error", action="store_true", help="start Home with a server error")
+parser.add_argument("--long-network", action="store_true", help="show a long setup Wi-Fi name")
+parser.add_argument("--setup-failure", action="store_true", help="show a setup save error")
+parser.add_argument("--window-width", type=int, help="override the automatic physical-size estimate")
 parser.add_argument("--shots", type=Path, default=firmware / "build" / "preview-shots", help="F12 screenshot directory")
 parser.add_argument("--screenshot", type=Path, help="save the selected state as BMP and exit")
 args = parser.parse_args()
@@ -26,6 +30,14 @@ if not (lvgl / "lvgl.h").exists():
 subprocess.run(["cmake", "-S", str(here), "-B", str(build), f"-DLVGL_DIR={lvgl}"], check=True)
 subprocess.run(["cmake", "--build", str(build), "--parallel", str(min(8, os.cpu_count() or 2))], check=True)
 command = [str(build / "mosaic-preview"), "--state", args.state, "--shots", str(args.shots.resolve())]
+if args.server_error:
+    command.append("--server-error")
+if args.long_network:
+    command.append("--long-network")
+if args.setup_failure:
+    command.append("--setup-failure")
+if args.window_width:
+    command += ["--window-width", str(args.window_width)]
 if args.screenshot:
     args.screenshot.resolve().parent.mkdir(parents=True, exist_ok=True)
     command += ["--screenshot", str(args.screenshot.resolve())]

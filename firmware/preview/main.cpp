@@ -20,6 +20,9 @@
 #include <array>
 #include <cmath>
 #include <filesystem>
+#ifdef __APPLE__
+#include <CoreGraphics/CoreGraphics.h>
+#endif
 
 using namespace mosaic;
 namespace prov = features::provisioning;
@@ -170,6 +173,10 @@ int main(int argc, char** argv) {
     std::string shots = "firmware/build/preview-shots";
     std::string initial = "home";
     std::string screenshot_path;
+    int requested_window_width = 0;
+    bool initial_error = false;
+    bool initial_long_network = false;
+    bool initial_setup_failure = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--shots" && i + 1 < argc)
@@ -178,8 +185,22 @@ int main(int argc, char** argv) {
             screenshot_path = argv[++i];
         else if (arg == "--state" && i + 1 < argc)
             initial = argv[++i];
-        else {
-            std::fprintf(stderr, "Usage: preview [--state NAME] [--shots DIR] [--screenshot FILE.bmp]\n");
+        else if (arg == "--server-error")
+            initial_error = true;
+        else if (arg == "--long-network")
+            initial_long_network = true;
+        else if (arg == "--setup-failure")
+            initial_setup_failure = true;
+        else if (arg == "--window-width" && i + 1 < argc) {
+            requested_window_width = std::atoi(argv[++i]);
+            if (requested_window_width < 200 || requested_window_width > 2560) {
+                std::fprintf(stderr, "Window width must be between 200 and 2560.\n");
+                return 2;
+            }
+        } else {
+            std::fprintf(stderr,
+                "Usage: preview [--state NAME] [--server-error] [--long-network] [--setup-failure] "
+                "[--window-width PIXELS] [--shots DIR] [--screenshot FILE.bmp]\n");
             return 2;
         }
     }
@@ -220,14 +241,30 @@ int main(int argc, char** argv) {
     lv_screen_load(screen);
 
     {
-        constexpr std::array kStates { "boot", "qr", "long-network", "setup-failure", "connecting", "offline",
-            "network-unavailable", "startup-failure", "setup-opening", "setup-saved", "recovery-failure", "unpaired",
-            "home", "trouble", "settings", "settings-manual", "settings-muted" };
+        // Only entry points live here. Variants come from interacting with the
+        // real controls or changing the simulated conditions below.
+        struct Scenario {
+            const char* name;
+            prov::Phase phase;
+            prov::VisibleReason reason = prov::VisibleReason::connecting;
+            bool qr = false;
+            bool paired = false;
+            bool settings = false;
+        };
+        constexpr std::array<Scenario, 7> kScenarios { {
+            { "boot", prov::Phase::unstarted },
+            { "qr", prov::Phase::portal, prov::VisibleReason::connecting, true },
+            { "connecting", prov::Phase::starting_saved },
+            { "offline", prov::Phase::offline, prov::VisibleReason::retrying },
+            { "unpaired", prov::Phase::online },
+            { "home", prov::Phase::online, prov::VisibleReason::connecting, false, true },
+            { "settings", prov::Phase::online, prov::VisibleReason::connecting, false, true, true },
+        } };
         size_t state_index = 0;
         auto select = [&](const std::string& state) {
             bool known = false;
-            for (size_t i = 0; i < kStates.size(); ++i) {
-                if (state == kStates[i]) {
+            for (size_t i = 0; i < kScenarios.size(); ++i) {
+                if (state == kScenarios[i].name) {
                     state_index = i;
                     known = true;
                     break;
@@ -246,93 +283,76 @@ int main(int argc, char** argv) {
             g_qr = false;
             g_long_network = false;
             g_setup_failure = false;
-            g_paired = false;
-            g_status = events::Status::disconnected;
-            if (state == "boot")
-                g_view = prov::present(prov::StartupView::starting);
-            else if (state == "qr")
-                g_qr = true;
-            else if (state == "long-network") {
-                g_long_network = true;
-                g_qr = true;
-            } else if (state == "setup-failure") {
-                g_setup_failure = true;
-                g_qr = true;
-            } else if (state == "connecting")
-                g_view = view(prov::Phase::starting_saved);
-            else if (state == "offline")
-                g_view = view(prov::Phase::offline, prov::VisibleReason::retrying);
-            else if (state == "network-unavailable")
-                g_view = view(prov::Phase::offline, prov::VisibleReason::unavailable);
-            else if (state == "startup-failure")
-                g_view = prov::present(prov::StartupView::unavailable);
-            else if (state == "setup-opening")
-                g_view = view(prov::Phase::requesting_setup);
-            else if (state == "setup-saved")
-                g_view = view(prov::Phase::saved_visible);
-            else if (state == "recovery-failure")
-                g_view = view(prov::Phase::recovery_failed, prov::VisibleReason::retrying, prov::RecoveryState::failed);
-            else if (state == "unpaired")
-                g_view = view(prov::Phase::online);
-            else if (state == "home" || state == "trouble" || state == "settings" || state == "settings-manual"
-                || state == "settings-muted") {
-                g_view = view(prov::Phase::online);
-                g_paired = true;
-                g_status = state == "trouble" ? events::Status::error : events::Status::connected;
-                auto settings = features::settings::Settings { };
-                if (state == "settings-manual")
-                    settings.auto_brightness = false;
-                if (state == "settings-muted")
-                    settings.muted = true;
-                features::settings::set(settings);
-                run(50);
-                if (state.starts_with("settings"))
-                    ui::navigation::open(ui::navigation::Screen::settings);
-            }
+            const auto& scenario = kScenarios[state_index];
+            g_view = view(scenario.phase, scenario.reason);
+            g_qr = scenario.qr;
+            g_paired = scenario.paired;
+            g_status = g_paired ? events::Status::connected : events::Status::disconnected;
+            run(50);
+            if (scenario.settings)
+                ui::navigation::open(ui::navigation::Screen::settings);
             run(50);
         };
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
             std::fprintf(stderr, "%s\n", SDL_GetError());
             return 1;
         }
-        // The panel is 5 inches diagonally. Start at its approximate physical
-        // size on this monitor, while LVGL and screenshots stay at 1280x720.
-        auto* window = SDL_CreateWindow("Mosaic device preview", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 100,
-            100, SDL_WINDOW_HIDDEN | SDL_WINDOW_ALLOW_HIGHDPI);
+        // Match the panel's 5-inch diagonal in desktop coordinates. LVGL and
+        // screenshots retain the full 1280x720 panel resolution.
+        float logical_dpi = 128.0F;
+#ifdef __APPLE__
+        const auto display_id = CGMainDisplayID();
+        const auto millimeters = CGDisplayScreenSize(display_id);
+        const auto bounds = CGDisplayBounds(display_id);
+        if (millimeters.width > 0 && bounds.size.width > 0)
+            logical_dpi = static_cast<float>(bounds.size.width * 25.4 / millimeters.width);
+#else
+        float reported_dpi = 0;
+        if (SDL_GetDisplayDPI(0, nullptr, &reported_dpi, nullptr) == 0 && reported_dpi > 0)
+            logical_dpi = reported_dpi;
+#endif
+        if (logical_dpi < 80.0F || logical_dpi > 200.0F)
+            logical_dpi = 128.0F;
+        const float panel_width_inches = 5.0F * W / std::hypot(static_cast<float>(W), static_cast<float>(H));
+        const int target_width
+            = requested_window_width ? requested_window_width : std::lround(panel_width_inches * logical_dpi);
+        const int target_height = std::lround(static_cast<float>(target_width) * H / W);
+        SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+        auto* window = SDL_CreateWindow("Mosaic device preview", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+            target_width, target_height, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
         auto* renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED) : nullptr;
         if (window && !renderer)
             renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-        if (window && renderer) {
-            float desktop_dpi = 120.0F;
-            float horizontal_dpi = 0;
-            if (SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), nullptr, &horizontal_dpi, nullptr) == 0
-                && horizontal_dpi > 0) {
-                int output_width = 0, output_height = 0;
-                if (SDL_GetRendererOutputSize(renderer, &output_width, &output_height) == 0 && output_width > 0)
-                    horizontal_dpi /= output_width / 100.0F;
-                if (horizontal_dpi >= 80.0F && horizontal_dpi <= 200.0F)
-                    desktop_dpi = horizontal_dpi;
-            }
-            constexpr float kPanelDiagonalInches = 5.0F;
-            const float diagonal_pixels = std::hypot(static_cast<float>(W), static_cast<float>(H));
-            const int window_width = std::lround(kPanelDiagonalInches * W / diagonal_pixels * desktop_dpi);
-            const int window_height = std::lround(kPanelDiagonalInches * H / diagonal_pixels * desktop_dpi);
-            SDL_SetWindowSize(window, window_width, window_height);
-            SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-            SDL_ShowWindow(window);
-            std::printf(
-                "Preview window: %dx%d desktop units; framebuffer: %dx%d RGB565\n", window_width, window_height, W, H);
+        if (renderer && SDL_RenderSetLogicalSize(renderer, W, H) != 0) {
+            std::fprintf(stderr, "Cannot set preview coordinates: %s\n", SDL_GetError());
+            return 1;
         }
         auto* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, W, H);
         if (!window || !renderer || !texture) {
             std::fprintf(stderr, "%s\n", SDL_GetError());
             return 1;
         }
+        int window_width = 0, window_height = 0;
+        int output_width = 0, output_height = 0;
+        SDL_GetWindowSize(window, &window_width, &window_height);
+        SDL_GetRendererOutputSize(renderer, &output_width, &output_height);
+        std::printf("Preview window: %dx%d; display output: %dx%d; framebuffer: %dx%d RGB565\n", window_width,
+            window_height, output_width, output_height, W, H);
         auto choose = [&](const std::string& state) {
             select(state);
             SDL_SetWindowTitle(window, ("Mosaic preview: " + state).c_str());
         };
         choose(initial);
+        if (initial_error && g_paired)
+            g_status = events::Status::error;
+        if (g_qr) {
+            g_setup_failure = initial_setup_failure;
+            if (initial_long_network) {
+                g_long_network = true;
+                g_setup_screen.hide();
+                g_qr_shown = false;
+            }
+        }
         auto save_frame = [&](const std::filesystem::path& path) {
             auto* image = SDL_CreateRGBSurfaceWithFormatFrom(
                 g_draw.data(), W, H, 16, W * sizeof(uint16_t), SDL_PIXELFORMAT_RGB565);
@@ -353,12 +373,10 @@ int main(int argc, char** argv) {
             SDL_Quit();
             return saved ? 0 : 1;
         }
-        std::puts("Left/Right: turn, Enter/Space: press, Backspace: hold for Back, mouse: touch, [ ]: switch states, "
-                  "F12: screenshot, Esc: "
-                  "quit.\n"
-                  "1 boot, 2 QR, 3 connecting, 4 offline, 5 unpaired, 6 Home, 7 trouble, 8 Settings, 9 long network, 0 "
-                  "setup failure.\n"
-                  "Other states: use --state NAME (see firmware/README.md).");
+        std::puts("Left/Right: turn, Enter/Space: press, Backspace: Back, mouse: touch, [ ]: switch screens.\n"
+                  "1 boot, 2 QR, 3 connecting, 4 offline, 5 unpaired, 6 Home, 7 Settings.\n"
+                  "E: toggle server trouble, L: toggle long Wi-Fi name, F: toggle setup failure, F12: screenshot, Esc: "
+                  "quit.");
         bool running = true;
         int shot_number = 0;
         while (running) {
@@ -378,6 +396,7 @@ int main(int argc, char** argv) {
                     case SDLK_RETURN:
                     case SDLK_SPACE:
                         g_pressed = true;
+                        run(40); // Ensure LVGL sees a press even if key-up is already queued.
                         break;
                     case SDLK_BACKSPACE:
                         ++g_backs;
@@ -401,22 +420,29 @@ int main(int argc, char** argv) {
                         choose("home");
                         break;
                     case SDLK_7:
-                        choose("trouble");
-                        break;
-                    case SDLK_8:
                         choose("settings");
                         break;
-                    case SDLK_9:
-                        choose("long-network");
+                    case SDLK_e:
+                        if (g_paired)
+                            g_status
+                                = g_status == events::Status::error ? events::Status::connected : events::Status::error;
                         break;
-                    case SDLK_0:
-                        choose("setup-failure");
+                    case SDLK_l:
+                        if (g_qr) {
+                            g_long_network = !g_long_network;
+                            g_setup_screen.hide();
+                            g_qr_shown = false;
+                        }
+                        break;
+                    case SDLK_f:
+                        if (g_qr)
+                            g_setup_failure = !g_setup_failure;
                         break;
                     case SDLK_LEFTBRACKET:
-                        choose(kStates[(state_index + kStates.size() - 1) % kStates.size()]);
+                        choose(kScenarios[(state_index + kScenarios.size() - 1) % kScenarios.size()].name);
                         break;
                     case SDLK_RIGHTBRACKET:
-                        choose(kStates[(state_index + 1) % kStates.size()]);
+                        choose(kScenarios[(state_index + 1) % kScenarios.size()].name);
                         break;
                     case SDLK_F12:
                         screenshot = true;
@@ -427,20 +453,24 @@ int main(int argc, char** argv) {
                     }
                 }
                 if (event.type == SDL_KEYUP
-                    && (event.key.keysym.sym == SDLK_RETURN || event.key.keysym.sym == SDLK_SPACE))
+                    && (event.key.keysym.sym == SDLK_RETURN || event.key.keysym.sym == SDLK_SPACE)) {
                     g_pressed = false;
+                    run(40);
+                }
                 if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP
                     || event.type == SDL_MOUSEMOTION) {
-                    int ww, wh;
-                    SDL_GetWindowSize(window, &ww, &wh);
-                    const int x = event.type == SDL_MOUSEMOTION ? event.motion.x : event.button.x;
-                    const int y = event.type == SDL_MOUSEMOTION ? event.motion.y : event.button.y;
-                    g_touch_x = x * W / ww;
-                    g_touch_y = y * H / wh;
-                    if (event.type == SDL_MOUSEBUTTONDOWN)
+                    // SDL_RenderSetLogicalSize already maps window events to
+                    // the framebuffer's coordinates, including Retina scaling.
+                    g_touch_x = event.type == SDL_MOUSEMOTION ? event.motion.x : event.button.x;
+                    g_touch_y = event.type == SDL_MOUSEMOTION ? event.motion.y : event.button.y;
+                    if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
                         g_touch = true;
-                    if (event.type == SDL_MOUSEBUTTONUP)
+                        run(40); // A quick click may deliver down and up in one SDL poll.
+                    }
+                    if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) {
                         g_touch = false;
+                        run(40);
+                    }
                 }
             }
             run(16);

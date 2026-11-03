@@ -11,29 +11,31 @@ the repository root, run:
 ```sh
 pnpm fw:preview
 pnpm fw:preview --state qr
-pnpm fw:preview --state settings-manual
-pnpm fw:preview --state trouble --screenshot firmware/build/trouble.bmp
+pnpm fw:preview --state settings
+pnpm fw:preview --state home --server-error --screenshot firmware/build/trouble.bmp
 ```
 
 The first build uses the managed LVGL 9.4.0 component if present, otherwise it
 downloads that release into `firmware/build/device-preview`. Set `LVGL_DIR` to use another
-local copy of the same release. The window opens at approximately the panel's
-5-inch physical size on your monitor. It renders the real firmware screen code
-at the panel's 1280×720 resolution in RGB565. Left and Right turn the knob,
-Enter or Space presses it, and Backspace is its long-press Back action. The mouse
-acts as touch. Keys 1–8 select boot, setup QR, connecting, offline, unpaired,
-Home, server trouble, and Settings; 9 shows a long network name and 0 a setup
-failure. `--state` also accepts `network-unavailable`, `startup-failure`,
-`setup-opening`, `setup-saved`, `recovery-failure`, `settings-manual`, and
-`settings-muted`. Press F12 to save the current frame as a BMP screenshot in
+local copy of the same release. The preview uses the monitor's physical size
+to open at approximately the board's 5-inch diagonal. If the monitor reports
+an inaccurate size, use `pnpm fw:preview --window-width 600` to calibrate
+against the board. The firmware screen and screenshots stay at 1280×720 in
+RGB565; the window uses the monitor's high-DPI output for a sharp image.
+Left and Right turn the knob, Enter or Space presses it, and Backspace
+is its long-press Back action. The mouse acts as touch. Keys 1–7 select boot,
+setup QR, connecting, offline, unpaired, Home, and Settings; `[` and `]` cycle
+them. Press E to toggle server trouble, L for a long Wi-Fi name, and F for a
+setup failure. Settings values change through their normal controls. The same
+variants can be set at startup with `--server-error`, `--long-network`, and
+`--setup-failure`. Press F12 to save the current frame as a BMP screenshot in
 `firmware/build/preview-shots`, or set a different directory with `--shots`. Use
-`--screenshot` to save a selected state without opening a window. Press `[` and
-`]` to cycle through every state in the running window.
+`--screenshot` to save a selected state without opening a window.
 
-The named states are fixtures in `preview/main.cpp`: they supply simulated
-provisioning snapshots, pairing and server status, and settings values to the
-firmware's real presenter, navigation, and screen code. They are maintained as
-the device's states change; the preview does not discover them automatically.
+The small entry-point table in `preview/main.cpp` supplies simulated device
+conditions to the firmware's real presenter, navigation, and screen code.
+Screen variants come from those conditions and from interacting with the UI,
+so each new variant does not need its own preview preset.
 
 ## Build and flash
 

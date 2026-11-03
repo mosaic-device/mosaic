@@ -40,3 +40,7 @@ add_executable(mosaic-preview
   "${MAIN}/events/status.cpp")
 target_include_directories(mosaic-preview PRIVATE "${MAIN}" "${MAIN}/ui/generated" fakes ${SDL2_INCLUDE_DIRS})
 target_link_libraries(mosaic-preview PRIVATE preview_assets preview_lvgl ${SDL2_LIBRARIES})
+if(APPLE)
+  find_library(COREGRAPHICS_FRAMEWORK CoreGraphics REQUIRED)
+  target_link_libraries(mosaic-preview PRIVATE ${COREGRAPHICS_FRAMEWORK})
+endif()
