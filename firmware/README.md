@@ -60,7 +60,7 @@ python3 ../scripts/firmware.py -B build/debug-triggers -D SDKCONFIG=build/debug-
 python3 ../scripts/firmware.py -B build/debug-triggers flash monitor
 ```
 
-At the `mosaic>` prompt on the UART console, run `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected` or `trigger error`. Posted events log `Status: <name>` or `Notification` under `mosaic_events`; setting the current status again posts nothing. `volume [0-100]` and `mute [on|off]` show or change those [device settings](#device-settings), which are saved like any other change. Provisioning and Wi-Fi run normally. The option is off by default and cannot be combined with the gallery; the CI firmware build checks that the normal image contains no trigger code.
+At the `mosaic>` prompt on the UART console, run `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected` or `trigger error`. Posted events log `Status: <name>` or `Notification` under `mosaic_events`; setting the current status again posts nothing. `volume [10-100]` and `mute [on|off]` show or change those [device settings](#device-settings), which are saved like any other change. Provisioning and Wi-Fi run normally. The option is off by default and cannot be combined with the gallery; the CI firmware build checks that the normal image contains no trigger code.
 
 ## Tests and tooling
 
@@ -120,15 +120,17 @@ Boot logs `Rotary encoder ready`; each click logs `Step +1`/`Step -1` (a fast sp
 
 | Screen | Shown when | Back |
 | --- | --- | --- |
-| Boot | until provisioning reports its first state | nothing |
+| Boot | until provisioning reports its first state: the wordmark only | nothing |
 | Setup | provisioning's screens: setup QR, connecting, offline, and "Wi-Fi connected · waiting for pairing" (unpaired) | nothing |
-| Home | Wi-Fi online and paired (status `connected`) | nothing |
+| Home | Wi-Fi online and paired: the time, the date, and a line saying when the server is out of reach | nothing |
 | Settings | opened from Home | Home, with focus back on Settings |
 | Notification | reserved for M3, above Home or Settings | the screen underneath |
 
-Home appears only once the device is paired; with debug triggers, `trigger connected` shows it and `trigger disconnected` returns to the unpaired screen. Losing Wi-Fi, or setup credentials appearing, brings provisioning's screens to the front and closes Settings. What opens from where is provisional until #56.
+Home appears once the device is paired: connecting proves it until M3 stores the pairing. A paired device that loses the server (status `error`) stays on Home, which says so; `disconnected` or `pairing` means unpaired and returns to provisioning's unpaired screen. With debug triggers, `trigger connected` shows Home and `trigger disconnected` leaves it. Losing Wi-Fi, or setup credentials appearing, brings provisioning's screens to the front and closes Settings, because they offer setup.
 
-Touch and the encoder share focus. Each screen has its own focus group, so turning moves through the visible screen's controls only (skipping disabled ones) and a screen remembers its focus when you return. A short press activates the focused control, the same as a tap. Holding the encoder button for 600 ms is Back, as is the on-screen Back button. Back with nowhere to go does nothing.
+Touch and the encoder share focus. Each screen has its own focus group, so turning moves through the visible screen's controls only (skipping unavailable ones) and a screen remembers its focus when you return. Every screen with a control starts with its first control focused, so a press works without turning first. A short press activates the focused control, the same as a tap; on a slider it starts adjusting, turning changes the value, and another press finishes. Holding the encoder button for 600 ms is Back, as is the on-screen Back button; while adjusting a slider, Back finishes adjusting instead. Back with nowhere to go does nothing.
+
+Every screen uses the same page layout from `main/ui/components/`: screen margins, a header row with the wordmark or title, and controls a touch target tall. Any touch, turn or press tells the [LEDs](#led-ring-and-strip) that a waiting notification has been seen.
 
 `main/ui/navigation/host.cpp` gives each screen a container and focus group inside the runtime's single renderer. Provisioning's renderer keeps its setup credentials handshake: credentials bring its screen to the front before they render. M3 adds the notification screen as `Screens::notification` and opens it with `navigation::open()`.
 
@@ -136,39 +138,41 @@ Touch and the encoder share focus. Each screen has its own focus group, so turni
 
 The WS2812 ring (8 LEDs) takes data on GPIO 28 and the strip on GPIO 29, both driven directly from 3.3V GPIO by the RMT peripheral; see the [hardware wiki](https://github.com/mosaic-device/mosaic/wiki/Hardware-Wiring-and-Power) for power and the series resistor. The strip length is set to the planned 12 LEDs in `main/drivers/leds.hpp`; change it there once the strip is cut. The driver starts first in `app_main`, sends a dark frame and blanks the LEDs again on restart. Every value it sends passes through `limit()` in `main/drivers/leds_logic.hpp`, which scales full-scale colors onto the 30% ceiling (76/255 per channel).
 
-`main/features/led_feedback/` shows the device status and notifications. The patterns in `patterns.cpp` are provisional until #56 defines LED meanings; edit them there:
+`main/features/led_feedback/` shows the device status and notifications. Each light means one thing. The ring, around the knob, lights only when something wants the owner; the strip is ambient light, on whenever the device is paired. Nothing blinks or spins: every change crossfades over 0.8 s.
 
-| Event | Ring | Strip |
+| State | Ring | Strip |
 | --- | --- | --- |
-| `disconnected` | off | off |
-| `pairing` | blue, spinning | blue, breathing |
-| `connected` (idle) | off | dim warm white, steady |
-| `error` | red, blinking | dim red, steady |
-| `notification` (3 s, then back to the status) | cool white, spinning | warm white, breathing |
+| Not paired (`disconnected`), including setup | off | off |
+| Pairing (`pairing`) | soft white, breathing slowly (3 s) | off |
+| Paired and idle (`connected`) | off | warm white, steady |
+| Server out of reach (`error`) | amber, steady | warm white if paired, otherwise off |
+| New notification | blue, steady, until the owner touches, turns or presses something | swells to blue and back over 3 s |
+
+A waiting notification takes the ring over any status color; once seen, the ring shows the status again. Becoming unpaired clears it. Colors are full scale; [ambient brightness](#ambient-brightness) dims both lights.
 
 To check them on the board, flash the [debug triggers](#debug-triggers) image and run each `trigger` command. The boot log shows `LEDs ready` under `mosaic_leds` with the pins, lengths and ceiling.
 
 ## Device settings
 
-Settings, opened from Home, adjusts device feedback. `main/features/settings/settings.cpp` defines them; the defaults, ranges and steps are provisional until #56:
+Settings, opened from Home, adjusts device feedback. `main/features/settings/settings.cpp` defines them:
 
-| Setting | Default | Range |
-| --- | --- | --- |
-| Automatic brightness | on | on or off |
-| Brightness (while automatic is off) | 70 | 40-100 perceived, steps of 10 |
-| Volume | 60% | 0-100%, steps of 10 |
-| Mute sounds | off | on or off |
-| LED lights | on | on or off |
+| Setting | Control | Default | Range |
+| --- | --- | --- | --- |
+| Automatic brightness | switch | on | on or off |
+| Brightness (while automatic is off) | slider | 70 | 40-100 perceived, steps of 10 |
+| Sounds | switch | on | on or off |
+| Volume | slider | 60% | 10-100%, steps of 10 |
+| LED lights | switch | on | on or off |
 
-Each change applies at once. Controls that cannot do anything right now are disabled, so turning the encoder skips them: brightness steps while brightness is automatic, and a step at the end of its range. Turning the LEDs off keeps both outputs dark while their patterns keep running underneath, so turning them on shows the current one.
+Each change applies at once. A control that cannot do anything right now is dimmed with the reason under its name, and turning the encoder skips it: Brightness says "Follows room light" while automatic brightness is on, and Volume says "Sounds are off" while sounds are off. Volume never reaches zero, since silence is the Sounds switch; an older saved volume of 0 loads as 10. Turning the LEDs off keeps both outputs dark while their patterns keep running underneath, so turning them on shows the current one.
 
 Settings are saved a second after the last change, so stepping through several values writes flash once. They live in their own NVS namespace, `mosaic_device`, as one versioned record, separate from provisioning's `mosaic_net`. On first boot the defaults apply quietly. If the record is unreadable or not valid, the device logs a warning under `mosaic_settings` and uses the defaults; a failed save is logged and the change still applies until restart. Startup never waits on storage.
 
 ## Clock
 
-Home shows the time as 12-hour local time without AM/PM, such as `2:05`. Each time Wi-Fi joins, `main/features/clock/` syncs over SNTP from `pool.ntp.org`, and ESP-IDF re-syncs hourly while connected. Startup never waits for it.
+Home shows the time as 12-hour local time without AM/PM, such as `2:05`, in a 200 px digits-only font (`mosaic_clock_200`), with the date under it, such as `Tuesday, November 3`. Each time Wi-Fi joins, `main/features/clock/` syncs over SNTP from `pool.ntp.org`, and ESP-IDF re-syncs hourly while connected. Startup never waits for it.
 
-Until a sync succeeds this boot, Home shows `--:--`, and it stays that way if sync never works. A time kept across a restart without Wi-Fi, or one earlier than 2026, is never shown as correct. Boot logs `Clock waiting for Wi-Fi` under `mosaic_clock`, and the first sync logs `Time synced`.
+Until a sync succeeds this boot, Home shows `--:--` and no date, and it stays that way if sync never works. A time kept across a restart without Wi-Fi, or one earlier than 2026, is never shown as correct. Boot logs `Clock waiting for Wi-Fi` under `mosaic_clock`, and the first sync logs `Time synced`.
 
 **Time zone:** every device uses Arizona time (`MST7`: UTC-7 all year, no daylight saving), where Mosaic is developed. It is `kTimeZone` in `main/features/clock/clock.hpp`; the owner's zone can come from setup or the server later. To check it on the board, flash the [debug triggers](#debug-triggers) image, let Wi-Fi join, and run `trigger connected` to show Home.
 
@@ -176,35 +180,35 @@ Until a sync succeeds this boot, Home shows `--:--`, and it stays that way if sy
 
 Cues play through the board's ES8311 codec and the speaker connector, using the BSP's `bsp_audio_codec_speaker_init()`. Opening the codec for a cue turns the amplifier on, and closing it afterwards turns it off, so the amplifier is on only while a cue plays. Each cue starts after 50 ms of silence, while the DAC and amplifier settle, and ends with 80 ms of silence that flushes the I2S buffers before the amplifier switches off. Every cue logs `i2s_channel_disable(…): the channel has not been enabled yet` from `i2s_common`: the codec library reconfigures I2S on each open without checking that the previous close already disabled it. It is harmless; avoiding it would mean keeping the codec, and so the amplifier, on between cues.
 
-`main/features/audio_cues/cues.cpp` maps events to cues; the choices are provisional until #56:
+`main/features/audio_cues/cues.cpp` decides which events are heard. The device makes a sound only when there is something to hear about:
 
 | Event | Cue |
 | --- | --- |
 | notification | `notification`: two rising notes |
-| status `connected` | `connected`: three rising notes |
-| status `error` | `error`: two falling notes |
-| `pairing`, `disconnected` | none |
+| status `connected`, when pairing completes or for the first time since starting | `connected`: three rising notes |
+| reconnecting after the server or Wi-Fi dropped | none, so a blip at night stays silent |
+| `error`, `pairing`, `disconnected` | none; the screen explains them |
 
-Volume (default 60%) applies from the next cue. Muting, or volume 0, skips cues without opening the codec, and stops a playing cue within about 10 ms. Both are [device settings](#device-settings). If cues arrive faster than they play, up to four wait and the rest are dropped.
+Volume (default 60%) applies from the next cue. Turning sounds off skips cues without opening the codec, and stops a playing cue within about 10 ms. Both are [device settings](#device-settings). If cues arrive faster than they play, up to four wait and the rest are dropped.
 
-The cues are 22050 Hz mono 16-bit WAV files in `main/features/audio_cues/generated/`, synthesized from a spec in `platform/packages/assets` and original to Mosaic; change them there, not here. To check them on the board, flash the [debug triggers](#debug-triggers) image and run `trigger notification`, `trigger connected` and `trigger error`, with `volume` and `mute` in between.
+The cues are 22050 Hz mono 16-bit WAV files in `main/features/audio_cues/generated/`, synthesized from a spec in `platform/packages/assets` and original to Mosaic; change them there, not here. To check them on the board, flash the [debug triggers](#debug-triggers) image and run `trigger notification` and `trigger connected` (after `trigger pairing` to hear it again), with `volume` and `mute` in between.
 
 ## Ambient brightness
 
 A BH1750 light sensor sets the screen and LED brightness. It has its own I2C bus: SDA on GPIO 21, SCL on GPIO 22, 100 kHz, address 0x23 (ADDR low or unconnected), separate from the BSP's touch and audio bus on GPIO 7/8. Power the breakout from 3.3V: its pull-ups go to its VCC, and the P4's pins must never see 5V. The P4's weak internal pull-ups are also enabled as a backstop.
 
-`main/features/brightness/policy.cpp` turns readings into levels. It works in perceived brightness (0-100, where 50 looks half as bright as 100) and converts to PWM only for the drivers, using CIE 1976 lightness, because eyes judge light roughly logarithmically and equal PWM steps look uneven. The curve is provisional until #56:
+`main/features/brightness/policy.cpp` turns readings into levels. It works in perceived brightness (0-100, where 50 looks half as bright as 100) and converts to PWM only for the drivers, using CIE 1976 lightness, because eyes judge light roughly logarithmically and equal PWM steps look uneven. In a dark room the LEDs drop further than the screen: they sit at the edge of the owner's view, and a lit strip in the dark draws more attention than the screen.
 
 | Light | Screen, perceived (PWM) | LEDs, perceived (share of the 30% ceiling) |
 | --- | --- | --- |
-| 1 lux or darker | 45 (15%) | 55 (23%) |
-| 20 lux | 65 (34%) | 75 (48%) |
-| 150 lux | 85 (66%) | 90 (76%) |
+| 1 lux or darker | 45 (15%) | 35 (8%) |
+| 20 lux | 65 (34%) | 60 (28%) |
+| 150 lux | 85 (66%) | 85 (66%) |
 | 600 lux or brighter | 100 (100%) | 100 (100%) |
 
 With automatic brightness off in [device settings](#device-settings), a manual level replaces the curve for the screen and LEDs alike, and fades in the same way. Between points, levels follow log(lux). Readings every 200 ms are smoothed over about a second. Levels change only once the light moves more than about 26% from where they were last set, so light wavering near a point never flickers them, and each change fades in equal perceived steps over a few seconds. The LED level only dims below the 30% ceiling, and the display driver never lets the backlight drop below 10%, because the setup credentials handshake treats a lit panel as visible.
 
-If the sensor is missing at startup or stops responding, the device logs one warning under `mosaic_brightness`, fades to fixed levels (perceived screen 85, LEDs 90) and retries every 5 s without logging; it logs `Ambient light sensor ready` when the sensor returns.
+If the sensor is missing at startup or stops responding, the device logs one warning under `mosaic_brightness`, fades to fixed levels (perceived screen 85, LEDs 85) and retries every 5 s without logging; it logs `Ambient light sensor ready` when the sensor returns.
 
 To check it on the board, build with `MOSAIC_BRIGHTNESS_TRACE`, which logs each reading that changes the levels:
 

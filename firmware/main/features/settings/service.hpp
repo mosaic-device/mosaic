@@ -9,7 +9,9 @@ esp_err_t start();
 // Any task.
 Settings current();
 // Any task. Each applies at once; changes are saved a second after the last one,
-// so turning through several steps writes flash once.
-void change(Change change);
+// so turning through several steps writes flash once. Values out of range are
+// brought into it.
+void toggle(Control control);
+void set_level(Control control, int level);
 void set(const Settings& settings);
 }

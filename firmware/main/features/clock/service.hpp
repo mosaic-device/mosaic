@@ -10,4 +10,6 @@ namespace mosaic::features::clock {
 esp_err_t start();
 // Any task. The Home clock's text: the local time, or the placeholder until synced.
 std::string_view now_text(std::span<char, kTextSize> buffer);
+// Any task. Today's date for under the clock, or empty until synced.
+std::string_view today_text(std::span<char, kDateSize> buffer);
 }

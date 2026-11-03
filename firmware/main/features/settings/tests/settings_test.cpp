@@ -103,36 +103,47 @@ void defaults() {
     assert(decode(encode(settings)) == settings);
 }
 
-void changes_and_availability() {
+void levels_and_availability() {
     Settings settings;
-    // Manual brightness is unavailable, and does nothing, while brightness is automatic.
-    assert(!available(settings, Change::brighter) && !available(settings, Change::dimmer));
-    assert(apply(settings, Change::brighter) == settings);
-    settings = apply(settings, Change::auto_brightness);
-    assert(!settings.auto_brightness);
-    assert(apply(settings, Change::brighter).brightness == 80);
-    assert(apply(settings, Change::dimmer).brightness == 60);
-    // Steps stop at the ends of each range, and become unavailable there.
-    for (int i = 0; i < 20; ++i)
-        settings = apply(settings, Change::brighter);
-    assert(settings.brightness == kBrightnessMax && !available(settings, Change::brighter));
-    for (int i = 0; i < 20; ++i)
-        settings = apply(settings, Change::dimmer);
-    assert(settings.brightness == kBrightnessMin && !available(settings, Change::dimmer));
-    for (int i = 0; i < 20; ++i)
-        settings = apply(settings, Change::quieter);
-    assert(settings.volume == 0 && !available(settings, Change::quieter));
-    for (int i = 0; i < 20; ++i)
-        settings = apply(settings, Change::louder);
-    assert(settings.volume == 100 && !available(settings, Change::louder));
-    // Toggles are always available and flip back.
-    for (Change toggle : { Change::auto_brightness, Change::mute, Change::leds }) {
-        assert(available(settings, toggle));
-        assert(apply(apply(settings, toggle), toggle) == settings);
-        assert(!(apply(settings, toggle) == settings));
+    // Manual brightness follows the room, and says so, while brightness is automatic.
+    assert(unavailable_reason(settings, Control::brightness) == "Follows room light");
+    assert(set_level(settings, Control::brightness, 90) == settings);
+    settings = toggle(settings, Control::auto_brightness);
+    assert(!settings.auto_brightness && available(settings, Control::brightness));
+    assert(set_level(settings, Control::brightness, 80).brightness == 80);
+    // Levels snap to the nearest step and stay in range.
+    assert(set_level(settings, Control::brightness, 84).brightness == 80);
+    assert(set_level(settings, Control::brightness, 86).brightness == 90);
+    assert(set_level(settings, Control::brightness, 0).brightness == kBrightnessMin);
+    assert(set_level(settings, Control::brightness, 500).brightness == kBrightnessMax);
+    assert(set_level(settings, Control::volume, 0).volume == kVolumeMin);
+    assert(set_level(settings, Control::volume, 100).volume == kVolumeMax);
+    assert(set_level(settings, Control::volume, 44).volume == 40);
+    // Volume does nothing while sounds are off, and says why.
+    settings = toggle(settings, Control::sounds);
+    assert(settings.muted && unavailable_reason(settings, Control::volume) == "Sounds are off");
+    assert(set_level(settings, Control::volume, 90) == settings);
+    // Turning sounds off keeps the volume for when they come back.
+    assert(toggle(settings, Control::sounds).volume == settings.volume);
+    // Switches are always available, flip back, and are not levels.
+    for (Control control : { Control::auto_brightness, Control::sounds, Control::leds }) {
+        assert(is_switch(control) && available(settings, control));
+        assert(toggle(toggle(settings, control), control) == settings);
+        assert(!(toggle(settings, control) == settings));
+        assert(set_level(settings, control, 1) == settings);
+        assert(value(toggle(settings, control), control) != value(settings, control));
     }
-    // Muting keeps the volume for when sound comes back.
-    assert(apply(settings, Change::mute).volume == settings.volume);
+    // Levels are not switches, and a level control's value is its level.
+    for (Control control : { Control::brightness, Control::volume }) {
+        assert(!is_switch(control) && toggle(settings, control) == settings);
+        assert(value(settings, control) >= range(control).min && value(settings, control) <= range(control).max);
+    }
+    assert(value(Settings { }, Control::sounds) == 1);
+    // A volume of zero, such as from the console, is raised to the floor.
+    Settings silent;
+    silent.volume = 0;
+    assert(normalize(silent).volume == kVolumeMin);
+    assert(normalize(Settings { }) == Settings { });
 }
 
 void stored_form_round_trips_and_rejects_anything_else() {
@@ -148,6 +159,10 @@ void stored_form_round_trips_and_rejects_anything_else() {
     assert(rejected(2, kBrightnessMin - 1));
     assert(rejected(2, kBrightnessMax + 1));
     assert(rejected(3, 101));
+    // A record saved before the volume floor loads with the volume raised to it.
+    auto quiet = good;
+    quiet[3] = 0;
+    assert(decode(quiet) && decode(quiet)->volume == kVolumeMin);
     assert(rejected(4, 7));
     assert(rejected(5, 0xFF));
     assert(!decode(std::span<const uint8_t>(good.data(), good.size() - 1)));
@@ -226,7 +241,7 @@ void save_failures_are_reported_and_keep_the_old_settings() {
 
 int main() {
     defaults();
-    changes_and_availability();
+    levels_and_availability();
     stored_form_round_trips_and_rejects_anything_else();
     first_boot_loads_defaults();
     saved_settings_load_after_restart();

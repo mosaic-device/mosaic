@@ -36,15 +36,16 @@ namespace {
         if (argc == 2) {
             char* end = nullptr;
             const long percent = std::strtol(argv[1], &end, 10);
-            if (*argv[1] == '\0' || *end != '\0' || percent < 0 || percent > 100) {
-                std::printf("usage: volume [0-100]\n");
+            if (*argv[1] == '\0' || *end != '\0' || percent < features::settings::kVolumeMin || percent > 100) {
+                std::printf("usage: volume [10-100]\n");
                 return 1;
             }
+            // Set directly, unlike the screen, so it works while sounds are off too.
             auto settings = features::settings::current();
             settings.volume = static_cast<uint8_t>(percent);
             features::settings::set(settings);
         } else if (argc != 1) {
-            std::printf("usage: volume [0-100]\n");
+            std::printf("usage: volume [10-100]\n");
             return 1;
         }
         std::printf("volume %u%%\n", features::settings::current().volume);
@@ -90,7 +91,7 @@ esp_err_t start() {
     err = add(
         "trigger", "Post a notification, or set status: pairing, connected, disconnected or error", "<event>", trigger);
     if (err == ESP_OK)
-        err = add("volume", "Show or set the saved cue volume (0-100)", "[0-100]", volume);
+        err = add("volume", "Show or set the saved cue volume (10-100)", "[10-100]", volume);
     if (err == ESP_OK)
         err = add("mute", "Show or set the saved cue muting", "[on|off]", mute);
     if (err != ESP_OK)

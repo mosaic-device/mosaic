@@ -6,8 +6,13 @@
 
 namespace mosaic::features::provisioning {
 
+// Boot and the setup states other than the QR: a page with the wordmark, a heading,
+// what is happening, and "Enter setup mode" when it applies. Before provisioning reports
+// its first state, only the wordmark shows.
 struct StatusScreen {
     lv_obj_t* card = nullptr;
+    lv_obj_t* boot = nullptr;
+    lv_obj_t* content = nullptr;
     lv_obj_t* heading = nullptr;
     lv_obj_t* description = nullptr;
     lv_obj_t* recovery_button = nullptr;

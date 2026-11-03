@@ -8,15 +8,26 @@
 namespace mosaic::features::audio_cues {
 
 // One per generated WAV file in generated/.
-enum class Cue : uint8_t { notification, connected, error };
+enum class Cue : uint8_t { notification, connected };
 
-// The cue for a status change, if any. Provisional until #56 defines the sounds.
-std::optional<Cue> cue_for(events::Status status);
+// Which status changes are heard. Connecting chimes when pairing completes, and the first
+// time the device connects after starting, so the owner hears that it is ready. A
+// reconnect after the server or Wi-Fi drops is silent, so a blip at night never wakes
+// anyone. Nothing else chimes: errors and pairing are explained on screen.
+class StatusCues {
+public:
+    // The cue for a change to this status, if any.
+    std::optional<Cue> on_status(events::Status status);
+
+private:
+    events::Status previous_ = events::Status::disconnected;
+    bool connected_before_ = false;
+};
 // The cue for each new notification.
 constexpr Cue kNotificationCue = Cue::notification;
 
-// Speaker output as a percentage of the codec's range. The default is provisional
-// until device settings (#88) store the owner's choice.
+// Speaker output as a percentage of the codec's range. Device settings store the
+// owner's choice; this is the first-boot default.
 constexpr uint8_t kDefaultVolume = 60;
 constexpr uint8_t kMaxVolume = 100;
 

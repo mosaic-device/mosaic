@@ -2,18 +2,15 @@
 
 namespace mosaic::features::audio_cues {
 
-std::optional<Cue> cue_for(events::Status status) {
-    // Provisional until #56: connecting and failing are heard; pairing and
-    // disconnecting are left to the screen and LEDs.
-    switch (status) {
-    case events::Status::connected:
+std::optional<Cue> StatusCues::on_status(events::Status status) {
+    const events::Status previous = previous_;
+    previous_ = status;
+    if (status != events::Status::connected)
+        return std::nullopt;
+    const bool first = !connected_before_;
+    connected_before_ = true;
+    if (first || previous == events::Status::pairing)
         return Cue::connected;
-    case events::Status::error:
-        return Cue::error;
-    case events::Status::pairing:
-    case events::Status::disconnected:
-        break;
-    }
     return std::nullopt;
 }
 

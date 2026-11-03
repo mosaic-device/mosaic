@@ -34,17 +34,19 @@ struct Point {
     Levels levels;
 };
 
-// Provisional until #56 defines how brightness follows the room. Between points,
-// levels follow log(lux), which matches how eyes judge brightness; outside them
-// they hold the end values.
+// How brightness follows the room. Between points, levels follow log(lux), which
+// matches how eyes judge brightness; outside them they hold the end values. In a dark
+// room the LEDs drop further than the screen: they sit in the corner of the owner's eye,
+// and a lit strip in the dark draws attention the screen does not. The darkest LED level,
+// about 9% of the ceiling, still leaves each color recognizable.
 inline constexpr Point kCurve[] = {
-    { .lux = 1, .levels = { .screen = 45, .leds = 55 } },
-    { .lux = 20, .levels = { .screen = 65, .leds = 75 } },
-    { .lux = 150, .levels = { .screen = 85, .leds = 90 } },
+    { .lux = 1, .levels = { .screen = 45, .leds = 35 } },
+    { .lux = 20, .levels = { .screen = 65, .leds = 60 } },
+    { .lux = 150, .levels = { .screen = 85, .leds = 85 } },
     { .lux = 600, .levels = { .screen = 100, .leds = 100 } },
 };
-// Used while the sensor is missing or failing.
-inline constexpr Levels kFallback { .screen = 85, .leds = 90 };
+// Used while the sensor is missing or failing: an ordinary lit room.
+inline constexpr Levels kFallback { .screen = 85, .leds = 85 };
 
 // The levels the curve gives for a light level.
 Levels curve(float lux);

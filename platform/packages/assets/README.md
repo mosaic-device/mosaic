@@ -90,10 +90,10 @@ not device pixels: never pass `TOKEN_FIRMWARE_TEXT_*` to these dispatch helpers,
 because numeric values can collide. Use `ui_tokens_font_weight(pixels, weight)`
 for explicit device pixels; unknown sizes fall back to body 36/400.
 
-Digit advances are normalized to the widest default digit in the static
-Manrope outputs (web and firmware); no browser-only `tnum` assumption is made.
-Glyph shapes are unchanged. This gives equal advances, not monospaced text.
-Check clock strings and kerning in the on-device gallery.
+Digits keep Manrope's own proportional spacing in every output, as the font is
+designed: a narrow 1 sits close to its neighbours. Firmware fonts have no
+OpenType features, so tabular figures are not available there; a changing
+number such as the clock re-centres slightly as its width changes.
 
 ## Coverage and fallback contract
 

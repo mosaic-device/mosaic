@@ -14,50 +14,71 @@ namespace {
     }
 } // namespace
 
-bool available(const Settings& settings, Change change) {
-    switch (change) {
-    case Change::brighter:
-        return !settings.auto_brightness && settings.brightness < kBrightnessMax;
-    case Change::dimmer:
-        return !settings.auto_brightness && settings.brightness > kBrightnessMin;
-    case Change::louder:
-        return settings.volume < audio_cues::kMaxVolume;
-    case Change::quieter:
-        return settings.volume > 0;
-    case Change::auto_brightness:
-    case Change::mute:
-    case Change::leds:
-        return true;
-    }
-    return false;
+Range range(Control control) {
+    if (control == Control::volume)
+        return { .min = kVolumeMin, .max = kVolumeMax, .step = kVolumeStep };
+    return { .min = kBrightnessMin, .max = kBrightnessMax, .step = kBrightnessStep };
 }
 
-Settings apply(Settings settings, Change change) {
-    if (!available(settings, change))
-        return settings;
-    switch (change) {
-    case Change::auto_brightness:
+int value(const Settings& settings, Control control) {
+    switch (control) {
+    case Control::auto_brightness:
+        return settings.auto_brightness;
+    case Control::brightness:
+        return settings.brightness;
+    case Control::sounds:
+        return !settings.muted;
+    case Control::volume:
+        return settings.volume;
+    case Control::leds:
+        return settings.leds_on;
+    }
+    return 0;
+}
+
+std::string_view unavailable_reason(const Settings& settings, Control control) {
+    if (control == Control::brightness && settings.auto_brightness)
+        return "Follows room light";
+    if (control == Control::volume && settings.muted)
+        return "Sounds are off";
+    return { };
+}
+
+Settings toggle(Settings settings, Control control) {
+    switch (control) {
+    case Control::auto_brightness:
         settings.auto_brightness = !settings.auto_brightness;
         break;
-    case Change::brighter:
-        settings.brightness = std::min<uint8_t>(settings.brightness + kBrightnessStep, kBrightnessMax);
-        break;
-    case Change::dimmer:
-        settings.brightness = std::max<uint8_t>(settings.brightness - kBrightnessStep, kBrightnessMin);
-        break;
-    case Change::louder:
-        settings.volume = std::min<uint8_t>(settings.volume + kVolumeStep, audio_cues::kMaxVolume);
-        break;
-    case Change::quieter:
-        settings.volume = static_cast<uint8_t>(std::max(settings.volume - kVolumeStep, 0));
-        break;
-    case Change::mute:
+    case Control::sounds:
         settings.muted = !settings.muted;
         break;
-    case Change::leds:
+    case Control::leds:
         settings.leds_on = !settings.leds_on;
         break;
+    case Control::brightness:
+    case Control::volume:
+        break;
     }
+    return settings;
+}
+
+Settings set_level(Settings settings, Control control, int level) {
+    if (is_switch(control) || !available(settings, control))
+        return settings;
+    const Range limits = range(control);
+    // Nearest step from the bottom of the range, so a slider dragged between steps lands on one.
+    const int steps = (std::clamp<int>(level, limits.min, limits.max) - limits.min + limits.step / 2) / limits.step;
+    const auto snapped = static_cast<uint8_t>(std::min<int>(limits.min + steps * limits.step, limits.max));
+    if (control == Control::brightness)
+        settings.brightness = snapped;
+    else
+        settings.volume = snapped;
+    return settings;
+}
+
+Settings normalize(Settings settings) {
+    settings.brightness = std::clamp(settings.brightness, kBrightnessMin, kBrightnessMax);
+    settings.volume = std::clamp(settings.volume, kVolumeMin, kVolumeMax);
     return settings;
 }
 
@@ -81,15 +102,15 @@ std::optional<Settings> decode(std::span<const uint8_t> stored) {
     const uint8_t brightness = stored[2];
     const uint8_t volume = stored[3];
     if (!automatic || !muted || !leds_on || brightness < kBrightnessMin || brightness > kBrightnessMax
-        || volume > audio_cues::kMaxVolume)
+        || volume > kVolumeMax)
         return std::nullopt;
-    return Settings {
+    return normalize(Settings {
         .auto_brightness = *automatic,
         .brightness = brightness,
         .volume = volume,
         .muted = *muted,
         .leds_on = *leds_on,
-    };
+    });
 }
 
 }

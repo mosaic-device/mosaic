@@ -18,6 +18,7 @@ namespace {
     // Serializes status changes so posts arrive in the order statuses were set.
     SemaphoreHandle_t status_lock = nullptr;
     std::atomic<Status> current = Status::disconnected;
+    std::atomic_bool is_paired = false;
 } // namespace
 
 esp_err_t start() {
@@ -61,11 +62,14 @@ esp_err_t set_status(Status status) {
     if (status != previous) {
         // Store first so handlers that call status() see the new value.
         current = status;
+        const bool was_paired = is_paired.load();
+        is_paired = paired_after(was_paired, status);
         err = esp_event_post_to(target, MOSAIC_EVENT, MOSAIC_EVENT_STATUS_CHANGED, &status, sizeof(status), kPostWait);
         if (err == ESP_OK) {
             ESP_LOGI(kTag, "Status: %s", name(status));
         } else {
             current = previous;
+            is_paired = was_paired;
             ESP_LOGE(kTag, "Status %s not posted: %s", name(status), esp_err_to_name(err));
         }
     }
@@ -88,6 +92,10 @@ esp_err_t post_notification() {
 
 Status status() {
     return current.load();
+}
+
+bool paired() {
+    return is_paired.load();
 }
 
 } // namespace mosaic::events

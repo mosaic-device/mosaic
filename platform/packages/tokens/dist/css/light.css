@@ -63,6 +63,7 @@
   --firmware-icon-md: 40px;
   --firmware-wordmark-md: 40px;
   --firmware-wordmark-lg: 60px;
+  --firmware-display-clock: 200px;
   --color-background: #fafafa;
   --color-foreground: #09090b;
   --color-surface: rgba(255, 255, 255, 0.94);

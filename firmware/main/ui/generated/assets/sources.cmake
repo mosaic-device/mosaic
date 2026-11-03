@@ -15,6 +15,7 @@ set(MOSAIC_ASSET_SOURCES
     "ui/generated/assets/mosaic_manrope_36_600.c"
     "ui/generated/assets/mosaic_manrope_48_600.c"
     "ui/generated/assets/mosaic_manrope_60_600.c"
+    "ui/generated/assets/mosaic_clock_200.c"
     "ui/generated/assets/mosaic_icon_settings_40.c"
     "ui/generated/assets/mosaic_wordmark_40.c"
     "ui/generated/assets/mosaic_wordmark_60.c"

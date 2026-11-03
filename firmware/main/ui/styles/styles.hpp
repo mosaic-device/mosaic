@@ -8,4 +8,8 @@ void initialize();
 void text(lv_obj_t* object, Text role, bool supporting = false);
 void card(lv_obj_t* object);
 void control(lv_obj_t* object, Control variant);
+// A slider: track, filled part and knob, with focus and adjusting (edit) states.
+void slider(lv_obj_t* object);
+// A switch's track and knob. Display-only: its row is the control.
+void toggle(lv_obj_t* object);
 }

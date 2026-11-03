@@ -30,5 +30,7 @@ esp_err_t set_status(Status status);
 esp_err_t post_notification();
 // The last status that was successfully posted. Initially disconnected.
 Status status();
+// Whether the statuses posted so far leave the device paired; see paired_after().
+bool paired();
 
 } // namespace mosaic::events

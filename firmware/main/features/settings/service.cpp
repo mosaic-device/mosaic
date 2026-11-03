@@ -59,7 +59,7 @@ namespace {
     template <class Update> void update(Update next) {
         portENTER_CRITICAL(&s_mux);
         const Settings before = s_current;
-        s_current = next(before);
+        s_current = normalize(next(before));
         const Settings after = s_current;
         portEXIT_CRITICAL(&s_mux);
         if (after == before)
@@ -72,7 +72,10 @@ namespace {
 void set(const Settings& settings) {
     update([&](const Settings&) { return settings; });
 }
-void change(Change change) {
-    update([change](const Settings& before) { return apply(before, change); });
+void toggle(Control control) {
+    update([control](const Settings& before) { return settings::toggle(before, control); });
+}
+void set_level(Control control, int level) {
+    update([control, level](const Settings& before) { return settings::set_level(before, control, level); });
 }
 }

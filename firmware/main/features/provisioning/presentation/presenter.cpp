@@ -58,20 +58,20 @@ ViewState present(const Snapshot& s, uint32_t session) {
         } else {
             v.heading = "Offline";
             v.recovery_visible = true;
-            v.message = s.reason == VisibleReason::unavailable ? "Wi-Fi unavailable. Retrying; tap to enter setup."
-                                                               : "Wi-Fi offline. Retrying; tap to enter setup.";
+            v.message = s.reason == VisibleReason::unavailable ? "Your Wi-Fi network isn't available. Retrying."
+                                                               : "Can't reach your Wi-Fi. Retrying.";
         }
         break;
     }
     if (s.recovery == RecoveryState::failed) {
         v.heading = "Offline";
-        v.message = "Setup unavailable. Restart the device or tap to retry setup.";
+        v.message = "Setup unavailable. Try again, or restart the device.";
         v.recovery_visible = true;
     }
     if (s.recovery == RecoveryState::confirming)
-        v.recovery_prompt = "Tap again to confirm setup";
+        v.recovery_prompt = "Press again to confirm";
     if (s.admission_rejected)
-        v.recovery_prompt = "Setup busy. Tap to retry.";
+        v.recovery_prompt = "Setup busy. Try again.";
     return v;
 }
 }

@@ -19,6 +19,7 @@ namespace {
     // reported state catches up and says Wi-Fi is no longer online.
     bool s_setup_forced = false;
     uint32_t s_backs_seen = 0;
+    uint32_t s_inactive_ms = 0;
 
     Slot slot(Screen screen) {
         switch (screen) {
@@ -34,6 +35,14 @@ namespace {
         }
         return kSetup;
     }
+    // Screens are built hidden, and LVGL never focuses a hidden control, so a screen's
+    // first visit would otherwise start with nothing focused and a press would do nothing
+    // until the encoder was turned. The same holds for a control that only appears later,
+    // such as "Enter setup mode". Focus stays where it is once something has it.
+    void ensure_focus(lv_group_t* group) {
+        if (group && !lv_group_get_focused(group))
+            lv_group_focus_next(group);
+    }
     // Shows the active screen's container and gives the encoder its focus group,
     // which remembers the focused control from the last visit.
     void show_active() {
@@ -47,6 +56,12 @@ namespace {
                 lv_obj_remove_flag(s_containers[i].object, LV_OBJ_FLAG_HIDDEN);
             else
                 lv_obj_add_flag(s_containers[i].object, LV_OBJ_FLAG_HIDDEN);
+        }
+        if (lv_group_t* group = s_containers[active].group) {
+            // Leaving mid-edit (Back while adjusting a slider) must not return to a screen
+            // where turning still changes a value instead of moving focus.
+            lv_group_set_editing(group, false);
+            ensure_focus(group);
         }
         drivers::encoder::set_group(s_containers[active].group);
         s_shown = active;
@@ -96,10 +111,26 @@ namespace {
             if (page->update)
                 page->update(page->context);
         follow_conditions();
-        // Each Back press counts once; Back with nowhere to go does nothing.
-        for (const uint32_t backs = drivers::encoder::back_presses(); s_backs_seen != backs; ++s_backs_seen)
-            s_navigator.back();
+        // Each Back press counts once. While a value is being adjusted, Back finishes
+        // adjusting it and stays on the screen; Back with nowhere to go does nothing.
+        const uint32_t backs = drivers::encoder::back_presses();
+        const bool pressed_back = backs != s_backs_seen;
+        for (; s_backs_seen != backs; ++s_backs_seen) {
+            lv_group_t* group = s_shown < kSlots ? s_containers[s_shown].group : nullptr;
+            if (group && lv_group_get_editing(group))
+                lv_group_set_editing(group, false);
+            else
+                s_navigator.back();
+        }
+        // LVGL resets the inactivity time on any touch, turn or press; Back never
+        // reaches LVGL, so it counts separately.
+        const uint32_t inactive = lv_display_get_inactive_time(nullptr);
+        if ((pressed_back || inactive < s_inactive_ms) && s_screens.input)
+            s_screens.input(s_screens.input_context);
+        s_inactive_ms = inactive;
         show_active();
+        if (s_shown < kSlots)
+            ensure_focus(s_containers[s_shown].group);
     }
     bool credentials(const void* bytes, size_t size, void*) {
         s_setup_forced = true;

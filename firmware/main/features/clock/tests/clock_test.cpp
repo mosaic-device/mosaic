@@ -55,6 +55,20 @@ void fits_the_buffer() {
     const std::string_view longest = text(true, kJuly + 7 * kHour + 10 * kHour + 59 * kMinute, buffer);
     assert(longest == "10:59" && longest.size() < kTextSize);
 }
+void the_date_follows_the_local_day() {
+    std::array<char, kDateSize> buffer;
+    // 2026-07-01 was a Wednesday; 06:59Z is still June 30 in Arizona.
+    assert(date(true, kJuly + 7 * kHour, buffer) == "Wednesday, July 1");
+    assert(date(true, kJuly + 6 * kHour + 59 * kMinute, buffer) == "Tuesday, June 30");
+    assert(date(true, kJanuary + 19 * kHour, buffer) == "Thursday, January 15");
+    // No date while the time is not trusted.
+    assert(date(false, kJuly, buffer).empty());
+    assert(date(true, kEarliestValid - 1, buffer).empty());
+    // The longest weekday with the longest month and a two-digit day fits.
+    const std::time_t september_30 = 1'790'726'400 + 19 * kHour; // noon on 2026-09-30, a Wednesday.
+    const std::string_view longest = date(true, september_30, buffer);
+    assert(longest == "Wednesday, September 30" && longest.size() < kDateSize);
+}
 } // namespace
 
 int main() {
@@ -65,4 +79,5 @@ int main() {
     twelve_hour_without_am_pm();
     arizona_has_no_daylight_saving();
     fits_the_buffer();
+    the_date_follows_the_local_day();
 }

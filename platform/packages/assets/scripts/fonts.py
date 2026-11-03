@@ -32,13 +32,6 @@ for family, weights in [("Manrope", [400, 500, 600]), ("Outfit", [500])]:
         # Always provide a standard Unicode English record, even if absent upstream.
         if font["name"].getName(13, 3, 1, 0x409) is None:
             font["name"].setName(license_text, 13, 3, 1, 0x409)
-        # Firmware needs tabular advances independent of browser OpenType features.
-        if family == "Manrope":
-            cmap = font.getBestCmap()
-            digits = [cmap[ord(c)] for c in "0123456789"]
-            advance = max(font["hmtx"][g][0] for g in digits)
-            for glyph in digits:
-                font["hmtx"][glyph] = (advance, font["hmtx"][glyph][1])
         font.save(root / f"sources/{family}-{weight}.ttf")
         opts = subset.Options()
         opts.recalc_timestamp = False

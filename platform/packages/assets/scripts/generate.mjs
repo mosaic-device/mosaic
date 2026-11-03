@@ -47,7 +47,7 @@ for (const file of licenseFiles) {
 }
 fs.writeFileSync(
   path.join(out, 'README.md'),
-  `# Generated Mosaic firmware assets\n\nGenerated offline with @mosaic/assets. Do not edit generated files.\nCommitted outputs are covered by platform/packages/assets/metadata/outputs.json; canonical\nlicenses remain in platform/packages/assets/licenses/.\n\nSources, pinned upstream URLs/revisions/checksums and generation tools are in\nplatform/packages/assets/. See that package's README.md for the explicit\npnpm generate-assets maintenance command and pinned Python environment setup.\nNormal builds consume committed assets without running converters.\n\n## Distribution notices\n\nKeep this README and all three files in licenses/ with redistributed generated\nasset source packages. For firmware binary/device releases, include these full\nnotices in the accompanying release documentation or third-party notices.\nThe build does not embed these text sidecars in the firmware image.\n\n- mosaic_manrope_*.c: derived from Manrope, SIL Open Font License 1.1;\n  copyright and full terms in licenses/Manrope-OFL.txt. Conversion changes\n  weight/size, normalizes digit advances and rasterizes glyphs.\n- mosaic_wordmark_*.c: outlined/rasterized Outfit 500 MOSAIC wordmark;\n  source font copyright and SIL OFL 1.1 in licenses/Outfit-OFL.txt.\n- mosaic_icon_settings_${pixels(firmware.icon.md)}.c: Lucide settings, release 0.468.0;\n  copyright and full terms in licenses/Lucide-LICENSE.\n\nThese notices accompany the upstream-derived assets; they do not relicense\nunrelated Mosaic code. Preserve the full notices when copying assets elsewhere.\n`,
+  `# Generated Mosaic firmware assets\n\nGenerated offline with @mosaic/assets. Do not edit generated files.\nCommitted outputs are covered by platform/packages/assets/metadata/outputs.json; canonical\nlicenses remain in platform/packages/assets/licenses/.\n\nSources, pinned upstream URLs/revisions/checksums and generation tools are in\nplatform/packages/assets/. See that package's README.md for the explicit\npnpm generate-assets maintenance command and pinned Python environment setup.\nNormal builds consume committed assets without running converters.\n\n## Distribution notices\n\nKeep this README and all three files in licenses/ with redistributed generated\nasset source packages. For firmware binary/device releases, include these full\nnotices in the accompanying release documentation or third-party notices.\nThe build does not embed these text sidecars in the firmware image.\n\n- mosaic_manrope_*.c and mosaic_clock_*.c: derived from Manrope, SIL Open Font\n  License 1.1; copyright and full terms in licenses/Manrope-OFL.txt. Conversion\n  changes weight/size, normalizes digit advances and rasterizes glyphs.\n- mosaic_wordmark_*.c: outlined/rasterized Outfit 500 MOSAIC wordmark;\n  source font copyright and SIL OFL 1.1 in licenses/Outfit-OFL.txt.\n- mosaic_icon_settings_${pixels(firmware.icon.md)}.c: Lucide settings, release 0.468.0;\n  copyright and full terms in licenses/Lucide-LICENSE.\n\nThese notices accompany the upstream-derived assets; they do not relicense\nunrelated Mosaic code. Preserve the full notices when copying assets elsewhere.\n`,
 )
 function fontNotice(family) {
   const copyright = fontkit.openSync(`sources/${family}.ttf`).copyright
@@ -113,6 +113,38 @@ for (const weight of weights) {
       manropeNotice + fs.readFileSync(file, 'utf8').replaceAll(out + '/', ''),
     )
   }
+}
+// The Home clock: one large weight, only the characters a time or its placeholder use,
+// so a desk-readable size costs a few kilobytes instead of a full font.
+const clockSize = pixels(firmware.display.clock)
+const clockName = `mosaic_clock_${clockSize}`
+names.push(clockName)
+execFileSync(process.execPath, [
+  require.resolve('lv_font_conv/lv_font_conv.js'),
+  '--font',
+  'sources/Manrope-500.ttf',
+  '--size',
+  String(clockSize),
+  '--bpp',
+  '4',
+  '--format',
+  'lvgl',
+  '--lv-include',
+  'lvgl.h',
+  '--symbols',
+  '0123456789:- ',
+  '--no-compress',
+  '--lv-font-name',
+  clockName,
+  '-o',
+  path.join(out, `${clockName}.c`),
+])
+{
+  const file = path.join(out, `${clockName}.c`)
+  fs.writeFileSync(
+    file,
+    manropeNotice + fs.readFileSync(file, 'utf8').replaceAll(out + '/', ''),
+  )
 }
 fs.writeFileSync(
   'metadata/coverage.json',
@@ -205,7 +237,7 @@ for (const entry of previousOutputs) {
   const file = path.resolve(root, entry.file)
   if (
     path.dirname(file) === out &&
-    /^mosaic_(?:manrope_\d+_(?:400|500|600)|wordmark_\d+|icon_settings_\d+)\.c$/.test(
+    /^mosaic_(?:manrope_\d+_(?:400|500|600)|clock_\d+|wordmark_\d+|icon_settings_\d+)\.c$/.test(
       path.basename(file),
     ) &&
     !outputs.includes(file)

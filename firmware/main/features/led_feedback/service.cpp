@@ -19,7 +19,9 @@ namespace {
     TaskHandle_t s_task = nullptr;
     // Written by bus handlers, read by the LED task, which the handlers wake.
     std::atomic<events::Status> s_status = events::Status::disconnected;
+    std::atomic_bool s_paired = false;
     std::atomic<uint32_t> s_notifications = 0;
+    std::atomic<uint32_t> s_acknowledgements = 0;
     std::atomic_bool s_enabled = true;
 
     uint32_t now_ms() {
@@ -27,6 +29,7 @@ namespace {
     }
     void on_status(void*, esp_event_base_t, int32_t, void* data) {
         s_status = *static_cast<const events::Status*>(data);
+        s_paired = events::paired();
         xTaskNotifyGive(s_task);
     }
     void on_notification(void*, esp_event_base_t, int32_t, void*) {
@@ -34,15 +37,22 @@ namespace {
         xTaskNotifyGive(s_task);
     }
     void run(void*) {
-        Feedback feedback(s_status.load(), now_ms());
+        Feedback feedback(s_status.load(), s_paired.load());
         uint32_t notifications = s_notifications.load();
+        uint32_t acknowledgements = s_acknowledgements.load();
         // The driver starts the LEDs dark, so a dark frame needs no write.
         std::array<Color, leds::kRingLength> ring { }, shown_ring { };
         std::array<Color, leds::kStripLength> strip { }, shown_strip { };
         esp_err_t last_err = ESP_OK;
         while (true) {
             const uint32_t now = now_ms();
-            feedback.set_status(s_status.load(), now);
+            feedback.set_status(s_status.load(), s_paired.load());
+            // Seen before arriving counts for nothing: acknowledge first, then notify.
+            const uint32_t seen = s_acknowledgements.load();
+            if (seen != acknowledgements) {
+                acknowledgements = seen;
+                feedback.acknowledge();
+            }
             const uint32_t received = s_notifications.load();
             if (received != notifications) {
                 notifications = received;
@@ -68,6 +78,11 @@ namespace {
         }
     }
 }
+void acknowledge() {
+    s_acknowledgements.fetch_add(1);
+    if (s_task)
+        xTaskNotifyGive(s_task);
+}
 void set_enabled(bool enabled) {
     s_enabled = enabled;
     if (s_task)
@@ -82,6 +97,7 @@ esp_err_t start() {
     // A status set before subscribing would otherwise be missed. The bus stores the
     // status before posting it, so this never replaces a newer one with an older one.
     s_status = events::status();
+    s_paired = events::paired();
     xTaskNotifyGive(s_task);
     return ESP_OK;
 }

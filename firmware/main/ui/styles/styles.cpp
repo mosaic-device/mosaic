@@ -4,6 +4,7 @@
 namespace mosaic::ui::styles {
 namespace {
     lv_style_t surface, base, primary, secondary, pressed_primary, pressed_secondary, focus, selected, disabled, busy;
+    lv_style_t track, track_fill, knob, knob_editing, track_disabled, fill_disabled;
     bool initialized = false;
     void fill(lv_style_t* style, uint32_t color, uint8_t opacity = LV_OPA_COVER) {
         lv_style_set_bg_color(style, lv_color_hex(color));
@@ -15,7 +16,7 @@ void initialize() {
         return;
     initialized = true;
     for (auto* style : { &surface, &base, &primary, &secondary, &pressed_primary, &pressed_secondary, &focus, &selected,
-             &disabled, &busy })
+             &disabled, &busy, &track, &track_fill, &knob, &knob_editing, &track_disabled, &fill_disabled })
         lv_style_init(style);
     fill(&surface, TOKEN_COLOR_SURFACE_DARK);
     lv_style_set_radius(&surface, TOKEN_RADIUS_LG);
@@ -47,6 +48,20 @@ void initialize() {
     lv_style_set_text_color(&disabled, lv_color_hex(TOKEN_COLOR_MUTED_FOREGROUND_DARK));
     lv_style_set_border_color(&busy, lv_color_hex(TOKEN_COLOR_FOCUS_DARK));
     lv_style_set_border_width(&busy, TOKEN_FOCUS_WIDTH);
+    fill(&track, TOKEN_COLOR_FIELD_DARK);
+    lv_style_set_radius(&track, TOKEN_RADIUS_FULL);
+    fill(&track_fill, TOKEN_COLOR_PRIMARY_DARK);
+    lv_style_set_radius(&track_fill, TOKEN_RADIUS_FULL);
+    fill(&knob, TOKEN_COLOR_FOREGROUND_DARK);
+    lv_style_set_radius(&knob, TOKEN_RADIUS_FULL);
+    lv_style_set_pad_all(&knob, TOKEN_SPACE_2);
+    // Adjusting: the knob grows and takes the focus color, so turning visibly changes the value.
+    lv_style_set_pad_all(&knob_editing, TOKEN_SPACE_3);
+    lv_style_set_outline_width(&knob_editing, TOKEN_FOCUS_WIDTH * 2);
+    lv_style_set_outline_color(&knob_editing, lv_color_hex(TOKEN_COLOR_FOCUS_DARK));
+    lv_style_set_outline_opa(&knob_editing, LV_OPA_COVER);
+    fill(&track_disabled, TOKEN_COLOR_SURFACE_RAISED_DARK);
+    fill(&fill_disabled, TOKEN_COLOR_LOW_EMPHASIS_DARK);
 }
 void text(lv_obj_t* object, Text role, bool supporting) {
     const int size = role == Text::caption ? TOKEN_TEXT_XS
@@ -79,5 +94,26 @@ void control(lv_obj_t* object, Control variant) {
     lv_obj_add_style(object, &focus, LV_STATE_FOCUSED);
     lv_obj_add_style(object, &busy, LV_STATE_USER_1);
     lv_obj_add_style(object, &disabled, LV_STATE_DISABLED);
+}
+void slider(lv_obj_t* object) {
+    initialize();
+    lv_obj_remove_style_all(object);
+    lv_obj_add_style(object, &track, LV_PART_MAIN);
+    lv_obj_add_style(object, &track_fill, LV_PART_INDICATOR);
+    lv_obj_add_style(object, &knob, LV_PART_KNOB);
+    lv_obj_add_style(object, &focus, LV_STATE_FOCUSED);
+    lv_obj_add_style(object, &knob_editing, static_cast<lv_style_selector_t>(LV_PART_KNOB) | LV_STATE_EDITED);
+    lv_obj_add_style(object, &track_disabled, LV_STATE_DISABLED);
+    lv_obj_add_style(object, &fill_disabled, static_cast<lv_style_selector_t>(LV_PART_INDICATOR) | LV_STATE_DISABLED);
+    lv_obj_add_style(object, &fill_disabled, static_cast<lv_style_selector_t>(LV_PART_KNOB) | LV_STATE_DISABLED);
+}
+void toggle(lv_obj_t* object) {
+    initialize();
+    lv_obj_remove_style_all(object);
+    lv_obj_add_style(object, &track, LV_PART_MAIN);
+    lv_obj_add_style(object, &track_fill, static_cast<lv_style_selector_t>(LV_PART_INDICATOR) | LV_STATE_CHECKED);
+    lv_obj_add_style(object, &knob, LV_PART_KNOB);
+    // The switch's knob sits inside its track; the slider's stands out from its thinner one.
+    lv_obj_set_style_pad_all(object, -TOKEN_SPACE_1 - 2, LV_PART_KNOB);
 }
 }
