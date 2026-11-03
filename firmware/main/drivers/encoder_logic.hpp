@@ -23,6 +23,9 @@ private:
     int32_t origin_; // Raw count at the last emitted detent boundary.
 };
 
+// Holding the button this long is Back; shorter presses click when released.
+constexpr uint16_t kLongPressMs = 600;
+
 // What a debounced press means. A press held past the long-press time is Back and
 // never reaches LVGL, so a long press cannot also click or toggle a slider's edit mode.
 enum class Press : uint8_t { none, click, back };
