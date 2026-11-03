@@ -18,6 +18,7 @@
 #include <vector>
 #include <SDL.h>
 #include <array>
+#include <cmath>
 #include <filesystem>
 
 using namespace mosaic;
@@ -294,11 +295,34 @@ int main(int argc, char** argv) {
             std::fprintf(stderr, "%s\n", SDL_GetError());
             return 1;
         }
-        auto* window = SDL_CreateWindow("Mosaic device preview", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, W, H,
-            SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
+        // The panel is 5 inches diagonally. Start at its approximate physical
+        // size on this monitor, while LVGL and screenshots stay at 1280x720.
+        auto* window = SDL_CreateWindow("Mosaic device preview", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 100,
+            100, SDL_WINDOW_HIDDEN | SDL_WINDOW_ALLOW_HIGHDPI);
         auto* renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED) : nullptr;
         if (window && !renderer)
             renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+        if (window && renderer) {
+            float desktop_dpi = 120.0F;
+            float horizontal_dpi = 0;
+            if (SDL_GetDisplayDPI(SDL_GetWindowDisplayIndex(window), nullptr, &horizontal_dpi, nullptr) == 0
+                && horizontal_dpi > 0) {
+                int output_width = 0, output_height = 0;
+                if (SDL_GetRendererOutputSize(renderer, &output_width, &output_height) == 0 && output_width > 0)
+                    horizontal_dpi /= output_width / 100.0F;
+                if (horizontal_dpi >= 80.0F && horizontal_dpi <= 200.0F)
+                    desktop_dpi = horizontal_dpi;
+            }
+            constexpr float kPanelDiagonalInches = 5.0F;
+            const float diagonal_pixels = std::hypot(static_cast<float>(W), static_cast<float>(H));
+            const int window_width = std::lround(kPanelDiagonalInches * W / diagonal_pixels * desktop_dpi);
+            const int window_height = std::lround(kPanelDiagonalInches * H / diagonal_pixels * desktop_dpi);
+            SDL_SetWindowSize(window, window_width, window_height);
+            SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+            SDL_ShowWindow(window);
+            std::printf(
+                "Preview window: %dx%d desktop units; framebuffer: %dx%d RGB565\n", window_width, window_height, W, H);
+        }
         auto* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, W, H);
         if (!window || !renderer || !texture) {
             std::fprintf(stderr, "%s\n", SDL_GetError());

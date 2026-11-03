@@ -17,7 +17,8 @@ pnpm fw:preview --state trouble --screenshot firmware/build/trouble.bmp
 
 The first build uses the managed LVGL 9.4.0 component if present, otherwise it
 downloads that release into `firmware/build/device-preview`. Set `LVGL_DIR` to use another
-local copy of the same release. The window renders the real firmware screen code
+local copy of the same release. The window opens at approximately the panel's
+5-inch physical size on your monitor. It renders the real firmware screen code
 at the panel's 1280×720 resolution in RGB565. Left and Right turn the knob,
 Enter or Space presses it, and Backspace is its long-press Back action. The mouse
 acts as touch. Keys 1–8 select boot, setup QR, connecting, offline, unpaired,
@@ -28,6 +29,11 @@ failure. `--state` also accepts `network-unavailable`, `startup-failure`,
 `firmware/build/preview-shots`, or set a different directory with `--shots`. Use
 `--screenshot` to save a selected state without opening a window. Press `[` and
 `]` to cycle through every state in the running window.
+
+The named states are fixtures in `preview/main.cpp`: they supply simulated
+provisioning snapshots, pairing and server status, and settings values to the
+firmware's real presenter, navigation, and screen code. They are maintained as
+the device's states change; the preview does not discover them automatically.
 
 ## Build and flash
 
