@@ -16,4 +16,11 @@ int main() {
         assert(!parse(text, parsed));
         assert(parsed == Status::pairing);
     }
+
+    // Connecting pairs; an error keeps whatever came before; unpairing clears it.
+    static_assert(paired_after(false, Status::connected));
+    static_assert(paired_after(true, Status::error));
+    static_assert(!paired_after(false, Status::error));
+    static_assert(!paired_after(true, Status::disconnected));
+    static_assert(!paired_after(true, Status::pairing));
 }

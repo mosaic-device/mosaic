@@ -58,8 +58,11 @@ int main() {
     assert(fake_posts == 0);
 
     // Changes are posted in order, and status() already reflects them in handlers.
+    assert(!paired());
     assert(set_status(Status::pairing) == ESP_OK);
+    assert(!paired());
     assert(set_status(Status::connected) == ESP_OK);
+    assert(paired());
     assert(set_status(Status::connected) == ESP_OK);
     assert((all.statuses == std::vector { Status::pairing, Status::connected }));
     assert(all.status_matched_data);
@@ -68,11 +71,14 @@ int main() {
     // A failed post leaves the old status, so retrying the same status posts again.
     fake_post_result = ESP_ERR_TIMEOUT;
     assert(set_status(Status::error) == ESP_ERR_TIMEOUT);
-    assert(status() == Status::connected);
+    assert(status() == Status::connected && paired());
     assert(post_notification() == ESP_ERR_TIMEOUT);
     fake_post_result = ESP_OK;
     assert(set_status(Status::error) == ESP_OK);
     assert(all.statuses.back() == Status::error && status() == Status::error);
+    // An error after connecting keeps the device paired; unpairing does not.
+    assert(paired());
+    assert(set_status(Status::disconnected) == ESP_OK && !paired());
 
     // Every notification is posted.
     for (int i = 0; i < 3; ++i)
