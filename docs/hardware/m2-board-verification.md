@@ -1,6 +1,6 @@
 # M2 board verification
 
-What M2 device behavior works on the physical board with every peripheral connected ([#89](https://github.com/mosaic-device/mosaic/issues/89)). Expected behavior comes from the [firmware README](../../firmware/README.md); where the firmware still uses provisional values that differ from the [#56 spec](https://github.com/mosaic-device/mosaic/wiki/Device-Experience-Spec), the firmware is what's tested and the difference is listed under [Differences from #56](#differences-from-56).
+What M2 device behavior works on the physical board with every peripheral connected ([#89](https://github.com/mosaic-device/mosaic/issues/89)). Expected behavior comes from the [firmware README](../../firmware/README.md), which matches the [#56 spec](https://github.com/mosaic-device/mosaic/wiki/Device-Experience-Spec) since [#115](https://github.com/mosaic-device/mosaic/issues/115). Steps #115 changed are marked for a re-run on the board; the rest kept their results from the first run.
 
 Result values: **Pass**, **Fail** (link the `bug` issue), or **Not tested** (say why). In sections 1 and 2, a step that doesn't depend on the input shows the same result under both, and — means that input can't do the step.
 
@@ -49,62 +49,66 @@ Start from erased settings so first-run defaults and setup are covered: `python3
 
 ### 1. Boot and setup screens
 
-| #   | Step                                                               | Expected                                                                                              | Touch | Encoder |
-| --- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ----- | ------- |
-| 1.1 | Power on with erased flash                                         | LEDs dark from power-on until a pattern is requested; `LEDs ready` logged; boot screen, then setup QR | Pass  | Pass    |
-| 1.2 | Join `Mosaic-XXXXXX` from a phone, submit Wi-Fi and a `wss://` URL | Success shown about 6 s, reboot, "Connecting to saved Wi-Fi..."                                       | Pass  | Pass    |
-| 1.3 | After joining                                                      | "Wi-Fi connected · Waiting for device pairing."; "Enter setup mode" focusable                         | Pass  | Pass    |
-| 1.4 | Activate "Enter setup mode" once, wait 10 s                        | Label asks to confirm, then reverts; nothing else happens                                             | Pass  | Pass    |
-| 1.5 | Activate it twice within 10 s                                      | Setup QR opens; resubmit the same settings to return                                                  | Pass  | Pass    |
-| 1.6 | Turn off the access point                                          | "Offline … Retrying; tap to enter setup."; Settings closes if open                                    | Pass  | Pass    |
-| 1.7 | Restore the access point                                           | Rejoins and returns to the unpaired screen                                                            | Pass  | Pass    |
-| 1.8 | Hold encoder (Back) on any setup screen                            | Nothing happens                                                                                       | —     | Pass    |
+| #   | Step                                                               | Expected                                                                                                                                                  | Touch                               | Encoder                             |
+| --- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ----------------------------------- |
+| 1.1 | Power on with erased flash                                         | LEDs dark from power-on until a pattern is requested; `LEDs ready` logged; the wordmark alone, then the setup QR with the Wi-Fi name and password visible | Not tested: changed in #115, re-run | Not tested: changed in #115, re-run |
+| 1.2 | Join `Mosaic-XXXXXX` from a phone, submit Wi-Fi and a `wss://` URL | Success shown about 6 s, reboot, "Connecting to saved Wi-Fi..."                                                                                           | Pass                                | Pass                                |
+| 1.3 | After joining                                                      | "Wi-Fi connected · Waiting for device pairing."; "Enter setup mode" focusable                                                                             | Pass                                | Pass                                |
+| 1.4 | Activate "Enter setup mode" once, wait 10 s                        | Label reads "Press again to confirm", then reverts; nothing else happens                                                                                  | Not tested: changed in #115, re-run | Not tested: changed in #115, re-run |
+| 1.5 | Activate it twice within 10 s                                      | Setup QR opens; resubmit the same settings to return                                                                                                      | Pass                                | Pass                                |
+| 1.6 | Turn off the access point                                          | "Offline", "Can't reach your Wi-Fi. Retrying.", "Enter setup mode" focused; Settings closes if open                                                       | Not tested: changed in #115, re-run | Not tested: changed in #115, re-run |
+| 1.7 | Restore the access point                                           | Rejoins and returns to the unpaired screen                                                                                                                | Pass                                | Pass                                |
+| 1.8 | Hold encoder (Back) on any setup screen                            | Nothing happens                                                                                                                                           | —                                   | Pass                                |
 
 ### 2. Home and Settings
 
 Run `trigger connected` to reach Home.
 
-| #   | Step                                       | Expected                                                                                 | Touch | Encoder                                                                                                                                             |
-| --- | ------------------------------------------ | ---------------------------------------------------------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2.1 | `trigger connected`                        | Home appears with the clock and Settings, with Settings focused                          | Pass  | **Fail** ([#115](https://github.com/mosaic-device/mosaic/issues/115)): on the first open after boot, nothing is focused until the encoder is turned |
-| 2.2 | Back on Home                               | Nothing happens                                                                          | —     | Pass                                                                                                                                                |
-| 2.3 | Open Settings                              | Settings opens, focus on the first control                                               | Pass  | **Fail** ([#115](https://github.com/mosaic-device/mosaic/issues/115)): on the first open after boot, nothing is focused until the encoder is turned |
-| 2.4 | Move through every control                 | Encoder skips disabled controls (brightness while automatic is on, a stepper at its end) | —     | Pass                                                                                                                                                |
-| 2.5 | Toggle each checkbox and step each stepper | Value changes and applies at once                                                        | Pass  | Pass                                                                                                                                                |
-| 2.6 | Back (on-screen button and encoder hold)   | Home, with focus on Settings                                                             | Pass  | Pass                                                                                                                                                |
-| 2.7 | Reopen Settings                            | Focus is where it was left                                                               | Pass  | Pass                                                                                                                                                |
-| 2.8 | `trigger disconnected`                     | Unpaired screen returns                                                                  | Pass  | Pass                                                                                                                                                |
+| #    | Step                                      | Expected                                                                                                                                   | Touch                               | Encoder                             |
+| ---- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | ----------------------------------- |
+| 2.1  | `trigger connected`                       | Home: the time, the date and Settings, with Settings focused, also on the first open after boot                                            | Not tested: changed in #115, re-run | Not tested: changed in #115, re-run |
+| 2.2  | Back on Home                              | Nothing happens                                                                                                                            | —                                   | Pass                                |
+| 2.3  | Open Settings                             | Settings opens, focused on Automatic brightness, also on the first open after boot                                                         | Not tested: changed in #115, re-run | Not tested: changed in #115, re-run |
+| 2.4  | Move through every control                | Encoder skips Brightness while automatic is on ("Follows room light" under it) and Volume while sounds are off ("Sounds are off" under it) | —                                   | Not tested: changed in #115, re-run |
+| 2.5  | Flip each switch and adjust each slider   | Value changes and applies at once; with the encoder, press to adjust, turn, press to finish                                                | Not tested: changed in #115, re-run | Not tested: changed in #115, re-run |
+| 2.6  | Back (on-screen button and encoder hold)  | Home, with focus on Settings                                                                                                               | Pass                                | Pass                                |
+| 2.7  | Reopen Settings                           | Focus is where it was left                                                                                                                 | Pass                                | Pass                                |
+| 2.8  | Hold Back while adjusting a slider        | Adjusting ends; Settings stays open; turning moves focus again                                                                             | —                                   | Not tested: changed in #115, re-run |
+| 2.9  | `trigger error`, then `trigger connected` | Home stays, saying "Can't reach the server. Retrying." while in error                                                                      | Not tested: changed in #115, re-run | Not tested: changed in #115, re-run |
+| 2.10 | `trigger disconnected`                    | Unpaired screen returns                                                                                                                    | Pass                                | Pass                                |
 
 ### 3. Debug triggers: LEDs and sound
 
-Default settings (volume 60%, not muted, LEDs on). Start from `trigger disconnected`.
+Default settings (volume 60%, sounds on, LEDs on). Start from `trigger disconnected` after a fresh boot. Every change should fade over about a second; nothing blinks or spins.
 
-| #    | Command                                                | Ring                                                               | Strip                            | Sound              | Result                                     |
-| ---- | ------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------- | ------------------ | ------------------------------------------ |
-| 3.1  | `trigger pairing`                                      | blue, spinning                                                     | blue, breathing                  | none               | Pass (ring and sound; strip not connected) |
-| 3.2  | `trigger connected`                                    | off                                                                | dim warm white, steady           | three rising notes | Pass (ring and sound; strip not connected) |
-| 3.3  | `trigger notification`                                 | cool white, spinning for 3 s, then back to the status              | warm white, breathing, then back | two rising notes   | Pass (ring and sound; strip not connected) |
-| 3.4  | `trigger error`                                        | red, blinking                                                      | dim red, steady                  | two falling notes  | Pass (ring and sound; strip not connected) |
-| 3.5  | `trigger disconnected`                                 | off                                                                | off                              | none               | Pass (ring and sound; strip not connected) |
-| 3.6  | Repeat a command for the current status                | nothing posted, nothing changes                                    |                                  |                    | Pass                                       |
-| 3.7  | `volume 20`, `trigger notification`; then `volume 100` | quieter, then louder from the next cue                             |                                  |                    | Pass                                       |
-| 3.8  | `mute on`, `trigger notification`; `mute off`          | no sound while muted; LEDs still change                            |                                  |                    | Pass                                       |
-| 3.9  | LED lights off in Settings, run 3.1–3.4                | both outputs stay dark; turning on shows the current pattern       |                                  |                    | Pass (ring only)                           |
-| 3.10 | Every pattern at the brightest ambient light           | nothing brighter than the 30% ceiling, no random colors or flicker |                                  |                    | Pass (ring only)                           |
+| #    | Command                                                | Ring                                                               | Strip                            | Sound                                  | Result                              |
+| ---- | ------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------- | -------------------------------------- | ----------------------------------- |
+| 3.1  | `trigger pairing`                                      | soft white, breathing slowly                                       | off                              | none                                   | Not tested: changed in #115, re-run |
+| 3.2  | `trigger connected`                                    | off                                                                | warm white, steady               | three rising notes (pairing completed) | Not tested: changed in #115, re-run |
+| 3.3  | `trigger notification`                                 | blue, and stays blue                                               | swells to blue and back over 3 s | two rising notes                       | Not tested: changed in #115, re-run |
+| 3.4  | Turn the encoder or touch the screen                   | blue fades out                                                     | unchanged                        | none                                   | Not tested: changed in #115, re-run |
+| 3.5  | `trigger error`                                        | amber, steady                                                      | warm white, steady               | none                                   | Not tested: changed in #115, re-run |
+| 3.6  | `trigger connected`                                    | off                                                                | warm white                       | none (a reconnect)                     | Not tested: changed in #115, re-run |
+| 3.7  | `trigger disconnected`                                 | off                                                                | off                              | none                                   | Not tested: changed in #115, re-run |
+| 3.8  | Repeat a command for the current status                | nothing posted, nothing changes                                    |                                  |                                        | Pass                                |
+| 3.9  | `volume 20`, `trigger notification`; then `volume 100` | quieter, then louder from the next cue                             |                                  |                                        | Pass                                |
+| 3.10 | `mute on`, `trigger notification`; `mute off`          | no sound while muted; LEDs still change                            |                                  |                                        | Pass                                |
+| 3.11 | LED lights off in Settings, run 3.1–3.5                | both outputs stay dark; turning on shows the current pattern       |                                  |                                        | Not tested: changed in #115, re-run |
+| 3.12 | Every pattern at the brightest ambient light           | nothing brighter than the 30% ceiling, no random colors or flicker |                                  |                                        | Not tested: changed in #115, re-run |
 
 ### 4. Ambient brightness
 
 LEDs here means the ring only; the strip was not connected.
 
-| #   | Step                                             | Expected                                                                                    | Result |
-| --- | ------------------------------------------------ | ------------------------------------------------------------------------------------------- | ------ |
-| 4.1 | Boot with sensor connected                       | `Ambient light sensor ready`                                                                | Pass   |
-| 4.2 | Cover the sensor, then shine a light on it       | Screen and LEDs fade (a few seconds) dimmer, then brighter; trace logs readings; no flicker | Pass   |
-| 4.3 | Hold the light level steady near a change point  | Levels don't waver                                                                          | Pass   |
-| 4.4 | Automatic brightness off, step brightness 40→100 | Screen and LEDs follow the manual level with a fade                                         | Pass   |
-| 4.5 | Unplug the sensor while running                  | One warning under `mosaic_brightness`; fades to fixed levels; no further log spam           | Pass   |
-| 4.6 | Plug it back in                                  | `Ambient light sensor ready` within about 5 s; automatic levels resume                      | Pass   |
-| 4.7 | Boot with the sensor unplugged                   | One warning; fixed levels; device otherwise normal                                          | Pass   |
+| #   | Step                                             | Expected                                                                                                                                                                      | Result                              |
+| --- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| 4.1 | Boot with sensor connected                       | `Ambient light sensor ready`                                                                                                                                                  | Pass                                |
+| 4.2 | Cover the sensor, then shine a light on it       | Screen and LEDs fade (a few seconds) dimmer, then brighter; covered, the LEDs are dimmer than the screen but their colors still recognizable; trace logs readings; no flicker | Not tested: changed in #115, re-run |
+| 4.3 | Hold the light level steady near a change point  | Levels don't waver                                                                                                                                                            | Pass                                |
+| 4.4 | Automatic brightness off, step brightness 40→100 | Screen and LEDs follow the manual level with a fade                                                                                                                           | Pass                                |
+| 4.5 | Unplug the sensor while running                  | One warning under `mosaic_brightness`; fades to fixed levels; no further log spam                                                                                             | Pass                                |
+| 4.6 | Plug it back in                                  | `Ambient light sensor ready` within about 5 s; automatic levels resume                                                                                                        | Pass                                |
+| 4.7 | Boot with the sensor unplugged                   | One warning; fixed levels; device otherwise normal                                                                                                                            | Pass                                |
 
 ### 5. Clock
 
@@ -116,12 +120,12 @@ LEDs here means the ring only; the strip was not connected.
 
 ### 6. Settings persistence
 
-| #   | Step                                                    | Expected                                                                         | Result |
-| --- | ------------------------------------------------------- | -------------------------------------------------------------------------------- | ------ |
-| 6.1 | First boot after erase                                  | Defaults: automatic brightness on, brightness 70, volume 60%, not muted, LEDs on | Pass   |
-| 6.2 | Change every setting, wait 2 s, power cycle             | All changes kept                                                                 | Pass   |
-| 6.3 | Change a setting and power cycle within half a second   | Previous value kept, no warning about an unreadable record                       | Pass   |
-| 6.4 | `volume 30` and `mute on` from the console, power cycle | Kept, and shown in Settings                                                      | Pass   |
+| #   | Step                                                    | Expected                                                                         | Result                              |
+| --- | ------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------- |
+| 6.1 | First boot after erase                                  | Defaults: automatic brightness on, brightness 70, sounds on, volume 60%, LEDs on | Not tested: changed in #115, re-run |
+| 6.2 | Change every setting, wait 2 s, power cycle             | All changes kept                                                                 | Pass                                |
+| 6.3 | Change a setting and power cycle within half a second   | Previous value kept, no warning about an unreadable record                       | Pass                                |
+| 6.4 | `volume 30` and `mute on` from the console, power cycle | Kept, and shown in Settings                                                      | Pass                                |
 
 ### 7. Power cycles under full load
 
@@ -143,11 +147,13 @@ Also leave it running under that load for 15 minutes and note any reset (`rst:` 
 
 Tested with the ring, encoder, BH1750 and speaker connected; the LED strip has not been obtained yet.
 
+**#115 re-run pending:** the steps marked "changed in #115" above. Until they are run, the summary below is from the first run.
+
 **Verified:** setup screens and recovery; Home and Settings navigation, Back and focus memory by touch and encoder; every debug trigger's ring pattern and sound, volume, mute and LEDs off; ambient brightness, the sensor-missing fallback and recovery; clock sync and `--:--` without a sync; settings defaults and persistence across power cycles.
 
-**Failed:**
+**Failed (first run):**
 
-- On the first open after boot, Home and Settings start with nothing focused, so the encoder has to be turned before a press does anything. Later opens keep their focus. Tracked in [#115](https://github.com/mosaic-device/mosaic/issues/115).
+- On the first open after boot, Home and Settings started with nothing focused, so the encoder had to be turned before a press did anything. Fixed in [#115](https://github.com/mosaic-device/mosaic/issues/115); steps 2.1 and 2.3 need a re-run.
 
 **Not tested:**
 
@@ -162,9 +168,9 @@ Tested with the ring, encoder, BH1750 and speaker connected; the LED strip has n
 
 ## Differences from #56
 
-The firmware's provisional tables predate the written [#56 spec](https://github.com/mosaic-device/mosaic/wiki/Device-Experience-Spec). These aren't board failures; [#115](https://github.com/mosaic-device/mosaic/issues/115) settles one behavior and brings the firmware and spec in line:
+None since [#115](https://github.com/mosaic-device/mosaic/issues/115), which settled one behavior for the lights, sounds, brightness and unavailable controls, and brought the firmware and the spec in line. The first run found these differences:
 
-- **LED meanings.** The spec has both lights in the user's color (default white) normally and fading to blue for a notification until Activity is checked, never flashing (FR-12). The firmware turns the ring off when idle, uses spinning, breathing and blinking patterns, shows red for error, and turns notification cool/warm white for 3 s.
-- **Error sound.** The spec has no sound on error; the firmware plays two falling notes.
-- **Brightness curve.** The spec proposes the strip at about 5–60%; the firmware sets 23–100% of the 30% ceiling for both lights.
-- **Unavailable controls.** The spec dims unavailable controls with a short reason in text; the firmware disables them without a reason.
+- **LED meanings.** The spec had both lights in the user's color and blue for a notification; the firmware turned the ring off when idle, used spinning, breathing and blinking patterns, red for error, and white for 3 s on a notification.
+- **Error sound.** The spec had none; the firmware played two falling notes.
+- **Brightness curve.** The spec proposed the strip at about 5–60%; the firmware set 23–100% of the 30% ceiling for both lights.
+- **Unavailable controls.** The spec dimmed them with a short reason; the firmware disabled them without one.
