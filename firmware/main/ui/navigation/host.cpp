@@ -56,7 +56,12 @@ namespace {
             else
                 lv_obj_add_flag(s_containers[i].object, LV_OBJ_FLAG_HIDDEN);
         }
-        ensure_focus(s_containers[active].group);
+        if (lv_group_t* group = s_containers[active].group) {
+            // Leaving mid-edit (Back while adjusting a slider) must not return to a screen
+            // where turning still changes a value instead of moving focus.
+            lv_group_set_editing(group, false);
+            ensure_focus(group);
+        }
         drivers::encoder::set_group(s_containers[active].group);
         s_shown = active;
     }
@@ -105,9 +110,15 @@ namespace {
             if (page->update)
                 page->update(page->context);
         follow_conditions();
-        // Each Back press counts once; Back with nowhere to go does nothing.
-        for (const uint32_t backs = drivers::encoder::back_presses(); s_backs_seen != backs; ++s_backs_seen)
-            s_navigator.back();
+        // Each Back press counts once. While a value is being adjusted, Back finishes
+        // adjusting it and stays on the screen; Back with nowhere to go does nothing.
+        for (const uint32_t backs = drivers::encoder::back_presses(); s_backs_seen != backs; ++s_backs_seen) {
+            lv_group_t* group = s_shown < kSlots ? s_containers[s_shown].group : nullptr;
+            if (group && lv_group_get_editing(group))
+                lv_group_set_editing(group, false);
+            else
+                s_navigator.back();
+        }
         show_active();
         if (s_shown < kSlots)
             ensure_focus(s_containers[s_shown].group);
