@@ -61,13 +61,13 @@ int main() {
     StateMachine offline;
     online(offline);
     (void)offline.dispatch(Disconnected { }, 4);
-    assert(present(offline.snapshot()).message == "Wi-Fi offline. Retrying; tap to enter setup.");
+    assert(present(offline.snapshot()).message == "Can't reach your Wi-Fi. Retrying.");
     assert(!present(offline.snapshot()).online);
     (void)offline.dispatch(Tick { }, 1'000'004);
     (void)offline.dispatch(ReconnectCompleted { false }, 1'000'005);
-    assert(present(offline.snapshot()).message == "Wi-Fi unavailable. Retrying; tap to enter setup.");
+    assert(present(offline.snapshot()).message == "Your Wi-Fi network isn't available. Retrying.");
     (void)offline.dispatch(ActionRejected { 1 }, 1'000'006);
-    assert(present(offline.snapshot()).recovery_prompt == "Setup busy. Tap to retry.");
+    assert(present(offline.snapshot()).recovery_prompt == "Setup busy. Try again.");
     (void)offline.dispatch(SetupTapped { 2 }, 1'000'007);
     assert(!offline.snapshot().admission_rejected);
     StateMachine unavailable;
