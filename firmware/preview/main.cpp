@@ -99,8 +99,9 @@ std::vector<std::string> without(std::vector<std::string> args, const std::strin
     return args;
 }
 void restart_process() {
-    // The boot after a restart keeps NVS: drop what only applied to the first start.
-    auto args = without(without(g_args, "--state", true), "--command", true);
+    // The boot after a restart keeps the same NVS, including a state's own file. --restarted
+    // skips what only applies to the first start: preparing the state and its commands.
+    auto args = without(without(g_args, "--command", true), "--restarted", false);
     args.emplace_back("--restarted");
     exec(args);
 }
