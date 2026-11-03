@@ -1,5 +1,6 @@
 #include "service.hpp"
 #include "state_machine.hpp"
+#include "wifi_observation.hpp"
 
 #include "adapters/captive_portal.hpp"
 #include "adapters/settings_store.hpp"
@@ -54,7 +55,7 @@ namespace {
     Settings saved { };
     esp_err_t startup_error = ESP_OK;
     bool recovery_callback_installed = false;
-    uint32_t ignored_wifi_through = 0; // provisioning owner task only
+    WifiObservation observation; // provisioning owner task only
     using support::secure_erase;
 
     bool submit(const Settings& settings, void*) {
@@ -137,7 +138,7 @@ namespace {
 
     void begin_wifi_observation_window() {
         wifi_overflow.exchange(false);
-        ignored_wifi_through = wifi_sequence.load();
+        observation.ignore_through(wifi_sequence.load());
     }
 
     esp_err_t display_setup() {
@@ -241,17 +242,13 @@ namespace {
     void resync_wifi(state::StateMachine& model) {
         ESP_LOGE("mosaic_network", "Wi-Fi event queue overflow; resynchronizing radio state");
         const auto phase = model.snapshot().phase;
-        if (phase != state::Phase::saved_sta && phase != state::Phase::online && phase != state::Phase::offline)
+        if (!follows_station(phase))
             return;
-        const char* ssid = phase == state::Phase::saved_sta ? saved.ssid : nullptr;
+        const char* ssid = needs_saved_network(phase) ? saved.ssid : nullptr;
         const bool connected = provisioning_wifi::associated(ssid);
-        const bool has_ip = connected && provisioning_wifi::has_ip(ssid);
-        if (connected)
-            dispatch(model, state::Connected { });
-        if (has_ip)
-            dispatch(model, state::GotIp { });
-        else
-            dispatch(model, state::Disconnected { });
+        const auto events = resync(phase, { connected, connected && provisioning_wifi::has_ip(ssid) });
+        for (size_t i = 0; i < events.count; ++i)
+            dispatch(model, events.events[i]);
     }
 
     esp_err_t detach_recovery_callback() {
@@ -339,13 +336,12 @@ namespace {
     void reconcile_lost_wifi_events(state::StateMachine& model) {
         if (!wifi_overflow.exchange(false))
             return;
-        ignored_wifi_through = wifi_sequence.load();
+        observation.ignore_through(wifi_sequence.load());
         resync_wifi(model);
     }
 
     bool stale_wifi_event(const Intent& event) {
-        return event.kind != Kind::submit && event.kind != Kind::recovery
-            && static_cast<int32_t>(event.wifi_sequence - ignored_wifi_through) <= 0;
+        return event.kind != Kind::submit && event.kind != Kind::recovery && observation.stale(event.wifi_sequence);
     }
 
     void handle_event(state::StateMachine& model, const Intent& event) {
@@ -364,13 +360,13 @@ namespace {
             dispatch(model, state::SetupTapped { event.admission_id, event.action_context });
             break;
         case Kind::connected:
-            if (model.snapshot().phase != state::Phase::saved_sta || provisioning_wifi::associated(saved.ssid))
+            if (!needs_saved_network(model.snapshot().phase) || provisioning_wifi::associated(saved.ssid))
                 dispatch(model, state::Connected { });
             break;
         case Kind::got_ip:
             reconcile_lost_wifi_events(model);
             if (!stale_wifi_event(event)
-                && (model.snapshot().phase != state::Phase::saved_sta || provisioning_wifi::has_ip(saved.ssid)))
+                && (!needs_saved_network(model.snapshot().phase) || provisioning_wifi::has_ip(saved.ssid)))
                 dispatch(model, state::GotIp { });
             break;
         case Kind::disconnected:
