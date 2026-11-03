@@ -120,6 +120,7 @@ python3 firmware/main/features/brightness/tests/run.py
 python3 firmware/main/features/clock/tests/run.py
 python3 firmware/main/features/settings/tests/run.py
 python3 firmware/main/features/debug_triggers/tests/run.py
+python3 firmware/preview/platform/tests/run.py
 ```
 
 ### Firmware build
