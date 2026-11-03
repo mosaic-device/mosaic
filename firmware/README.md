@@ -2,6 +2,33 @@
 
 Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 using ESP-IDF **5.5.4** and ESP32-C6-hosted Wi-Fi. Display/touch, phone setup, credential save, reboot, Wi-Fi join and recovery have been verified on the physical board. The production dashboard, pairing and backend transport are not implemented; device states can be injected with [debug triggers](#debug-triggers). The M2 on-board check and its results are in [M2 board verification](../docs/hardware/m2-board-verification.md).
 
+## Device screen preview
+
+On macOS or Linux, install CMake, a C++23 compiler, and SDL2 development files
+(`brew install cmake sdl2` or `sudo apt-get install cmake libsdl2-dev`). From
+the repository root, run:
+
+```sh
+python3 firmware/preview/run.py
+python3 firmware/preview/run.py --state qr
+python3 firmware/preview/run.py --state settings-manual
+python3 firmware/preview/run.py --state trouble --screenshot build/trouble.bmp
+```
+
+The first build uses the managed LVGL 9.4.0 component if present, otherwise it
+downloads that release into `build/device-preview`. Set `LVGL_DIR` to use another
+local copy of the same release. The window renders the real firmware screen code
+at the panel's 1280×720 resolution in RGB565. Left and Right turn the knob,
+Enter or Space presses it, and Backspace is its long-press Back action. The mouse
+acts as touch. Keys 1–8 select boot, setup QR, connecting, offline, unpaired,
+Home, server trouble, and Settings; 9 shows a long network name and 0 a setup
+failure. `--state` also accepts `network-unavailable`, `startup-failure`,
+`setup-opening`, `setup-saved`, `recovery-failure`, `settings-manual`, and
+`settings-muted`. Press F12 to save the current frame as a BMP screenshot in
+`build/preview-shots`, or set a different directory with `--shots`. Use
+`--screenshot` to save a selected state without opening a window. Press `[` and
+`]` to cycle through every state in the running window.
+
 ## Build and flash
 
 Activate ESP-IDF with the ESP32-P4 toolchain and put Node.js on `PATH`. From `firmware/`:

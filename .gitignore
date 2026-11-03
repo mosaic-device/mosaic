@@ -12,6 +12,7 @@ __pycache__/
 !.env.example
 **/dist/
 /firmware/main/ui/generated/design_tokens.h
+/build/
 **/bin/
 **/obj/
 platform/apps/backend/wwwroot/
