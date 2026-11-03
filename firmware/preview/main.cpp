@@ -166,7 +166,7 @@ prov::ViewState view(prov::Phase phase, prov::VisibleReason reason = prov::Visib
 }
 
 int main(int argc, char** argv) {
-    std::string shots = "build/preview-shots";
+    std::string shots = "firmware/build/preview-shots";
     std::string initial = "home";
     std::string screenshot_path;
     for (int i = 1; i < argc; ++i) {

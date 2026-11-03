@@ -20,6 +20,7 @@
     "fw:format": "node scripts/format-firmware.mjs --write",
     "fw:format:check": "node scripts/format-firmware.mjs --check",
     "fw:build": "python3 scripts/firmware.py build",
+    "fw:preview": "python3 firmware/preview/run.py",
     "fw:flash": "python3 scripts/firmware.py flash",
     "fw:monitor": "python3 scripts/firmware.py monitor",
     "companion:check": "cargo fmt --check --manifest-path platform/apps/companion/src-tauri/Cargo.toml && cargo clippy --manifest-path platform/apps/companion/src-tauri/Cargo.toml -- -D warnings",

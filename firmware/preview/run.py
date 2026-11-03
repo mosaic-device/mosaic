@@ -7,12 +7,11 @@ import subprocess
 
 here = Path(__file__).resolve().parent
 firmware = here.parent
-repo = firmware.parent
-build = repo / "build" / "device-preview"
+build = firmware / "build" / "device-preview"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--state", default="home", help="initial interactive screen")
-parser.add_argument("--shots", type=Path, default=Path("build/preview-shots"), help="F12 screenshot directory")
+parser.add_argument("--shots", type=Path, default=firmware / "build" / "preview-shots", help="F12 screenshot directory")
 parser.add_argument("--screenshot", type=Path, help="save the selected state as BMP and exit")
 args = parser.parse_args()
 

@@ -9,14 +9,14 @@ On macOS or Linux, install CMake, a C++23 compiler, and SDL2 development files
 the repository root, run:
 
 ```sh
-python3 firmware/preview/run.py
-python3 firmware/preview/run.py --state qr
-python3 firmware/preview/run.py --state settings-manual
-python3 firmware/preview/run.py --state trouble --screenshot build/trouble.bmp
+pnpm fw:preview
+pnpm fw:preview --state qr
+pnpm fw:preview --state settings-manual
+pnpm fw:preview --state trouble --screenshot firmware/build/trouble.bmp
 ```
 
 The first build uses the managed LVGL 9.4.0 component if present, otherwise it
-downloads that release into `build/device-preview`. Set `LVGL_DIR` to use another
+downloads that release into `firmware/build/device-preview`. Set `LVGL_DIR` to use another
 local copy of the same release. The window renders the real firmware screen code
 at the panel's 1280×720 resolution in RGB565. Left and Right turn the knob,
 Enter or Space presses it, and Backspace is its long-press Back action. The mouse
@@ -25,7 +25,7 @@ Home, server trouble, and Settings; 9 shows a long network name and 0 a setup
 failure. `--state` also accepts `network-unavailable`, `startup-failure`,
 `setup-opening`, `setup-saved`, `recovery-failure`, `settings-manual`, and
 `settings-muted`. Press F12 to save the current frame as a BMP screenshot in
-`build/preview-shots`, or set a different directory with `--shots`. Use
+`firmware/build/preview-shots`, or set a different directory with `--shots`. Use
 `--screenshot` to save a selected state without opening a window. Press `[` and
 `]` to cycle through every state in the running window.
 
