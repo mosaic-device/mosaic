@@ -62,8 +62,10 @@ namespace {
         if (xQueueSend(s_queue, &cue, 0) != pdTRUE)
             ESP_LOGW(kTag, "Cue dropped: still playing earlier cues");
     }
+    // Bus handlers run one at a time, so only the bus task touches this.
+    StatusCues s_status_cues;
     void on_status(void*, esp_event_base_t, int32_t, void* data) {
-        if (const auto cue = cue_for(*static_cast<const events::Status*>(data)))
+        if (const auto cue = s_status_cues.on_status(*static_cast<const events::Status*>(data)))
             enqueue(*cue);
     }
     void on_notification(void*, esp_event_base_t, int32_t, void*) {

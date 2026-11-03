@@ -140,11 +140,24 @@ void committed_cues_parse(int count, char** paths) {
 }
 
 void status_cues() {
-    assert(cue_for(Status::connected) == Cue::connected);
-    assert(cue_for(Status::error) == Cue::error);
-    assert(!cue_for(Status::pairing));
-    assert(!cue_for(Status::disconnected));
-    // Each event that has a cue has its own sound.
+    // The first connection after starting chimes; reconnecting after a drop does not.
+    StatusCues cues;
+    assert(cues.on_status(Status::error) == Cue::error);
+    assert(cues.on_status(Status::connected) == Cue::connected);
+    assert(cues.on_status(Status::error) == Cue::error);
+    assert(!cues.on_status(Status::connected));
+    assert(!cues.on_status(Status::disconnected));
+    assert(!cues.on_status(Status::connected));
+    // Finishing pairing always chimes, even after an earlier connection.
+    assert(!cues.on_status(Status::pairing));
+    assert(cues.on_status(Status::connected) == Cue::connected);
+    // A fresh start pairing for the first time chimes once.
+    StatusCues fresh;
+    assert(!fresh.on_status(Status::pairing));
+    assert(fresh.on_status(Status::connected) == Cue::connected);
+    // Pairing and disconnecting are never heard.
+    for (Status status : { Status::pairing, Status::disconnected })
+        assert(!StatusCues { }.on_status(status));
     assert(kNotificationCue != Cue::connected && kNotificationCue != Cue::error);
 }
 
