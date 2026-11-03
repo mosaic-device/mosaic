@@ -5,7 +5,8 @@
 #include "device.hpp"
 #include "events/bus.hpp"
 #include "features/provisioning/adapters/settings_store.hpp"
-#include "hardware_view.hpp"
+#include "console_log.hpp"
+#include "device_view.hpp"
 #include "mosaic_platform.hpp"
 #include "nvs_flash.h"
 
@@ -13,6 +14,7 @@
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -76,7 +78,7 @@ const State* find_state(const std::string& name) {
 // esp_restart(): start this program again with the same options and NVS, so the boot
 // that follows sees what the firmware saved, as the device would.
 void exec(std::vector<std::string> args) {
-    std::fflush(stdout);
+    mosaic::preview::console_log::stop();
     std::vector<char*> argv;
     for (auto& arg : args)
         argv.push_back(arg.data());
@@ -184,7 +186,7 @@ int window_width(int requested) {
 int usage() {
     std::fprintf(stderr,
         "Usage: preview [--state NAME] [--command TEXT]... [--nvs FILE] [--window-width PIXELS] [--shots DIR] "
-        "[--screenshot FILE.bmp]\nStates:");
+        "[--screenshot FILE.bmp] [--window-screenshot FILE.bmp]\nStates:");
     for (const auto& state : kStates)
         std::fprintf(stderr, " %s", state.name);
     std::fputc('\n', stderr);
@@ -197,6 +199,7 @@ int main(int argc, char** argv) {
     std::filesystem::path nvs = "mosaic-preview.nvs";
     std::filesystem::path shots = "preview-shots";
     std::string screenshot_path;
+    std::string window_shot_path;
     const State* state = nullptr;
     std::vector<std::string> commands;
     int requested_width = 0;
@@ -218,6 +221,8 @@ int main(int argc, char** argv) {
             shots = argv[++i];
         } else if (arg == "--screenshot" && has_value) {
             screenshot_path = argv[++i];
+        } else if (arg == "--window-screenshot" && has_value) {
+            window_shot_path = argv[++i];
         } else if (arg == "--window-width" && has_value) {
             requested_width = std::atoi(argv[++i]);
             if (requested_width < 200 || requested_width > 2560) {
@@ -276,15 +281,27 @@ int main(int argc, char** argv) {
         std::_Exit(saved ? 0 : 1);
     }
 
-    const int target_width = window_width(requested_width);
-    const int target_height = static_cast<int>(std::lround(static_cast<float>(target_width) * H / W));
+    using mosaic::preview::DeviceView;
+    mosaic::preview::console_log::start();
+    // The screen keeps its physical size; the rest of the device and the bench scale with it,
+    // within the desktop.
+    int target_width = window_width(requested_width) * DeviceView::width() / W;
+    SDL_Rect desktop { };
+    if (SDL_GetDisplayUsableBounds(0, &desktop) == 0 && desktop.w > 0 && desktop.h > 0) {
+        const float fit = std::min({ 1.0F, desktop.w * 0.95F / target_width,
+            desktop.h * 0.9F / (static_cast<float>(target_width) * DeviceView::height() / DeviceView::width()) });
+        target_width = static_cast<int>(target_width * fit);
+    }
+    const int target_height = target_width * DeviceView::height() / DeviceView::width();
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-    auto* window = SDL_CreateWindow("Mosaic device preview", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        target_width, target_height, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
+    const std::string title = std::string("Mosaic preview") + (state ? std::string(": ") + state->name : "");
+    auto* window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, target_width,
+        target_height, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
     auto* renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED) : nullptr;
     if (window && !renderer)
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-    if (renderer && SDL_RenderSetLogicalSize(renderer, W, H) != 0) {
+    // Mouse events arrive in these coordinates, where the screen is 1280x720 panel pixels.
+    if (renderer && SDL_RenderSetLogicalSize(renderer, DeviceView::width(), DeviceView::height()) != 0) {
         std::fprintf(stderr, "Cannot set preview coordinates: %s\n", SDL_GetError());
         return 1;
     }
@@ -294,19 +311,14 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "%s\n", SDL_GetError());
         return 1;
     }
-    mosaic::preview::HardwareView hardware_view;
-    if (!hardware_view.start(window))
-        std::fprintf(stderr, "Hardware panel unavailable: %s\n", SDL_GetError());
-    const std::string title = std::string("Mosaic preview") + (state ? std::string(": ") + state->name : "");
-    SDL_SetWindowTitle(window, title.c_str());
-    std::puts("Left/Right: turn, Enter/Space: press (hold for Back), Backspace: Back, mouse: touch.\n"
-              "N: notification, E: server trouble, F1: console command, F12: screenshot, R: restart, Esc: quit.\n"
-              "1-7: restart into setup, connecting, offline, unpaired, home, trouble, settings.\n"
-              "Type console commands here too; \"help\" lists them.");
+    DeviceView view;
+    view.start(renderer);
+    std::puts("Left/Right or the wheel on the knob: turn. Enter/Space or a click on the knob: press; hold for Back.\n"
+              "Backspace: Back. The mouse on the screen: touch. N: notification, E: server trouble, R: restart.\n"
+              "F1: console, F12: screenshot, Esc: quit. 1-7: restart into setup, connecting, offline, unpaired,\n"
+              "home, trouble, settings. Commands typed here work too; \"help\" lists them.");
 
     bool running = true;
-    bool command_mode = false;
-    std::string command_line;
     int shot_number = 0;
     while (running) {
         bool screenshot = false;
@@ -315,30 +327,15 @@ int main(int argc, char** argv) {
             if (event.type == SDL_QUIT
                 || (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE))
                 running = false;
-            if (command_mode && event.type == SDL_TEXTINPUT) {
-                command_line += event.text.text;
-            } else if (command_mode && event.type == SDL_KEYDOWN) {
-                const auto key = event.key.keysym.sym;
-                if (key == SDLK_BACKSPACE && !command_line.empty())
-                    command_line.pop_back();
-                if (key == SDLK_RETURN || key == SDLK_ESCAPE) {
-                    if (key == SDLK_RETURN) {
-                        std::printf("mosaic> %s\n", command_line.c_str());
-                        const std::string line = command_line;
-                        std::thread([line] { mosaic::preview::run_command(line); }).detach();
-                    }
-                    command_line.clear();
-                    command_mode = false;
-                    SDL_StopTextInput();
-                }
-            } else if (event.type == SDL_KEYDOWN && !event.key.repeat) {
+            if (view.handle(event))
+                continue;
+            if (event.type == SDL_KEYDOWN && !event.key.repeat) {
                 const auto key = event.key.keysym.sym;
                 if (key >= SDLK_1 && key < SDLK_1 + static_cast<int>(kStates.size()))
                     restart_into(kStates[static_cast<size_t>(key - SDLK_1)]);
                 switch (key) {
                 case SDLK_F1:
-                    command_mode = true;
-                    SDL_StartTextInput();
+                    view.open_console();
                     break;
                 case SDLK_LEFT:
                     device::turn(-1);
@@ -375,41 +372,28 @@ int main(int argc, char** argv) {
             } else if (event.type == SDL_KEYUP
                 && (event.key.keysym.sym == SDLK_RETURN || event.key.keysym.sym == SDLK_SPACE)) {
                 device::button(false);
-            } else if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP
-                || event.type == SDL_MOUSEMOTION) {
-                const uint32_t event_window
-                    = event.type == SDL_MOUSEMOTION ? event.motion.windowID : event.button.windowID;
-                if (event_window == hardware_view.window_id()) {
-                    hardware_view.handle(event);
-                    continue;
-                }
-                if (event_window != SDL_GetWindowID(window))
-                    continue;
-                // SDL_RenderSetLogicalSize maps window events to panel pixels, including Retina scaling.
-                const int x = event.type == SDL_MOUSEMOTION ? event.motion.x : event.button.x;
-                const int y = event.type == SDL_MOUSEMOTION ? event.motion.y : event.button.y;
-                if (event.type == SDL_MOUSEMOTION)
-                    device::touch((event.motion.state & SDL_BUTTON_LMASK) != 0, x, y);
-                else if (event.button.button == SDL_BUTTON_LEFT)
-                    device::touch(event.type == SDL_MOUSEBUTTONDOWN, x, y);
             }
         }
         device::poll_button();
         device::run_display();
         copy();
         SDL_UpdateTexture(texture, nullptr, frame.data(), W * static_cast<int>(sizeof(uint16_t)));
-        SDL_RenderClear(renderer);
-        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-        // The backlight: dimmer as it drops, and dark while off.
-        SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, static_cast<uint8_t>((100 - device::backlight()) * 255 / 100));
-        SDL_RenderFillRect(renderer, nullptr);
+        view.render(texture);
+        if (!window_shot_path.empty() && g_settled.load()) {
+            // The whole window as drawn, at its output resolution.
+            int width = 0, height = 0;
+            SDL_GetRendererOutputSize(renderer, &width, &height);
+            auto* image = SDL_CreateRGBSurfaceWithFormat(0, width, height, 32, SDL_PIXELFORMAT_ARGB8888);
+            const bool saved = image
+                && SDL_RenderReadPixels(renderer, nullptr, SDL_PIXELFORMAT_ARGB8888, image->pixels, image->pitch) == 0
+                && SDL_SaveBMP(image, window_shot_path.c_str()) == 0;
+            SDL_FreeSurface(image);
+            std::printf(saved ? "Window screenshot: %s\n" : "Window screenshot failed: %s\n",
+                saved ? window_shot_path.c_str() : SDL_GetError());
+            mosaic::preview::console_log::stop();
+            std::_Exit(saved && !g_stuck.load() ? 0 : 1);
+        }
         SDL_RenderPresent(renderer);
-        hardware_view.render();
-        if (command_mode)
-            SDL_SetWindowTitle(window, ("mosaic> " + command_line).c_str());
-        else
-            SDL_SetWindowTitle(window, title.c_str());
         if (screenshot) {
             std::filesystem::create_directories(shots);
             char time_text[32];
@@ -420,7 +404,7 @@ int main(int argc, char** argv) {
         }
         SDL_Delay(16);
     }
-    hardware_view.close();
-    std::fflush(stdout);
+    view.close();
+    mosaic::preview::console_log::stop();
     std::_Exit(0);
 }

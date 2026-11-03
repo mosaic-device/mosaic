@@ -41,14 +41,20 @@ an inaccurate size, use `pnpm fw:preview --window-width 600` to calibrate
 against the board. The firmware screen and screenshots stay at 1280×720 in
 RGB565; the window uses the monitor's high-DPI output for a sharp image.
 
-Left and Right turn the knob, and Enter or Space presses it; holding past the
-long-press time is Back, as is Backspace. The mouse acts as touch. A second
-window shows the LED ring and strip, the light sensor (drag its slider) and
-the speaker. N posts a notification, E toggles server trouble, R restarts,
-and keys 1–7 restart into the states above. Press F12 to save a BMP screenshot
-in `firmware/build/preview-shots`, or set a different directory with `--shots`.
+The window shows the whole device: the screen, the LED ring around the knob to
+its right, the LED strip along the bottom and the light sensor on its top edge.
+Turn the knob with the mouse wheel over it or Left and Right, and press it with
+a click or Enter or Space; holding past the long-press time is Back, as is
+Backspace. The mouse on the screen is touch. The panel under the device shows
+the light reading, screen and LED brightness, speaker, saved network and storage,
+sets the room's light (or unplugs the sensor; the wheel over the sensor works
+too), and has the console with its recent output. N posts a notification, E
+toggles server trouble, R restarts, and keys 1–7 restart into the states above.
+Press F12 to save a BMP of the screen in `firmware/build/preview-shots`, or set a
+different directory with `--shots`. The layout constants at the top of
+`preview/device_view.cpp` place the ring, strip and sensor.
 
-The terminal is the device's debug console, and F1 opens it in the window. It
+The terminal is the device's debug console, and the window's console runs the same commands. It
 has the [debug triggers](#debug-triggers) plus controls for the simulated world:
 
 | Command | Simulates |
