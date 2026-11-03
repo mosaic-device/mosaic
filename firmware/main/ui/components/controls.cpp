@@ -137,7 +137,10 @@ lv_obj_t* wordmark(lv_obj_t* parent, bool large) {
 lv_obj_t* header(lv_obj_t* page, const char* title) {
     auto* row = lv_obj_create(page);
     lv_obj_remove_style_all(row);
-    lv_obj_set_size(row, lv_pct(100), TOKEN_FIRMWARE_CONTROL_MD);
+    // At least a control tall, and as tall as its tallest control: a button that overflowed
+    // a fixed height would push its focus ring past the room allowed for it.
+    lv_obj_set_size(row, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_style_min_height(row, TOKEN_FIRMWARE_CONTROL_MD, 0);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(row, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE);
