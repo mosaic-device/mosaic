@@ -18,9 +18,36 @@ enum DaemonActionId {
   LOCK_SCREEN = 4;
 }
 
+// First frame from the device on every connection. See the wiki's
+// Device Connection Protocol for ordering and receiver-enforced field rules.
 message DeviceConnect {
   string mac_address = 1 [(nanopb).max_size = 18];
   string auth_secret = 2 [(nanopb).max_size = 64];
+  // Wire protocol version. Currently 1; zero is unsupported. Never renumber.
+  uint32 protocol_version = 3;
+}
+
+enum ConnectionRejectReason {
+  CONNECTION_REJECT_REASON_UNSPECIFIED = 0;
+  CONNECTION_REJECT_REASON_MALFORMED_REQUEST = 1;
+  CONNECTION_REJECT_REASON_UNSUPPORTED_VERSION = 2;
+  CONNECTION_REJECT_REASON_CREDENTIAL_REVOKED = 3;
+  CONNECTION_REJECT_REASON_SERVER_BUSY = 4;
+}
+
+// The credential is not paired yet. The code is eight uppercase characters
+// without the dash; the device displays it as XXXX-XXXX.
+message PairingPending {
+  string code = 1 [(nanopb).max_size = 9];
+  uint32 expires_in_seconds = 2;
+}
+
+// The credential is paired; application frames are now allowed.
+message DevicePaired {}
+
+// The server will close the connection after this frame. Never renumber.
+message ConnectionRejected {
+  ConnectionRejectReason reason = 1;
 }
 
 message NotificationAction {
@@ -68,6 +95,7 @@ message DeviceToBackendEnvelope {
     DeviceTelemetry telemetry = 2;
     DeviceActionTrigger daemon_action = 3;
     IntegrationActionTrigger integration_action = 4;
+    DeviceConnect connect = 5;
   }
 }
 
@@ -77,5 +105,8 @@ message BackendToDeviceEnvelope {
   oneof payload {
     AiSummaryNotification notification = 2;
     IntegrationActionResult action_result = 3;
+    PairingPending pairing_pending = 4;
+    DevicePaired paired = 5;
+    ConnectionRejected rejected = 6;
   }
 }

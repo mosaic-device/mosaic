@@ -24,3 +24,13 @@ git diff --exit-code -- platform/packages/protocols firmware/components/device_p
 
 Review and commit schema, configuration, and generated bindings together.
 Do not hand-edit generated bindings.
+
+## Golden frames
+
+`testdata/frames.txt` holds hex-encoded envelopes that both sides must decode
+identically: the C# bindings in `DeviceProtocolGoldenFrameTests` (.NET job) and
+the nanopb bindings in `firmware/components/device_protos/tests/run.py`
+(Firmware host checks job). When a schema change adds or changes a frame, add
+the frame here and its expected fields to both tests in the same change; each
+test fails if the file and its expectations cover different frames. Message
+ordering and field rules are on the wiki's Device Connection Protocol page.

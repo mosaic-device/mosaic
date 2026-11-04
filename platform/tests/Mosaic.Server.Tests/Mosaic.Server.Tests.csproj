@@ -25,4 +25,9 @@
     <ProjectReference Include="../../apps/backend/Mosaic.Server.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Shared with the firmware host test so both sides check the same bytes. -->
+    <None Include="../../packages/protocols/testdata/frames.txt" Link="testdata/frames.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

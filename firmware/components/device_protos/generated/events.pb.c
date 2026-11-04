@@ -9,6 +9,15 @@
 PB_BIND(mosaic_device_v1_DeviceConnect, mosaic_device_v1_DeviceConnect, AUTO)
 
 
+PB_BIND(mosaic_device_v1_PairingPending, mosaic_device_v1_PairingPending, AUTO)
+
+
+PB_BIND(mosaic_device_v1_DevicePaired, mosaic_device_v1_DevicePaired, AUTO)
+
+
+PB_BIND(mosaic_device_v1_ConnectionRejected, mosaic_device_v1_ConnectionRejected, AUTO)
+
+
 PB_BIND(mosaic_device_v1_NotificationAction, mosaic_device_v1_NotificationAction, AUTO)
 
 
@@ -31,6 +40,8 @@ PB_BIND(mosaic_device_v1_DeviceToBackendEnvelope, mosaic_device_v1_DeviceToBacke
 
 
 PB_BIND(mosaic_device_v1_BackendToDeviceEnvelope, mosaic_device_v1_BackendToDeviceEnvelope, 2)
+
+
 
 
 
