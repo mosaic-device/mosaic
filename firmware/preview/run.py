@@ -11,6 +11,7 @@ firmware = here.parent
 build = firmware / "build" / "device-preview"
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--build-only", action="store_true", help="build the preview without starting the device")
 parser.add_argument("--state", help="start from a prepared device: setup, connecting, offline, unpaired, home, "
                     "trouble or settings; without it, the preview is one device that keeps its NVS")
 parser.add_argument("--fresh", action="store_true", help="erase the device's NVS first, like a factory reset")
@@ -31,6 +32,8 @@ if not (lvgl / "lvgl.h").exists():
 subprocess.run(["cmake", "-S", str(here), "-B", str(build), f"-DLVGL_DIR={lvgl}"], check=True)
 subprocess.run(["cmake", "--build", str(build), "--config", "Release",
                 "--parallel", str(min(8, os.cpu_count() or 2))], check=True)
+if args.build_only:
+    sys.exit(0)
 name = "mosaic-preview.exe" if sys.platform == "win32" else "mosaic-preview"
 # Multi-config generators (Visual Studio) put the program in a per-config directory.
 program = next((path for path in (build / name, build / "Release" / name) if path.exists()), build / name)

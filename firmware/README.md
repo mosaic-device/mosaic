@@ -18,6 +18,7 @@ Studio 2022 with SDL2 from vcpkg (`vcpkg install sdl2`, then set
 
 ```sh
 pnpm fw:preview
+pnpm fw:preview --build-only
 pnpm fw:preview --fresh
 pnpm fw:preview --state settings
 pnpm fw:preview --state trouble --screenshot firmware/build/trouble.bmp

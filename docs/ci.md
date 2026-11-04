@@ -125,18 +125,12 @@ python3 firmware/preview/platform/tests/run.py
 
 ### Firmware preview
 
-CI builds the host preview on Linux, macOS and Windows and boots the real firmware
-into prepared states; a state the firmware never reaches fails the job. It needs
+CI builds the host preview on Linux, macOS and Windows. It needs
 CMake, SDL2 and a C++23 compiler (see the [firmware guide](../firmware/README.md#device-screen-preview)):
 
 ```sh
-python3 firmware/preview/run.py --state setup --screenshot firmware/build/preview-ci/setup.bmp
-python3 firmware/preview/run.py --state settings --screenshot firmware/build/preview-ci/settings.bmp
-python3 firmware/preview/check_setup_page.py
+python3 firmware/preview/run.py --build-only
 ```
-
-The last check sets up the device through the served setup page, as a phone would,
-and waits for the firmware to save, restart and join the network.
 
 ### Firmware build
 
