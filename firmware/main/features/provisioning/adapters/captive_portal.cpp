@@ -23,15 +23,14 @@ extern const char setup_js_start[] asm("_binary_setup_js_start");
 
 namespace mosaic::features::provisioning::adapters::portal {
 namespace {
-    constexpr size_t kBodyLimit = form::kEncodedBodyLimit;
+    constexpr size_t kBodyLimit = kFormBodyLimit;
     constexpr int64_t kBodyReceiveLimitUs = 10'000'000;
-    constexpr int64_t kAttemptIntervalUs = 3'000'000;
     Context context { };
     httpd_handle_t server = nullptr;
     DnsLifecycle dns;
     int dns_socket = -1; // Published by task creation; only the worker uses/closes it afterward.
     std::atomic_bool pending { false };
-    std::atomic<int64_t> last_attempt { 0 };
+    AttemptThrottle throttle;
     bool socket_ipv4(const sockaddr_storage& address, socklen_t length, uint32_t& result) {
         if (address.ss_family == AF_INET && length >= sizeof(sockaddr_in)) {
             result = reinterpret_cast<const sockaddr_in*>(&address)->sin_addr.s_addr;
@@ -121,26 +120,25 @@ namespace {
         return httpd_resp_sendstr(req, json ? reply.structured : reply.plain);
     }
 
+    esp_err_t send(httpd_req_t* req, const HttpReply& reply) {
+        if (reply.code == 400)
+            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, reply.text);
+        httpd_resp_set_status(req, status_line(reply.code));
+        if (reply.html)
+            httpd_resp_set_type(req, "text/html; charset=utf-8");
+        return httpd_resp_sendstr(req, reply.text);
+    }
+
     esp_err_t save(httpd_req_t* req) {
         if (!from_ap(req) || !same_host(req))
             return httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Use the displayed URL");
-        if (!accepts_submission(context.status->load(), pending.load())) {
-            httpd_resp_set_status(req, "409 Conflict");
-            return httpd_resp_sendstr(req, "Setup already in progress");
-        }
-        if (req->content_len <= 0 || req->content_len > kBodyLimit)
-            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid form size");
+        // A type too long for this buffer is not the form type either.
         char type[64] { };
-        if (httpd_req_get_hdr_value_str(req, "Content-Type", type, sizeof(type)) != ESP_OK
-            || std::strcmp(type, "application/x-www-form-urlencoded") != 0)
-            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Expected form data");
-        int64_t now = esp_timer_get_time();
-        int64_t previous = last_attempt.load();
-        if ((previous != 0 && now - previous < kAttemptIntervalUs)
-            || !last_attempt.compare_exchange_strong(previous, now)) {
-            httpd_resp_set_status(req, "429 Too Many Requests");
-            return httpd_resp_sendstr(req, "Wait a few seconds before retrying");
-        }
+        if (httpd_req_get_hdr_value_str(req, "Content-Type", type, sizeof(type)) != ESP_OK)
+            type[0] = '\0';
+        if (const auto rejected = screen_save(context.status->load(), pending.load(),
+                static_cast<int64_t>(req->content_len), type, throttle, esp_timer_get_time()))
+            return send(req, *rejected);
         char body[kBodyLimit + 1] { };
         Settings settings { };
         int received = 0;
@@ -165,25 +163,19 @@ namespace {
         support::secure_erase(body, sizeof(body));
         if (!ok) {
             support::secure_erase(&settings, sizeof(settings));
-            return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid SSID, password or WSS URL");
+            return send(req, kInvalidSettings);
         }
         if (pending.exchange(true)) {
             support::secure_erase(&settings, sizeof(settings));
-            httpd_resp_set_status(req, "409 Conflict");
-            return httpd_resp_sendstr(req, "Setup already in progress");
+            return send(req, kInProgress);
         }
         const bool queued = context.submit(settings, context.user);
         support::secure_erase(&settings, sizeof(settings));
         if (!queued) {
             pending.store(false);
-            httpd_resp_set_status(req, "503 Service Unavailable");
-            return httpd_resp_sendstr(req, "Busy; retry shortly");
+            return send(req, kBusy);
         }
-        httpd_resp_set_status(req, "202 Accepted");
-        httpd_resp_set_type(req, "text/html; charset=utf-8");
-        return httpd_resp_sendstr(req,
-            "<p>Saving settings without testing Wi-Fi. <a href='/status'>Check status</a> or watch the device "
-            "display.</p>");
+        return send(req, kAccepted);
     }
 
     esp_err_t redirect(httpd_req_t* req) {
