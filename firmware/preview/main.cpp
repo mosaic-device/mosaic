@@ -5,7 +5,6 @@
 #include "device.hpp"
 #include "events/bus.hpp"
 #include "features/provisioning/adapters/settings_store.hpp"
-#include "console_log.hpp"
 #include "device_view.hpp"
 #include "mosaic_platform.hpp"
 #include "nvs_flash.h"
@@ -78,7 +77,7 @@ const State* find_state(const std::string& name) {
 // esp_restart(): start this program again with the same options and NVS, so the boot
 // that follows sees what the firmware saved, as the device would.
 void exec(std::vector<std::string> args) {
-    mosaic::preview::console_log::stop();
+    std::fflush(stdout);
     std::vector<char*> argv;
     for (auto& arg : args)
         argv.push_back(arg.data());
@@ -282,7 +281,6 @@ int main(int argc, char** argv) {
     }
 
     using mosaic::preview::DeviceView;
-    mosaic::preview::console_log::start();
     // The screen keeps its physical size; the rest of the device and the bench scale with it,
     // within the desktop.
     int target_width = window_width(requested_width) * DeviceView::width() / W;
@@ -300,11 +298,6 @@ int main(int argc, char** argv) {
     auto* renderer = window ? SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED) : nullptr;
     if (window && !renderer)
         renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-    // Mouse events arrive in these coordinates, where the screen is 1280x720 panel pixels.
-    if (renderer && SDL_RenderSetLogicalSize(renderer, DeviceView::width(), DeviceView::height()) != 0) {
-        std::fprintf(stderr, "Cannot set preview coordinates: %s\n", SDL_GetError());
-        return 1;
-    }
     auto* texture
         = renderer ? SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING, W, H) : nullptr;
     if (!window || !renderer || !texture) {
@@ -320,7 +313,7 @@ int main(int argc, char** argv) {
     view.start(renderer, std::move(options));
     std::puts("The panel under the device drives everything around it. Turn the knob with the wheel over it or\n"
               "Left/Right; press it with a click, Enter or Space, and hold for Back (or Backspace). The mouse on\n"
-              "the screen is touch. F1: console, F12: screenshot, Esc: quit.");
+              "the screen is touch. F12: screenshot, Esc: quit. Console commands work here; \"help\" lists them.");
 
     bool running = true;
     int shot_number = 0;
@@ -335,9 +328,6 @@ int main(int argc, char** argv) {
                 continue;
             if (event.type == SDL_KEYDOWN && !event.key.repeat) {
                 switch (event.key.keysym.sym) {
-                case SDLK_F1:
-                    view.open_console();
-                    break;
                 case SDLK_LEFT:
                     device::turn(-1);
                     break;
@@ -379,7 +369,7 @@ int main(int argc, char** argv) {
             SDL_FreeSurface(image);
             std::printf(saved ? "Window screenshot: %s\n" : "Window screenshot failed: %s\n",
                 saved ? window_shot_path.c_str() : SDL_GetError());
-            mosaic::preview::console_log::stop();
+            std::fflush(stdout);
             std::_Exit(saved && !g_stuck.load() ? 0 : 1);
         }
         SDL_RenderPresent(renderer);
@@ -394,6 +384,6 @@ int main(int argc, char** argv) {
         SDL_Delay(16);
     }
     view.close();
-    mosaic::preview::console_log::stop();
+    std::fflush(stdout);
     std::_Exit(0);
 }

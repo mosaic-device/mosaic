@@ -55,7 +55,6 @@ file(CONFIGURE OUTPUT "${SOUNDS_CPP}" CONTENT "${SOUNDS_TEXT}" @ONLY)
 # adapters/ replaces those.
 add_executable(mosaic-preview
   main.cpp
-  console_log.cpp
   device_view.cpp
   text.cpp
   adapters/bh1750.cpp

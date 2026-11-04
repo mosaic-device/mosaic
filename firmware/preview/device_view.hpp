@@ -22,20 +22,15 @@ public:
         std::function<void(const std::string&)> start_as;
     };
 
-    // The whole window in panel pixels; the screen is 1280 of its width.
+    // The window's layout size, margin included; the screen is 1280 of its width.
     static int width();
     static int height();
 
     bool start(SDL_Renderer* renderer, Options options);
     // Draws everything; screen is the latest frame as a texture.
     void render(SDL_Texture* screen);
-    // Handles mouse and text events for the device and panel; true when consumed.
+    // Handles mouse events for the device and panel; true when consumed.
     bool handle(const SDL_Event& event);
-    // The console line has the keyboard while open.
-    bool typing() const {
-        return typing_;
-    }
-    void open_console();
     void close();
 
 private:
@@ -49,9 +44,13 @@ private:
     int button(int x, int y, const std::string& label, bool selected, bool enabled, std::function<void()> action);
     int button_width(const std::string& label);
     void row_label(int y, const char* title, const char* hint);
-    void finish_command(bool run);
+    // Window coordinates to device coordinates, as last drawn.
+    void to_device(int window_x, int window_y, int& x, int& y) const;
 
     SDL_Renderer* renderer_ = nullptr;
+    SDL_Texture* canvas_ = nullptr; // The layout at full size.
+    float scale_ = 1;
+    float offset_x_ = 0, offset_y_ = 0;
     Options options_;
     Text text_;
     std::vector<Button> buttons_;
@@ -59,8 +58,6 @@ private:
     // The button the mouse went down on; it acts if the mouse comes up over it too.
     bool pressing_ = false;
     SDL_Rect pressed_ { };
-    bool typing_ = false;
-    std::string line_;
     bool dragging_light_ = false;
     bool touching_ = false;
     bool knob_down_ = false;

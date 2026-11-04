@@ -42,7 +42,8 @@ against the board. The firmware screen and screenshots stay at 1280×720 in
 RGB565; the window uses the monitor's high-DPI output for a sharp image.
 
 The window shows the whole device: the screen, the LED ring around the knob to
-its right, the LED strip along the bottom and the light sensor on its top edge.
+its right, the LED strip along the bottom, and the light sensor and speaker on
+its top edge.
 Turn the knob with the mouse wheel over it or Left and Right, and press it with
 a click or Enter or Space; holding past the long-press time is Back, as is
 Backspace. The mouse on the screen is touch. The layout constants at the top of
@@ -54,12 +55,12 @@ resets, or makes storage fail; **Server** sets the connection status or sends a
 notification; **Saved Wi-Fi** sets how the network answers or drops it;
 **Phone** submits the setup page while the device shows setup; and **Room
 light** sets the sensor's reading or unplugs it. The current choice in each row
-is highlighted. Below them are the recent console output and a command line (F1)
-for anything else. Press F12 to save a BMP of the screen in
+is highlighted. Press F12 to save a BMP of the screen in
 `firmware/build/preview-shots`, or set a different directory with `--shots`.
 
-The terminal is the device's debug console too. Both consoles have the [debug
-triggers](#debug-triggers) plus the commands the panel uses:
+The terminal is the device's debug console, for anything the panel does not
+cover. It has the [debug triggers](#debug-triggers) plus the commands the panel
+uses:
 
 | Command | Simulates |
 | --- | --- |

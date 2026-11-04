@@ -1,7 +1,6 @@
 #include "device_view.hpp"
 
 #include "console.hpp"
-#include "console_log.hpp"
 #include "device.hpp"
 #include "events/bus.hpp"
 #include "mosaic_platform.hpp"
@@ -32,7 +31,11 @@ namespace {
     constexpr int kBodyWidth = kRingX + kRingRadius + kSide;
     constexpr int kStripY = kScreenY + device::kHeight + kStripGap;
     constexpr int kBodyHeight = kStripY + kStripHeight + kBottom;
-    constexpr int kSensorX = kBodyWidth / 2, kSensorY = kTop / 2;
+    // The light sensor and the speaker grille share the top edge, side by side.
+    constexpr int kSensorX = kBodyWidth / 2 - 50, kSensorY = kTop / 2;
+    constexpr int kSpeakerX = kBodyWidth / 2 + 10, kSpeakerY = kTop / 2;
+    // Empty space around the device and panel inside the window.
+    constexpr int kMargin = 48;
 
     // The bench panel under the device: a row per thing around it, label on the left.
     constexpr int kPanelY = kBodyHeight + 28;
@@ -57,17 +60,11 @@ namespace {
     constexpr int kUnplugW = 270;
     constexpr int kUnplugX = kRight - kUnplugW;
     constexpr int kSliderLeft = kControlsX + 16, kSliderRight = kUnplugX - 48;
-    // The console: a few quiet lines of output and a command line.
-    constexpr int kLogY = kRoomRow + kRowHeight + 40;
-    constexpr int kLogLines = 5;
-    constexpr int kLineHeight = 27;
-    constexpr float kLogScale = 0.7F;
-    constexpr int kInputY = kLogY + kLogLines * kLineHeight + 12;
-    constexpr int kInputH = 46;
-    constexpr int kHeight = kInputY + kInputH + 32;
+    constexpr int kHeight = kRoomRow + kRowHeight + 36;
 
     constexpr float kMaxLux = 600.0F;
 
+    constexpr SDL_Color kBackground { 22, 23, 27, 255 };
     constexpr SDL_Color kInk { 238, 236, 230, 255 };
     constexpr SDL_Color kMuted { 150, 152, 160, 255 };
     constexpr SDL_Color kFaint { 96, 99, 108, 255 };
@@ -84,10 +81,15 @@ namespace {
         set(renderer, color);
         SDL_RenderFillRect(renderer, &rect);
     }
+    // One row of a shape.
+    void row(SDL_Renderer* renderer, int x1, int y, int x2) {
+        const SDL_Rect span { x1, y, x2 - x1 + 1, 1 };
+        SDL_RenderFillRect(renderer, &span);
+    }
     void disc(SDL_Renderer* renderer, int cx, int cy, int radius) {
         for (int y = -radius; y <= radius; ++y) {
             const int x = static_cast<int>(std::lround(std::sqrt(static_cast<float>(radius * radius - y * y))));
-            SDL_RenderDrawLine(renderer, cx - x, cy + y, cx + x, cy + y);
+            row(renderer, cx - x, cy + y, cx + x);
         }
     }
     void rounded(SDL_Renderer* renderer, SDL_Rect rect, int radius, SDL_Color color) {
@@ -97,9 +99,8 @@ namespace {
         for (int y = 0; y < radius; ++y) {
             const float dy = static_cast<float>(radius - y) - 0.5F;
             const int inset = radius - static_cast<int>(std::sqrt(static_cast<float>(radius * radius) - dy * dy));
-            SDL_RenderDrawLine(renderer, rect.x + inset, rect.y + y, rect.x + rect.w - 1 - inset, rect.y + y);
-            SDL_RenderDrawLine(renderer, rect.x + inset, rect.y + rect.h - 1 - y, rect.x + rect.w - 1 - inset,
-                rect.y + rect.h - 1 - y);
+            row(renderer, rect.x + inset, rect.y + y, rect.x + rect.w - 1 - inset);
+            row(renderer, rect.x + inset, rect.y + rect.h - 1 - y, rect.x + rect.w - 1 - inset);
         }
     }
     // An LED as seen: its limited drive scaled back to full range so the ceiling reads as
@@ -145,10 +146,10 @@ namespace {
 } // namespace
 
 int DeviceView::width() {
-    return kBodyWidth;
+    return kBodyWidth + 2 * kMargin;
 }
 int DeviceView::height() {
-    return kHeight;
+    return kHeight + 2 * kMargin;
 }
 
 bool DeviceView::start(SDL_Renderer* renderer, Options options) {
@@ -159,14 +160,40 @@ bool DeviceView::start(SDL_Renderer* renderer, Options options) {
 
 void DeviceView::close() {
     text_.clear();
+    if (canvas_)
+        SDL_DestroyTexture(canvas_);
+    canvas_ = nullptr;
 }
 
 void DeviceView::render(SDL_Texture* screen) {
+    // Draw at full size offscreen, then scale the picture into the window: fine detail like
+    // one-pixel rows would vanish if each shape were scaled on its own.
+    if (!canvas_) {
+        canvas_ = SDL_CreateTexture(renderer_, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, kBodyWidth, kHeight);
+        if (!canvas_)
+            return;
+    }
+    SDL_SetRenderTarget(renderer_, canvas_);
     SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND);
-    set(renderer_, { 22, 23, 27, 255 });
+    set(renderer_, kBackground);
     SDL_RenderClear(renderer_);
     draw_device(screen);
     draw_panel();
+    SDL_SetRenderTarget(renderer_, nullptr);
+
+    // Centered in the window, inset by the margin.
+    set(renderer_, kBackground);
+    SDL_RenderClear(renderer_);
+    int output_width = 0, output_height = 0;
+    SDL_GetRendererOutputSize(renderer_, &output_width, &output_height);
+    scale_ = std::min(static_cast<float>(output_width) / static_cast<float>(width()),
+        static_cast<float>(output_height) / static_cast<float>(height()));
+    offset_x_ = (static_cast<float>(output_width) / scale_ - static_cast<float>(width())) / 2 + kMargin;
+    offset_y_ = (static_cast<float>(output_height) / scale_ - static_cast<float>(height())) / 2 + kMargin;
+    const SDL_Rect target { static_cast<int>(std::lround(offset_x_ * scale_)),
+        static_cast<int>(std::lround(offset_y_ * scale_)), static_cast<int>(std::lround(kBodyWidth * scale_)),
+        static_cast<int>(std::lround(kHeight * scale_)) };
+    SDL_RenderCopy(renderer_, canvas_, nullptr, &target);
 }
 
 void DeviceView::draw_device(SDL_Texture* screen) {
@@ -211,11 +238,11 @@ void DeviceView::draw_device(SDL_Texture* screen) {
         led(renderer_, strip_left + static_cast<int>(step * (static_cast<float>(i) + 0.5F)), kStripY + kStripHeight / 2,
             13, leds.strip[i]);
 
-    // The speaker grille lights while a cue plays.
+    // The speaker grille on the top edge lights while a cue plays.
     const bool playing = device::speaker_on();
     for (int i = 0; i < 5; ++i) {
         set(renderer_, playing ? SDL_Color { 120, 170, 255, 255 } : SDL_Color { 40, 42, 48, 255 });
-        disc(renderer_, kRingX - 40 + i * 20, kStripY - 26, 4);
+        disc(renderer_, kSpeakerX + i * 20, kSpeakerY, 4);
     }
 }
 
@@ -343,69 +370,29 @@ void DeviceView::draw_panel() {
     const std::string sensor_label = lux ? "Unplug sensor" : "Plug in sensor";
     button(kRight - button_width(sensor_label), kRoomRow, sensor_label, !lux, true,
         [plugged = lux.has_value()] { device::set_lux(plugged ? std::nullopt : std::optional<float>(150.0F)); });
-
-    // Console: recent output, quietly, and a command line for anything the buttons do not cover.
-    fill(renderer_, { kPad, kLogY - 20, kRight - kPad, 1 }, { 46, 48, 55, 255 });
-    const auto lines = console_log::lines(kLogLines);
-    for (size_t i = 0; i < lines.size(); ++i)
-        text_.draw(renderer_, body, lines[i], kPad, kLogY + static_cast<int>(i) * kLineHeight,
-            lines[i].starts_with("mosaic>") ? kMuted : kFaint, Text::Align::left, kLogScale);
-    const SDL_Rect input { kPad, kInputY, kRight - kPad, kInputH };
-    rounded(renderer_, input, 10, typing_ ? kAccent : SDL_Color { 40, 41, 47, 255 });
-    rounded(renderer_, { input.x + 2, input.y + 2, input.w - 4, input.h - 4 }, 9, { 20, 21, 25, 255 });
-    if (typing_) {
-        const int typed
-            = text_.draw(renderer_, body, "mosaic> " + line_, input.x + 16, input.y + 8, kInk, Text::Align::left, 0.8F);
-        if ((SDL_GetTicks() / 500) % 2 == 0)
-            fill(renderer_, { input.x + 20 + typed, input.y + 10, 2, input.h - 20 }, kInk);
-    } else {
-        text_.draw(renderer_, body, "Type a console command (F1); \"help\" lists them", input.x + 16, input.y + 8,
-            kFaint, Text::Align::left, 0.8F);
-    }
 }
 
-void DeviceView::open_console() {
-    typing_ = true;
-    SDL_StartTextInput();
-}
-
-void DeviceView::finish_command(bool run) {
-    if (run) {
-        std::printf("mosaic> %s\n", line_.c_str());
-        run_in_background(line_);
-    }
-    line_.clear();
-    typing_ = false;
-    SDL_StopTextInput();
+void DeviceView::to_device(int window_x, int window_y, int& x, int& y) const {
+    // Window points to output pixels (they differ on high-DPI displays), then into the
+    // device's coordinates.
+    int window_width = 1, window_height = 1, output_width = 1, output_height = 1;
+    SDL_GetWindowSize(SDL_RenderGetWindow(renderer_), &window_width, &window_height);
+    SDL_GetRendererOutputSize(renderer_, &output_width, &output_height);
+    const float pixel_x
+        = static_cast<float>(window_x) * static_cast<float>(output_width) / static_cast<float>(window_width);
+    const float pixel_y
+        = static_cast<float>(window_y) * static_cast<float>(output_height) / static_cast<float>(window_height);
+    x = static_cast<int>(std::floor(pixel_x / scale_ - offset_x_));
+    y = static_cast<int>(std::floor(pixel_y / scale_ - offset_y_));
 }
 
 bool DeviceView::handle(const SDL_Event& event) {
-    if (typing_ && event.type == SDL_TEXTINPUT) {
-        line_ += event.text.text;
-        return true;
-    }
-    if (typing_ && event.type == SDL_KEYDOWN) {
-        const auto key = event.key.keysym.sym;
-        if (key == SDLK_BACKSPACE && !line_.empty()) {
-            // Remove one UTF-8 character.
-            do
-                line_.pop_back();
-            while (!line_.empty() && (static_cast<unsigned char>(line_.back()) & 0xC0) == 0x80);
-        } else if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
-            finish_command(!line_.empty());
-        } else if (key == SDLK_ESCAPE) {
-            finish_command(false);
-        }
-        return true;
-    }
-    if (typing_ && event.type == SDL_KEYUP)
-        return true;
-
     if (event.type == SDL_MOUSEWHEEL) {
+        int mouse_x = 0, mouse_y = 0;
+        SDL_GetMouseState(&mouse_x, &mouse_y);
         int x = 0, y = 0;
-        SDL_GetMouseState(&x, &y);
-        float logical_x = 0, logical_y = 0;
-        SDL_RenderWindowToLogical(renderer_, x, y, &logical_x, &logical_y);
+        to_device(mouse_x, mouse_y, x, y);
+        const float logical_x = static_cast<float>(x), logical_y = static_cast<float>(y);
         const int steps = event.wheel.y * (event.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -1 : 1);
         if (on_knob(static_cast<int>(logical_x), static_cast<int>(logical_y))) {
             device::turn(steps > 0 ? 1 : steps < 0 ? -1 : 0);
@@ -421,8 +408,9 @@ bool DeviceView::handle(const SDL_Event& event) {
         return false;
     const bool down = event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT;
     const bool up = event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT;
-    const int x = event.type == SDL_MOUSEMOTION ? event.motion.x : event.button.x;
-    const int y = event.type == SDL_MOUSEMOTION ? event.motion.y : event.button.y;
+    int x = 0, y = 0;
+    to_device(event.type == SDL_MOUSEMOTION ? event.motion.x : event.button.x,
+        event.type == SDL_MOUSEMOTION ? event.motion.y : event.button.y, x, y);
     mouse_x_ = x;
     mouse_y_ = y;
     const SDL_Rect screen { kScreenX, kScreenY, device::kWidth, device::kHeight };
@@ -468,8 +456,6 @@ bool DeviceView::handle(const SDL_Event& event) {
         && x <= kSliderRight + 20) {
         dragging_light_ = true;
         device::set_lux(lux_at(x));
-    } else if (inside(x, y, { kPad, kInputY, kRight - kPad, kInputH })) {
-        open_console();
     }
     return true;
 }
