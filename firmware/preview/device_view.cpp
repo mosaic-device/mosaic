@@ -373,8 +373,8 @@ void DeviceView::draw_panel() {
 }
 
 void DeviceView::to_device(int window_x, int window_y, int& x, int& y) const {
-    // Window points to output pixels (they differ on high-DPI displays), then into the
-    // device's coordinates.
+    // Window points, as SDL_GetMouseState reports them, to output pixels (they differ on
+    // high-DPI displays), then into the device's coordinates.
     int window_width = 1, window_height = 1, output_width = 1, output_height = 1;
     SDL_GetWindowSize(SDL_RenderGetWindow(renderer_), &window_width, &window_height);
     SDL_GetRendererOutputSize(renderer_, &output_width, &output_height);
@@ -408,9 +408,12 @@ bool DeviceView::handle(const SDL_Event& event) {
         return false;
     const bool down = event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT;
     const bool up = event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT;
+    // Not the event's own coordinates: SDL already rescales those for the renderer, and how
+    // depends on the display. The mouse state is always in window points.
+    int window_x = 0, window_y = 0;
+    SDL_GetMouseState(&window_x, &window_y);
     int x = 0, y = 0;
-    to_device(event.type == SDL_MOUSEMOTION ? event.motion.x : event.button.x,
-        event.type == SDL_MOUSEMOTION ? event.motion.y : event.button.y, x, y);
+    to_device(window_x, window_y, x, y);
     mouse_x_ = x;
     mouse_y_ = y;
     const SDL_Rect screen { kScreenX, kScreenY, device::kWidth, device::kHeight };
