@@ -2,13 +2,14 @@
 
 ASP.NET Core on .NET 10, with Native AOT publishing enabled. The server exposes
 `GET /healthz` (HTTP 200, plain text `OK`), the first-run setup, login, and session API
-(see [Admin authentication](#admin-authentication)), and serves the built React admin app
+(see [Admin authentication](#admin-authentication)), the device WebSocket at `/ws/device`
+(see [Device connections](#device-connections)), and serves the built React admin app
 from `wwwroot/`. Browser navigation falls back to `index.html`; missing assets and
 unimplemented `/api` and `/ws` paths return 404.
 
 At startup the server opens its SQLite database and applies any pending schema
-migrations (see [Database](#database)). Pairing, integrations, and device
-transport are not implemented yet. The admin page is currently a placeholder. Keep the server
+migrations (see [Database](#database)). Claiming and managing devices from the admin
+app, notifications, and integrations are not implemented yet. The admin page is currently a placeholder. Keep the server
 Native-AOT-compatible: [PR checks](../../../docs/ci.md) publish it for Linux x64 with
 AOT/trimming warnings as errors and run the smoke test against the result.
 
@@ -156,6 +157,37 @@ startup; enter that code in the setup screen. Scripts and `curl` must send an
 curl -i -X POST http://localhost:5000/api/auth/login -H "Origin: http://localhost:5000" -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"your-password\"}"
 ```
 
+## Device connections
+
+Devices connect to `/ws/device` as the
+[Device Connection Protocol](https://github.com/mosaic-device/mosaic/wiki/Device-Connection-Protocol)
+describes; the code is in [`Devices/`](Devices). Each binary WebSocket message is one
+protobuf envelope. The device's first frame must be `connect`, within 10 seconds:
+
+- A **paired** credential gets `paired`.
+- An **unknown** credential gets `pairing_pending` with an 8-character code and the
+  seconds it has left. Codes last ten minutes, survive brief reconnects, are replaced
+  at expiry while the device stays connected, and live only in memory, so a restart
+  drops them.
+- A **revoked** credential, a **malformed** frame or an **unsupported version** gets
+  `rejected` with the reason, then a close, before any device access.
+
+The `devices` table stores only the SHA-256 of each device's decoded 32-byte secret.
+Secrets and pairing codes are never logged. Requests with an `Origin` header get 403,
+so a web page cannot open device connections. The server pings every 15 seconds and
+drops a connection that misses its pong for 15 seconds. These settings can be changed
+under `Devices`:
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `Devices:HandshakeTimeout` | `00:00:10` | Time allowed for the first `connect` |
+| `Devices:KeepAliveInterval` | `00:00:15` | Ping interval |
+| `Devices:KeepAliveTimeout` | `00:00:15` | Pong timeout before the connection is dropped |
+| `Devices:MaxPendingPairings` | `32` | Live pairing codes at once; more unpaired devices get `SERVER_BUSY` |
+
+Claiming a code, listing and removing devices come with the admin API (#104, #105);
+`PairingCodes`, `DeviceStore` and `DeviceConnections` are what they call.
+
 ## Build and run the Linux Native AOT container
 
 Prerequisite: Docker Desktop running Linux containers, or Docker Engine on Linux.
@@ -223,9 +255,11 @@ This builds the assets and native server, then executes
 `/out/Mosaic.Server`. The script starts the server on `127.0.0.1:55881` against a
 new temporary database, checks it, runs first-run setup, a rejected login, a login,
 and a logout through the API, checks `GET /api/auth/session` with a valid, missing,
-malformed, and logged-out session cookie, and stops it. It then confirms the schema exists and
-the password is stored hashed, saves a settings row, restarts the server, and
-confirms the admin can still log in, the rows remain, and no migration ran twice. An unexpected response, startup
+malformed, and logged-out session cookie, connects an unpaired device over `/ws/device`
+and expects a pairing code, and stops it. It then confirms the schema exists and
+the password is stored hashed, saves a settings row and that device's secret hash,
+restarts the server, and confirms the admin can still log in, the device is now
+authenticated as paired, the rows remain, and no migration ran twice. An unexpected response, startup
 failure, or database mismatch fails the build.
 
 On each start the seven expected responses are:
@@ -286,5 +320,5 @@ publish. Keep local `wwwroot`, publish outputs, and IDE files out of commits.
 
 ## Generated device protocol
 
-`Generated/DeviceProtocol/` contains committed C# bindings, not yet connected to a
-device transport. Do not hand-edit them; see [protocol generation](../../packages/protocols/README.md).
+`Generated/DeviceProtocol/` contains the committed C# bindings used by
+[device connections](#device-connections). Do not hand-edit them; see [protocol generation](../../packages/protocols/README.md).

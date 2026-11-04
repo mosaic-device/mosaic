@@ -62,9 +62,10 @@ The publish/smoke commands above target Linux x64 and need Linux AOT prerequisit
 CI builds the admin assets before publishing and makes AOT/trimming warnings fatal.
 
 `dotnet test` runs `platform/tests/Mosaic.Server.Tests`, which covers SQLite schema
-migrations and persistence. The published-server smoke test covers static assets,
-SPA routing, missing API/WebSocket routes, and, for the AOT binary, database
-creation, restart persistence and migrations not re-running.
+migrations and persistence, the admin API, and the device WebSocket driven by a fake
+device client. The published-server smoke test covers static assets, SPA routing,
+missing API/WebSocket routes, and, for the AOT binary, database creation, restart
+persistence, migrations not re-running, and an unpaired and a paired device handshake.
 
 ### Rust
 

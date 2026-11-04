@@ -1,0 +1,430 @@
+using System.Net.WebSockets;
+using Google.Protobuf;
+using Mosaic.Device.V1;
+
+namespace Mosaic.Server.Devices;
+
+/// <summary>
+/// <c>/ws/device</c>: the one entry point for first pairing and every reconnect (Device
+/// Connection Protocol). A paired credential is authenticated; an unknown one gets a pairing
+/// code; a revoked, malformed or unsupported one is rejected before any device access.
+/// </summary>
+public static class DeviceEndpoint
+{
+    public const string Path = "/ws/device";
+
+    /// <summary>The largest device frame: the generated nanopb <c>DeviceToBackendEnvelope_size</c>.</summary>
+    public const int MaxDeviceFrameBytes = 328;
+
+    /// <summary>The largest server frame: the generated nanopb <c>BackendToDeviceEnvelope_size</c>.</summary>
+    public const int MaxServerFrameBytes = 1326;
+
+    public static void MapDeviceEndpoint(this WebApplication app)
+    {
+        var options = app.Services.GetRequiredService<DeviceConnectionOptions>();
+        var handler = app.Services.GetRequiredService<DeviceConnectionHandler>();
+        app.Map(Path, async context =>
+        {
+            // A browser always sends Origin; the device never does. This stops a web page from
+            // opening device connections and using up pending pairing slots (section 1).
+            if (context.Request.Headers.Origin.Count > 0)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return;
+            }
+
+            if (!context.WebSockets.IsWebSocketRequest)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
+            using var socket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
+            {
+                DangerousEnableCompression = false,
+                KeepAliveInterval = options.KeepAliveInterval,
+                KeepAliveTimeout = options.KeepAliveTimeout,
+            });
+            await handler.RunAsync(socket);
+        });
+    }
+}
+
+/// <summary>Runs one device connection from its first frame until it closes.</summary>
+public sealed partial class DeviceConnectionHandler(
+    DeviceConnectionOptions options,
+    DeviceStore devices,
+    PairingCodes codes,
+    DeviceConnections connections,
+    TimeProvider time,
+    IHostApplicationLifetime lifetime,
+    ILogger<DeviceConnectionHandler> logger)
+{
+    // How long to wait for the device's close reply after the server closes. Real time, so a
+    // test clock cannot hold a socket open.
+    private static readonly TimeSpan CloseGrace = TimeSpan.FromSeconds(1);
+
+    private static readonly Task<DeviceSignal> NoSignal = new TaskCompletionSource<DeviceSignal>().Task;
+
+    private enum FrameKind
+    {
+        Binary,
+        Text,
+        TooLarge,
+        Closed,
+    }
+
+    private readonly record struct Frame(FrameKind Kind, byte[] Bytes);
+
+    /// <summary>The socket and its one outstanding receive, which every step waits on together.</summary>
+    private sealed class Link(WebSocket socket)
+    {
+        public WebSocket Socket { get; } = socket;
+
+        public Task<Frame> Receive { get; private set; } = ReceiveAsync(socket);
+
+        /// <summary>Starts reading the next frame once the current one has been handled.</summary>
+        public void ReceiveNext() => Receive = ReceiveAsync(Socket);
+    }
+
+    public async Task RunAsync(WebSocket socket)
+    {
+        var stopping = Task.Delay(Timeout.Infinite, lifetime.ApplicationStopping);
+        var link = new Link(socket);
+        try
+        {
+            await RunAsync(link, stopping);
+        }
+        catch (WebSocketException)
+        {
+            // The device went away, or missed its pongs and the socket was aborted.
+        }
+        catch (Exception exception)
+        {
+            LogUnexpectedFailure(exception);
+            await CloseAsync(link, WebSocketCloseStatus.InternalServerError);
+        }
+        finally
+        {
+            // Observe the last receive so its failure after close is never unobserved.
+            _ = link.Receive.ContinueWith(static task => _ = task.Exception, TaskScheduler.Default);
+        }
+    }
+
+    private async Task RunAsync(Link link, Task stopping)
+    {
+        using var handshake = new CancellationTokenSource();
+        var deadline = Task.Delay(options.HandshakeTimeout, time, handshake.Token);
+        var first = await Task.WhenAny(link.Receive, deadline, stopping);
+        await handshake.CancelAsync();
+        if (first == stopping)
+        {
+            await CloseAsync(link, WebSocketCloseStatus.EndpointUnavailable);
+            return;
+        }
+
+        if (first == deadline)
+        {
+            await CloseAsync(link, WebSocketCloseStatus.PolicyViolation);
+            return;
+        }
+
+        var frame = await link.Receive;
+        if (!await AcceptsFrameKind(link, frame))
+        {
+            return;
+        }
+
+        link.ReceiveNext();
+        DeviceToBackendEnvelope envelope;
+        try
+        {
+            envelope = DeviceToBackendEnvelope.Parser.ParseFrom(frame.Bytes);
+        }
+        catch (InvalidProtocolBufferException)
+        {
+            await RejectAsync(link, ConnectionRejectReason.MalformedRequest, "");
+            return;
+        }
+
+        var check = ConnectCheck.Check(envelope);
+        if (check.Connect is not { } connect)
+        {
+            LogRejected(check.Rejection!.Value);
+            await RejectAsync(link, check.Rejection!.Value, check.RequestId);
+            return;
+        }
+
+        // Version and fields are checked; now the credential (section 5).
+        var credential = devices.Find(connect.SecretHash);
+        if (credential.State == CredentialState.Revoked)
+        {
+            LogRevokedCredential(credential.DeviceId!.Value);
+            await RejectAsync(link, ConnectionRejectReason.CredentialRevoked, connect.RequestId);
+            return;
+        }
+
+        var connection = connections.Register(connect.SecretHash);
+        try
+        {
+            PendingCode? code = null;
+            if (credential.State == CredentialState.Paired)
+            {
+                LogPaired(credential.DeviceId!.Value);
+                await SendAsync(link, new BackendToDeviceEnvelope { RequestId = connect.RequestId, Paired = new DevicePaired() });
+            }
+            else
+            {
+                code = codes.Issue(connect.SecretHash, connect.MacAddress);
+                if (code is null)
+                {
+                    LogPendingLimit(options.MaxPendingPairings);
+                    await RejectAsync(link, ConnectionRejectReason.ServerBusy, connect.RequestId);
+                    return;
+                }
+
+                LogPending(connect.MacAddress);
+                await SendAsync(link, Pending(connect.RequestId, code));
+            }
+
+            await ConnectedAsync(link, stopping, connection, connect, code);
+        }
+        finally
+        {
+            connections.Unregister(connection);
+        }
+    }
+
+    /// <summary>
+    /// After the handshake reply. While <paramref name="code"/> is set the device is pending:
+    /// any frame from it is a protocol error, and its code is replaced at expiry. Once paired,
+    /// frames this server doesn't handle yet are ignored (section 7).
+    /// </summary>
+    private async Task ConnectedAsync(
+        Link link, Task stopping, DeviceConnection connection, ValidConnect connect, PendingCode? code)
+    {
+        var signal = connection.NextSignalAsync(CancellationToken.None).AsTask();
+        while (true)
+        {
+            using var expiryCancel = new CancellationTokenSource();
+            var expiry = code is null
+                ? NoSignal
+                : Task.Delay(Until(code), time, expiryCancel.Token);
+            var next = await Task.WhenAny(link.Receive, signal, expiry, stopping);
+            await expiryCancel.CancelAsync();
+
+            if (next == stopping)
+            {
+                await CloseAsync(link, WebSocketCloseStatus.EndpointUnavailable);
+                return;
+            }
+
+            if (next == link.Receive)
+            {
+                var frame = await link.Receive;
+                if (!await AcceptsFrameKind(link, frame))
+                {
+                    return;
+                }
+
+                link.ReceiveNext();
+                if (code is not null || !IsIgnorableAfterPairing(frame))
+                {
+                    await RejectAsync(link, ConnectionRejectReason.MalformedRequest, "");
+                    return;
+                }
+
+                continue;
+            }
+
+            if (next == signal)
+            {
+                switch (await signal)
+                {
+                    case DeviceSignal.Paired when code is not null:
+                        code = null;
+                        await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
+                        break;
+                    case DeviceSignal.Revoked:
+                        await RejectAsync(link, ConnectionRejectReason.CredentialRevoked, "");
+                        return;
+                    case DeviceSignal.Replaced:
+                        await CloseAsync(link, WebSocketCloseStatus.NormalClosure);
+                        return;
+                }
+
+                signal = connection.NextSignalAsync(CancellationToken.None).AsTask();
+                continue;
+            }
+
+            // The code expired while the device was connected. A claim may have just committed.
+            switch (devices.Find(connect.SecretHash).State)
+            {
+                case CredentialState.Paired:
+                    code = null;
+                    await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
+                    break;
+                case CredentialState.Revoked:
+                    await RejectAsync(link, ConnectionRejectReason.CredentialRevoked, "");
+                    return;
+                default:
+                    code = codes.Issue(connect.SecretHash, connect.MacAddress);
+                    if (code is null)
+                    {
+                        LogPendingLimit(options.MaxPendingPairings);
+                        await RejectAsync(link, ConnectionRejectReason.ServerBusy, "");
+                        return;
+                    }
+
+                    await SendAsync(link, Pending("", code));
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Closes for a text frame (1003), an oversized one (1009) or the device's own close.</summary>
+    private static async Task<bool> AcceptsFrameKind(Link link, Frame frame)
+    {
+        switch (frame.Kind)
+        {
+            case FrameKind.Binary:
+                return true;
+            case FrameKind.Text:
+                await CloseAsync(link, WebSocketCloseStatus.InvalidMessageType);
+                return false;
+            case FrameKind.TooLarge:
+                await CloseAsync(link, WebSocketCloseStatus.MessageTooBig);
+                return false;
+            default:
+                await CloseAsync(link, WebSocketCloseStatus.NormalClosure);
+                return false;
+        }
+    }
+
+    /// <summary>After <c>paired</c>, a decodable frame other than a second <c>connect</c> is tolerated.</summary>
+    private static bool IsIgnorableAfterPairing(Frame frame)
+    {
+        try
+        {
+            return DeviceToBackendEnvelope.Parser.ParseFrom(frame.Bytes).PayloadCase
+                != DeviceToBackendEnvelope.PayloadOneofCase.Connect;
+        }
+        catch (InvalidProtocolBufferException)
+        {
+            return false;
+        }
+    }
+
+    private TimeSpan Until(PendingCode code)
+    {
+        // PairingCodes treats a code with under a second left as expired.
+        var remaining = code.ExpiresAt - time.GetUtcNow() - TimeSpan.FromSeconds(1);
+        return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
+    }
+
+    private BackendToDeviceEnvelope Pending(string requestId, PendingCode code) => new()
+    {
+        RequestId = requestId,
+        PairingPending = new PairingPending { Code = code.Code, ExpiresInSeconds = (uint)codes.SecondsLeft(code) },
+    };
+
+    /// <summary>Sends <c>rejected</c>, then closes: 1000 after a revocation, 1008 otherwise (section 5).</summary>
+    private static async Task RejectAsync(Link link, ConnectionRejectReason reason, string requestId)
+    {
+        await SendAsync(link, new BackendToDeviceEnvelope
+        {
+            RequestId = requestId,
+            Rejected = new ConnectionRejected { Reason = reason },
+        });
+        await CloseAsync(
+            link,
+            reason == ConnectionRejectReason.CredentialRevoked ? WebSocketCloseStatus.NormalClosure : WebSocketCloseStatus.PolicyViolation);
+    }
+
+    private static async Task SendAsync(Link link, BackendToDeviceEnvelope envelope)
+    {
+        var bytes = envelope.ToByteArray();
+        if (bytes.Length > DeviceEndpoint.MaxServerFrameBytes)
+        {
+            throw new InvalidOperationException($"A server frame of {bytes.Length} bytes exceeds the device's limit.");
+        }
+
+        await link.Socket.SendAsync(bytes, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
+    }
+
+    private static async Task CloseAsync(Link link, WebSocketCloseStatus status)
+    {
+        if (link.Socket.State is not (WebSocketState.Open or WebSocketState.CloseReceived))
+        {
+            return;
+        }
+
+        try
+        {
+            await link.Socket.CloseOutputAsync(status, null, CancellationToken.None);
+            // Give the device a moment to answer, so the close frame isn't lost to an abort.
+            await Task.WhenAny(link.Receive, Task.Delay(CloseGrace));
+        }
+        catch (WebSocketException)
+        {
+            // Already gone.
+        }
+    }
+
+    /// <summary>
+    /// Reads one whole message, up to <see cref="DeviceEndpoint.MaxDeviceFrameBytes"/>. Not
+    /// cancellable: cancelling a WebSocket receive aborts the socket, and the server must still
+    /// be able to send its close code.
+    /// </summary>
+    private static async Task<Frame> ReceiveAsync(WebSocket socket)
+    {
+        var buffer = new byte[DeviceEndpoint.MaxDeviceFrameBytes + 1];
+        var count = 0;
+        while (true)
+        {
+            if (count == buffer.Length)
+            {
+                return new Frame(FrameKind.TooLarge, []);
+            }
+
+            var result = await socket.ReceiveAsync(buffer.AsMemory(count), CancellationToken.None);
+            switch (result.MessageType)
+            {
+                case WebSocketMessageType.Close:
+                    return new Frame(FrameKind.Closed, []);
+                case WebSocketMessageType.Text:
+                    return new Frame(FrameKind.Text, []);
+            }
+
+            count += result.Count;
+            if (count > DeviceEndpoint.MaxDeviceFrameBytes)
+            {
+                return new Frame(FrameKind.TooLarge, []);
+            }
+
+            if (result.EndOfMessage)
+            {
+                return new Frame(FrameKind.Binary, buffer[..count]);
+            }
+        }
+    }
+
+    // Secrets and pairing codes are never logged. A MAC is self-reported and for support only.
+    [LoggerMessage(Level = LogLevel.Information, Message = "Paired device {DeviceId} connected")]
+    private partial void LogPaired(long deviceId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Unpaired device reporting MAC {MacAddress} is waiting to be claimed")]
+    private partial void LogPending(string macAddress);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rejected a device connection: {Reason}")]
+    private partial void LogRejected(ConnectionRejectReason reason);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rejected removed device {DeviceId}")]
+    private partial void LogRevokedCredential(long deviceId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Rejected an unpaired device: {Limit} pairing codes are already live")]
+    private partial void LogPendingLimit(int limit);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Device connection failed unexpectedly")]
+    private partial void LogUnexpectedFailure(Exception exception);
+}

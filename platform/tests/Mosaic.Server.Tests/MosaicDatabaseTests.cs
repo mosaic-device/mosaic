@@ -25,11 +25,11 @@ public sealed class MosaicDatabaseTests : IDisposable
 
         var applied = database.Migrate();
 
-        Assert.Equal([1, 2], applied);
+        Assert.Equal([1, 2, 3], applied);
         Assert.True(File.Exists(DatabasePath));
         using var connection = database.OpenConnection();
         Assert.Equal(
-            ["admin", "schema_migrations", "sessions", "settings"],
+            ["admin", "devices", "schema_migrations", "sessions", "settings"],
             Strings(connection, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name"));
         Assert.Equal(
             ["id", "username", "password_hash", "created_at", "updated_at"],
@@ -41,7 +41,10 @@ public sealed class MosaicDatabaseTests : IDisposable
             ["token_hash", "admin_id", "created_at", "idle_expires_at", "absolute_expires_at"],
             Strings(connection, "SELECT name FROM pragma_table_info('sessions')"));
         Assert.Equal(
-            ["1:initial_admin_and_settings", "2:admin_sessions"],
+            ["id", "secret_hash", "mac_address", "paired_at", "revoked_at"],
+            Strings(connection, "SELECT name FROM pragma_table_info('devices')"));
+        Assert.Equal(
+            ["1:initial_admin_and_settings", "2:admin_sessions", "3:devices"],
             Strings(connection, "SELECT version || ':' || name FROM schema_migrations ORDER BY version"));
     }
 
@@ -70,7 +73,7 @@ public sealed class MosaicDatabaseTests : IDisposable
         Assert.Empty(new MosaicDatabase(DatabasePath).Migrate());
 
         using var connection = database.OpenConnection();
-        Assert.Equal(2L, Scalar(connection, "SELECT COUNT(*) FROM schema_migrations"));
+        Assert.Equal(3L, Scalar(connection, "SELECT COUNT(*) FROM schema_migrations"));
     }
 
     [Fact]
@@ -93,6 +96,25 @@ public sealed class MosaicDatabaseTests : IDisposable
         using var check = reopened.OpenConnection();
         Assert.Equal(["admin|stored-hash"], Strings(check, "SELECT username || '|' || password_hash FROM admin"));
         Assert.Equal(["Kitchen"], Strings(check, "SELECT value FROM settings WHERE key = 'display.name'"));
+    }
+
+    [Fact]
+    public void DevicesStoreOnlyA32ByteSecretHashOncePerCredential()
+    {
+        var database = new MosaicDatabase(DatabasePath);
+        database.Migrate();
+        using var connection = database.OpenConnection();
+        var hash = "x'" + new string('a', 64) + "'";
+        Execute(connection, $"INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES ({hash}, 'AA:BB:CC:DD:EE:FF', 'now')");
+
+        var duplicate = Assert.Throws<SqliteException>(() =>
+            Execute(connection, $"INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES ({hash}, 'AA:BB:CC:DD:EE:00', 'now')"));
+        var plainSecret = Assert.Throws<SqliteException>(() =>
+            Execute(connection, "INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES (x'01', 'AA:BB:CC:DD:EE:01', 'now')"));
+
+        Assert.Equal(19, duplicate.SqliteErrorCode); // SQLITE_CONSTRAINT
+        Assert.Equal(19, plainSecret.SqliteErrorCode);
+        Assert.Equal(1L, Scalar(connection, "SELECT COUNT(*) FROM devices"));
     }
 
     [Fact]

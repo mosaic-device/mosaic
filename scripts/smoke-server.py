@@ -1,10 +1,15 @@
 """Smoke-test a built/published server without a Node process."""
 
+import base64
 import contextlib
+import hashlib
 import json
 import os
 import pathlib
 import re
+import secrets
+import socket
+import struct
 import sqlite3
 import subprocess
 import sys
@@ -130,6 +135,59 @@ def expect_unauthenticated(cookie, what):
     expect(cleared, None if cookie is None else "mosaic_session=", f"{what} Set-Cookie")
 
 
+def field(number, value):
+    """A protobuf length-delimited field, enough to build a device frame without a protobuf library."""
+    assert len(value) < 128
+    return bytes([number << 3 | 2, len(value)]) + value
+
+
+def device_frame(request_id, secret):
+    connect = field(1, b"AA:BB:CC:DD:EE:FF") + field(2, base64.urlsafe_b64encode(secret).rstrip(b"=")) + b"\x18\x01"
+    return field(1, request_id) + field(5, connect)
+
+
+def device_handshake(frame):
+    """Opens /ws/device like the firmware (no Origin), sends one binary frame and returns the reply."""
+    host, port = url.removeprefix("http://").split(":")
+    with socket.create_connection((host, int(port)), timeout=5) as connection:
+        key = base64.b64encode(secrets.token_bytes(16)).decode()
+        connection.sendall(
+            f"GET /ws/device HTTP/1.1\r\nHost: {host}:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+            f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n".encode()
+        )
+        response = b""
+        while b"\r\n\r\n" not in response:
+            response += connection.recv(1)
+        expect(response.split(b"\r\n")[0], b"HTTP/1.1 101 Switching Protocols", "device WebSocket upgrade")
+        mask = secrets.token_bytes(4)
+        connection.sendall(bytes([0x82, 0x80 | len(frame)]) + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(frame)))
+        opcode, length = connection.recv(1)[0] & 0x0F, connection.recv(1)[0]
+        if length == 126:
+            length = struct.unpack(">H", connection.recv(2))[0]
+        payload = b""
+        while len(payload) < length:
+            payload += connection.recv(length - len(payload))
+        expect(opcode, 2, "device reply is a binary frame")
+        return payload
+
+
+def check_device(database, secret, paired):
+    reply = device_handshake(device_frame(b"smoke-1", secret))
+    echo = field(1, b"smoke-1")
+    if paired:
+        expect(reply, echo + field(5, b""), "paired device handshake")
+        return
+    # pairing_pending: an 8-character code, then its seconds left as a two-byte varint. The
+    # server rounds down, so a fresh code reports 599 or 600 depending on when it is sent.
+    expect((reply[: len(echo)], reply[len(echo)], reply[-3]), (echo, 0x22, 0x10), "unpaired device handshake")
+    seconds = (reply[-2] & 0x7F) | (reply[-1] << 7)
+    expect(590 <= seconds <= 600, True, f"pairing code lifetime ({seconds} s)")
+    code = reply[len(echo) + 4 : len(echo) + 12].decode()
+    expect(re.fullmatch(r"[A-HJ-NP-Z2-9]{8}", code) is not None, True, "pairing code alphabet")
+    # The code is in memory only; the device table is untouched until a claim.
+    expect(query(database, "SELECT COUNT(*) FROM devices"), [(0,)], "no device stored before a claim")
+
+
 def query(database, sql):
     with contextlib.closing(sqlite3.connect(database)) as connection:
         return connection.execute(sql).fetchall()
@@ -149,12 +207,14 @@ with tempfile.TemporaryDirectory() as directory:
     with running_server(database):
         check_routes()
         check_auth(setup_required=True, password=password)
+        device_secret = secrets.token_bytes(32)
+        check_device(database, device_secret, paired=False)
     expect(
         query(database, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name"),
-        [("admin",), ("schema_migrations",), ("sessions",), ("settings",)],
+        [("admin",), ("devices",), ("schema_migrations",), ("sessions",), ("settings",)],
         "tables after first start",
     )
-    expect(query(database, "SELECT version FROM schema_migrations"), [(1,), (2,)], "migrations after first start")
+    expect(query(database, "SELECT version FROM schema_migrations"), [(1,), (2,), (3,)], "migrations after first start")
     # Setup and login each issued a session; logout deleted the login one.
     expect(query(database, "SELECT COUNT(*) FROM sessions"), [(1,)], "sessions after logout")
     stored_hash = query(database, "SELECT password_hash FROM admin")[0][0]
@@ -164,10 +224,16 @@ with tempfile.TemporaryDirectory() as directory:
         connection.execute(
             "INSERT INTO settings (key, value, updated_at) VALUES ('smoke', 'kept', '2026-01-01T00:00:00Z')"
         )
+        # Stands in for a claim: the server stores only the SHA-256 of the decoded secret.
+        connection.execute(
+            "INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES (?, 'AA:BB:CC:DD:EE:FF', '2026-01-01T00:00:00Z')",
+            (hashlib.sha256(device_secret).digest(),),
+        )
 
     with running_server(database):
         check_routes()
         check_auth(setup_required=False, password=password)
-    expect(query(database, "SELECT version FROM schema_migrations"), [(1,), (2,)], "migrations after restart")
+        check_device(database, device_secret, paired=True)
+    expect(query(database, "SELECT version FROM schema_migrations"), [(1,), (2,), (3,)], "migrations after restart")
     expect(query(database, "SELECT username, password_hash FROM admin"), [("Smoke-Admin", stored_hash)], "admin after restart")
     expect(query(database, "SELECT value FROM settings WHERE key = 'smoke'"), [("kept",)], "settings after restart")
