@@ -200,8 +200,39 @@ jobs:
         run: python3 firmware/main/features/clock/tests/run.py
       - name: Settings host tests
         run: python3 firmware/main/features/settings/tests/run.py
+      - name: Debug trigger host tests
+        run: python3 firmware/main/features/debug_triggers/tests/run.py
+      - name: Preview platform host tests
+        run: python3 firmware/preview/platform/tests/run.py
       - name: Device protocol golden frames
         run: python3 firmware/components/device_protos/tests/run.py
+
+  firmware-preview:
+    name: Firmware preview (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2022]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Install SDL2 (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev g++-14 && echo "CXX=g++-14" >> "$GITHUB_ENV"
+      - name: Install SDL2 (macOS)
+        if: runner.os == 'macOS'
+        run: brew install sdl2
+      - name: Install SDL2 (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          "$VCPKG_INSTALLATION_ROOT/vcpkg" install sdl2:x64-windows
+          echo "CMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" >> "$GITHUB_ENV"
+      - name: Build firmware preview
+        run: python firmware/preview/run.py --build-only
 
   firmware-build:
     name: Firmware build

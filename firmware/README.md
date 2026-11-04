@@ -2,6 +2,85 @@
 
 Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 using ESP-IDF **5.5.4** and ESP32-C6-hosted Wi-Fi. Display/touch, phone setup, credential save, reboot, Wi-Fi join and recovery have been verified on the physical board. The production dashboard, pairing and backend transport are not implemented; device states can be injected with [debug triggers](#debug-triggers). The M2 on-board check and its results are in [M2 board verification](../docs/hardware/m2-board-verification.md).
 
+## Device screen preview
+
+The preview runs the firmware itself on your computer: `app_main()`, every feature
+service, provisioning, the event bus and the screens are the same code the board
+runs. Only the hardware and radio adapters are replaced, by simulated ones in
+`preview/adapters/`, and `preview/platform/` stands in for the ESP-IDF and
+FreeRTOS APIs. A change to firmware behavior shows up in the preview without
+preview changes.
+
+Install CMake, a C++23 compiler and SDL2 development files: `brew install cmake sdl2`
+on macOS, `sudo apt-get install cmake libsdl2-dev` on Linux, or on Windows Visual
+Studio 2022 with SDL2 from vcpkg (`vcpkg install sdl2`, then set
+`CMAKE_TOOLCHAIN_FILE` to vcpkg's toolchain). From the repository root, run:
+
+```sh
+pnpm fw:preview
+pnpm fw:preview --build-only
+pnpm fw:preview --fresh
+pnpm fw:preview --state settings
+pnpm fw:preview --state trouble --screenshot firmware/build/trouble.bmp
+```
+
+Without `--state`, the preview is one device that keeps its NVS in
+`firmware/build/device-preview/device.nvs`: a first start opens Wi-Fi setup, and
+what you save survives restarts. `--fresh` erases it. `--state` starts from a
+prepared device instead, using its own NVS: `setup`, `connecting`, `offline`,
+`unpaired`, `home`, `trouble` or `settings`. States set up what the device finds
+at boot (saved Wi-Fi, how the network answers) and the triggers it receives;
+the firmware gets itself to the screen. `--screenshot` waits for that, saves
+the frame and exits; `offline` takes about 20 seconds, the firmware's real
+Wi-Fi test timeout.
+
+The first build uses the managed LVGL 9.4.0 component if present, otherwise it
+downloads that release into `firmware/build/device-preview`. Set `LVGL_DIR` to use another
+local copy of the same release. The preview uses the monitor's physical size
+to open at approximately the board's 5-inch diagonal. If the monitor reports
+an inaccurate size, use `pnpm fw:preview --window-width 600` to calibrate
+against the board. The firmware screen and screenshots stay at 1280×720 in
+RGB565; the window uses the monitor's high-DPI output for a sharp image.
+
+The window shows the whole device: the screen, the LED ring around the knob to
+its right, the LED strip along the bottom, and the light sensor and speaker on
+its top edge.
+Turn the knob with the mouse wheel over it or Left and Right, and press it with
+a click or Enter or Space; holding past the long-press time is Back, as is
+Backspace. The mouse on the screen is touch. The layout constants at the top of
+`preview/device_view.cpp` place the ring, strip and sensor.
+
+The panel under the device drives the world around it, one labeled row each:
+**Start as** restarts into the states above; **This device** restarts, factory
+resets, or makes storage fail; **Server** sets the connection status or sends a
+notification; **Saved Wi-Fi** sets how the network answers or drops it;
+**Phone** opens the setup page or submits a ready-made form while the device
+shows setup; and **Room light** sets the sensor's reading or unplugs it. The current choice in each row
+is highlighted. Press F12 to save a BMP of the screen in
+`firmware/build/preview-shots`, or set a different directory with `--shots`.
+
+While the firmware shows setup, the preview serves its real setup page at
+`http://localhost:8080/` (or the next free port; the terminal and the Phone row
+show it). A phone on the same network can open it at this computer's address,
+also shown. Requests get the device's answers from the same rules: form
+validation, throttling, the status the page polls, then the save and restart.
+Only joining the device's own Wi-Fi is missing, since the preview has no radio;
+the QR code and `192.168.4.1` on screen are what the board would show.
+
+The terminal is the device's debug console, for anything the panel does not
+cover. It has the [debug triggers](#debug-triggers) plus the commands the panel
+uses:
+
+| Command | Simulates |
+| --- | --- |
+| `setup <ssid> <password\|-> <wss-url>` | A phone submitting the setup page; `setup` alone shows the page's status |
+| `wifi joins\|rejects\|silent` | How the saved network answers; `wifi drop` drops a joined network |
+| `lux <0-100000>\|off` | The light sensor's reading, or unplugging it |
+| `storage ok\|full` | NVS writes failing, as on a full partition |
+| `screen settings\|back` | Opening Settings or going back, as the controls would |
+| `restart`, `erase` | A restart keeping NVS, or a factory reset |
+| `quit` | Closing the preview |
+
 ## Build and flash
 
 Activate ESP-IDF with the ESP32-P4 toolchain and put Node.js on `PATH`. From `firmware/`:

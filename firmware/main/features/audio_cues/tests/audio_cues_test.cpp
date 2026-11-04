@@ -1,9 +1,11 @@
 #include "../cues.hpp"
+#include "../playback.hpp"
 #include "../wav.hpp"
 
 #include <cassert>
 #include <cstdio>
 #include <initializer_list>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -174,6 +176,89 @@ void volume_and_mute() {
     assert(!(Output { .volume = 0, .muted = false }.audible()));
     assert((Output { .volume = 1, .muted = false }.audible()));
 }
+
+// Records what playback asks of the speaker; "fail" names a call that fails.
+struct RecordingSpeaker final : Speaker {
+    std::vector<std::string> calls;
+    std::string fail;
+    Bytes written;
+    size_t silent = 0;
+    uint8_t volume = 0;
+    bool open(const Pcm& format) override {
+        assert(format.sample_rate == 1000 && format.channels == 1 && format.bits_per_sample == 16);
+        calls.emplace_back("open");
+        return fail != "open";
+    }
+    bool set_volume(uint8_t percent) override {
+        volume = percent;
+        calls.emplace_back("volume");
+        return fail != "volume";
+    }
+    bool write(uint8_t* bytes, size_t size) override {
+        assert(size > 0 && size <= kChunkBytes);
+        bool zero = true;
+        for (size_t i = 0; i < size; ++i)
+            zero = zero && bytes[i] == 0;
+        if (zero)
+            silent += size;
+        else
+            written.insert(written.end(), bytes, bytes + size);
+        bytes[0] = 0xEE; // Scaling in place must not touch the cue.
+        calls.emplace_back("write");
+        return fail != "write";
+    }
+    void close() override {
+        calls.emplace_back("close");
+    }
+};
+int audible_checks = 0;
+int mute_after = -1;
+bool audible() {
+    return mute_after < 0 || audible_checks++ < mute_after;
+}
+
+void plays_with_lead_and_tail_silence() {
+    // 1 kHz mono 16-bit: 2 bytes per ms, so 100 lead bytes and 160 tail bytes.
+    Bytes samples(1200, 0x11);
+    const Pcm pcm { .sample_rate = 1000, .channels = 1, .bits_per_sample = 16, .samples = samples };
+    mute_after = -1;
+    RecordingSpeaker speaker;
+    play(pcm, 42, speaker, audible);
+    assert(speaker.calls.front() == "open" && speaker.calls[1] == "volume" && speaker.calls.back() == "close");
+    assert(speaker.volume == 42 && speaker.written == samples);
+    assert(speaker.silent == (kLeadMs + kTailMs) * 2);
+    assert(samples[0] == 0x11);
+
+    // Muting partway stops the cue at a chunk boundary, then still flushes the tail.
+    audible_checks = 0;
+    mute_after = 2; // The start check and the first chunk.
+    RecordingSpeaker muted;
+    play(pcm, 42, muted, audible);
+    assert(muted.written.size() == kChunkBytes && muted.silent == (kLeadMs + kTailMs) * 2);
+    assert(muted.calls.back() == "close");
+
+    // Silent from the start: the speaker never opens.
+    audible_checks = 0;
+    mute_after = 0;
+    RecordingSpeaker never;
+    play(pcm, 42, never, audible);
+    assert(never.calls.empty());
+    mute_after = -1;
+
+    // Failures stop playback, and an opened speaker is always closed.
+    RecordingSpeaker unopened;
+    unopened.fail = "open";
+    play(pcm, 42, unopened, audible);
+    assert(unopened.calls == std::vector<std::string> { "open" });
+    RecordingSpeaker no_volume;
+    no_volume.fail = "volume";
+    play(pcm, 42, no_volume, audible);
+    assert((no_volume.calls == std::vector<std::string> { "open", "volume", "close" }));
+    RecordingSpeaker broken;
+    broken.fail = "write";
+    play(pcm, 42, broken, audible);
+    assert((broken.calls == std::vector<std::string> { "open", "volume", "write", "close" }));
+}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -183,4 +268,5 @@ int main(int argc, char** argv) {
     committed_cues_parse(argc - 1, argv + 1);
     status_cues();
     volume_and_mute();
+    plays_with_lead_and_tail_silence();
 }

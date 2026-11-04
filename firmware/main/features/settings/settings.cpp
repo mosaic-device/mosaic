@@ -14,6 +14,15 @@ namespace {
     }
 } // namespace
 
+Effects effects(const Settings& settings) {
+    return {
+        .manual_brightness = settings.auto_brightness ? std::nullopt : std::optional<uint8_t>(settings.brightness),
+        .volume = settings.volume,
+        .muted = settings.muted,
+        .leds_on = settings.leds_on,
+    };
+}
+
 Range range(Control control) {
     if (control == Control::volume)
         return { .min = kVolumeMin, .max = kVolumeMax, .step = kVolumeStep };

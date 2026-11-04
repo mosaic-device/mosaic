@@ -119,6 +119,8 @@ python3 firmware/main/features/audio_cues/tests/run.py
 python3 firmware/main/features/brightness/tests/run.py
 python3 firmware/main/features/clock/tests/run.py
 python3 firmware/main/features/settings/tests/run.py
+python3 firmware/main/features/debug_triggers/tests/run.py
+python3 firmware/preview/platform/tests/run.py
 python3 firmware/components/device_protos/tests/run.py
 ```
 
@@ -126,6 +128,15 @@ The last command decodes the shared golden protocol frames in
 `platform/packages/protocols/testdata/frames.txt` with the committed nanopb
 bindings. The **.NET** job checks the same file with the C# bindings
 (`DeviceProtocolGoldenFrameTests`), so both sides must agree on every byte.
+
+### Firmware preview
+
+CI builds the host preview on Linux, macOS and Windows. It needs
+CMake, SDL2 and a C++23 compiler (see the [firmware guide](../firmware/README.md#device-screen-preview)):
+
+```sh
+python3 firmware/preview/run.py --build-only
+```
 
 ### Firmware build
 

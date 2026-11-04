@@ -101,6 +101,9 @@ void defaults() {
     assert(!settings.muted && settings.leds_on);
     // Defaults are themselves valid stored settings.
     assert(decode(encode(settings)) == settings);
+    assert((effects(settings)
+        == Effects { .manual_brightness = std::nullopt, .volume = settings.volume, .muted = false, .leds_on = true }));
+    assert((effects(kCustom) == Effects { .manual_brightness = 50, .volume = 30, .muted = true, .leds_on = false }));
 }
 
 void levels_and_availability() {
