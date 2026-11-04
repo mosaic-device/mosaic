@@ -29,7 +29,7 @@ if not (lvgl / "lvgl.h").exists():
         subprocess.run(["git", "clone", "--depth", "1", "--branch", "v9.4.0",
                         "https://github.com/lvgl/lvgl.git", str(lvgl)], check=True)
 
-subprocess.run(["cmake", "-S", str(here), "-B", str(build), f"-DLVGL_DIR={lvgl}"], check=True)
+subprocess.run(["cmake", "-S", str(here), "-B", str(build), f"-DLVGL_DIR={lvgl.as_posix()}"], check=True)
 subprocess.run(["cmake", "--build", str(build), "--config", "Release",
                 "--parallel", str(min(8, os.cpu_count() or 2))], check=True)
 if args.build_only:

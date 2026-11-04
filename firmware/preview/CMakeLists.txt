@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT DEFINED LVGL_DIR)
   set(LVGL_DIR "${CMAKE_CURRENT_LIST_DIR}/../managed_components/lvgl__lvgl")
 endif()
+# CMake source lists need forward slashes even when the caller passes a native Windows path.
+string(REPLACE "\\" "/" LVGL_DIR "${LVGL_DIR}")
 if(NOT EXISTS "${LVGL_DIR}/lvgl.h")
   message(FATAL_ERROR "LVGL 9.4.0 is missing; see firmware/README.md")
 endif()
