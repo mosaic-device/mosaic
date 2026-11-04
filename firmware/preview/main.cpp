@@ -9,8 +9,6 @@
 #include "mosaic_platform.hpp"
 #include "nvs_flash.h"
 
-// The preview has its own main(); SDL does not need to wrap it.
-#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #include <algorithm>

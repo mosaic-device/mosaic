@@ -126,8 +126,8 @@ add_executable(mosaic-preview
   "${MAIN}/features/settings/store.cpp")
 target_include_directories(mosaic-preview PRIVATE "${MAIN}" "${MAIN}/ui/generated" "${CMAKE_CURRENT_LIST_DIR}"
   ${SDL2_INCLUDE_DIRS})
-# The preview always has the development console: it is how the simulated world is driven.
-target_compile_definitions(mosaic-preview PRIVATE MOSAIC_DEBUG_TRIGGERS=1)
+# The preview has its own main() and always has the development console.
+target_compile_definitions(mosaic-preview PRIVATE MOSAIC_DEBUG_TRIGGERS=1 SDL_MAIN_HANDLED=1)
 if(MSVC)
   # Standard __VA_OPT__ for the logging macros, UTF-8 sources, and the POSIX time calls.
   target_compile_options(preview_platform PUBLIC /Zc:preprocessor /utf-8)
