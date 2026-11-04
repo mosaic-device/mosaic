@@ -17,10 +17,11 @@ namespace {
     TaskHandle_t s_saver = nullptr;
 
     void apply_to_features(const Settings& settings) {
-        brightness::set_manual(settings.auto_brightness ? std::nullopt : std::optional<uint8_t>(settings.brightness));
-        audio_cues::set_volume(settings.volume);
-        audio_cues::set_muted(settings.muted);
-        led_feedback::set_enabled(settings.leds_on);
+        const Effects applied = effects(settings);
+        brightness::set_manual(applied.manual_brightness);
+        audio_cues::set_volume(applied.volume);
+        audio_cues::set_muted(applied.muted);
+        led_feedback::set_enabled(applied.leds_on);
     }
     void save_later(void*) {
         while (true) {

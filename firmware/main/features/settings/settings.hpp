@@ -33,6 +33,17 @@ struct Settings {
     bool operator==(const Settings&) const = default;
 };
 
+// What the feedback features receive after settings change. Shared by the
+// firmware service and host preview so they apply the same choices.
+struct Effects {
+    std::optional<uint8_t> manual_brightness;
+    uint8_t volume;
+    bool muted;
+    bool leds_on;
+    bool operator==(const Effects&) const = default;
+};
+Effects effects(const Settings& settings);
+
 // The settings screen's controls, in screen order.
 enum class Control : uint8_t { auto_brightness, brightness, sounds, volume, leds };
 

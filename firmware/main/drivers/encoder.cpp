@@ -26,8 +26,6 @@ namespace {
     // The hardware counter limits; accum_count carries the total past them.
     constexpr int kCountLimit = 10'000;
     constexpr uint32_t kGlitchFilterNs = 1'000;
-    // Holding the button this long is Back; shorter presses click when released.
-    constexpr uint16_t kLongPressMs = 600;
 
     pcnt_unit_handle_t s_unit = nullptr;
     lv_indev_t* s_indev = nullptr;

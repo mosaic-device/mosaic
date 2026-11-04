@@ -9,7 +9,7 @@ if(MOSAIC_DEBUG_TRIGGERS)
     if(MOSAIC_UI_GALLERY)
         message(FATAL_ERROR "MOSAIC_DEBUG_TRIGGERS needs the normal app; the gallery does not start the event bus")
     endif()
-    list(APPEND debug_sources "features/debug_triggers/console.cpp")
+    list(APPEND debug_sources "features/debug_triggers/console.cpp" "features/debug_triggers/commands.cpp")
 endif()
 
 option(MOSAIC_DISPLAY_DIAGNOSTICS "Trace the display's PPA and frame-buffer waits" OFF)
@@ -36,17 +36,21 @@ idf_component_register(
          "drivers/encoder.cpp"
          "drivers/encoder_logic.cpp"
          "drivers/leds.cpp"
+         "drivers/speaker.cpp"
          "features/brightness/policy.cpp"
          "features/brightness/service.cpp"
          "features/clock/clock.cpp"
          "features/clock/service.cpp"
+         "features/clock/sync.cpp"
          "features/home/screen.cpp"
          "features/settings/screen.cpp"
          "features/settings/service.cpp"
          "features/settings/settings.cpp"
          "features/settings/store.cpp"
          "features/audio_cues/cues.cpp"
+         "features/audio_cues/playback.cpp"
          "features/audio_cues/service.cpp"
+         "features/audio_cues/sounds.cpp"
          "features/audio_cues/wav.cpp"
          "features/led_feedback/patterns.cpp"
          "features/led_feedback/service.cpp"
@@ -55,6 +59,8 @@ idf_component_register(
          "features/provisioning/ui/setup_screen.cpp"
          "features/provisioning/ui/status_screen.cpp"
          "features/provisioning/state_machine.cpp"
+         "features/provisioning/wifi_observation.cpp"
+         "features/provisioning/portal_replies.cpp"
          "features/provisioning/service.cpp"
          "features/provisioning/settings_validation.cpp"
          "features/provisioning/adapters/captive_portal.cpp"

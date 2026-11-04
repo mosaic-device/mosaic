@@ -13,6 +13,7 @@ compiler = shlex.split(os.environ.get("CXX", "c++"))
 sources = [
     feature / "wav.cpp",
     feature / "cues.cpp",
+    feature / "playback.cpp",
     main / "events/status.cpp",
     feature / "tests/audio_cues_test.cpp",
 ]
@@ -41,8 +42,8 @@ with tempfile.TemporaryDirectory(prefix="mosaic-audio-cues-") as work:
     subprocess.run([str(exe), *map(str, cues)], check=True, env=env, timeout=60)
     print("Audio cue tests passed", flush=True)
 
-# Cue logic and WAV parsing stay hardware-free so these tests exercise the code that ships.
-for name in ("cues", "wav"):
+# Cue logic, playback and WAV parsing stay hardware-free so these tests exercise the code that ships.
+for name in ("cues", "playback", "wav"):
     for path in feature.glob(f"{name}.*pp"):
         text = path.read_text()
         for forbidden in ('"driver/', '"esp_', '"lvgl', '"freertos/', '"bsp/'):

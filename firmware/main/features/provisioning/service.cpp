@@ -1,5 +1,6 @@
 #include "service.hpp"
 #include "state_machine.hpp"
+#include "wifi_observation.hpp"
 
 #include "adapters/captive_portal.hpp"
 #include "adapters/settings_store.hpp"
@@ -7,7 +8,6 @@
 
 #include <atomic>
 #include <cstdio>
-#include <cstring>
 
 #include "../../support/secure_erase.hpp"
 #include "../../ui/runtime.hpp"
@@ -15,11 +15,9 @@
 #include "presentation/presenter.hpp"
 #include "presentation/action_admission.hpp"
 #include "ui/renderer.hpp"
-#include "esp_event.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h"
-#include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
@@ -47,10 +45,6 @@ namespace {
     QueueHandle_t queue = nullptr;
     TaskHandle_t owner = nullptr;
     TaskHandle_t startup_caller = nullptr;
-    esp_netif_t* ap_netif = nullptr;
-    esp_netif_t* sta_netif = nullptr;
-    esp_event_handler_instance_t wifi_handler = nullptr;
-    esp_event_handler_instance_t ip_handler = nullptr;
     std::atomic<state::PortalStatus> published_status { state::PortalStatus::idle };
     std::atomic_bool wifi_overflow { false };
     std::atomic_uint32_t wifi_sequence { 0 };
@@ -60,9 +54,8 @@ namespace {
     provisioning_wifi::Ap ap { };
     Settings saved { };
     esp_err_t startup_error = ESP_OK;
-    bool wifi_initialized = false; // provisioning owner task only
     bool recovery_callback_installed = false;
-    uint32_t ignored_wifi_through = 0; // provisioning owner task only
+    WifiObservation observation; // provisioning owner task only
     using support::secure_erase;
 
     bool submit(const Settings& settings, void*) {
@@ -116,22 +109,16 @@ namespace {
         if (xQueueSend(queue, &intent, 0) != pdTRUE)
             wifi_overflow.store(true);
     }
-    void on_wifi(void*, esp_event_base_t, int32_t id, void*) {
-        if (id == WIFI_EVENT_STA_CONNECTED)
-            post(Kind::connected);
-        if (id == WIFI_EVENT_STA_DISCONNECTED)
-            post(Kind::disconnected);
-    }
-    void on_ip(void*, esp_event_base_t, int32_t id, void*) {
-        if (id == IP_EVENT_STA_GOT_IP)
-            post(Kind::got_ip);
+    void on_wifi(provisioning_wifi::Event event) {
+        using E = provisioning_wifi::Event;
+        post(event == E::connected ? Kind::connected : event == E::disconnected ? Kind::disconnected : Kind::got_ip);
     }
 
     void stop_wifi_safely() {
-        if (!wifi_initialized)
+        if (!provisioning_wifi::initialized())
             return;
         const esp_err_t err = provisioning_wifi::stop();
-        if (err != ESP_OK && err != ESP_ERR_WIFI_NOT_STARTED) {
+        if (err != ESP_OK) {
             ESP_LOGE("mosaic_network", "Cannot stop Wi-Fi after setup failure: %s; restarting", esp_err_to_name(err));
             esp_restart();
         }
@@ -151,7 +138,7 @@ namespace {
 
     void begin_wifi_observation_window() {
         wifi_overflow.exchange(false);
-        ignored_wifi_through = wifi_sequence.load();
+        observation.ignore_through(wifi_sequence.load());
     }
 
     esp_err_t display_setup() {
@@ -162,7 +149,7 @@ namespace {
 
     esp_err_t open_portal() {
         // The synchronous display refresh/backlight is the gate before AP or HTTP/DNS.
-        esp_err_t err = provisioning_wifi::configure_ap(ap_netif, ap);
+        esp_err_t err = provisioning_wifi::configure_ap(ap);
         if (err == ESP_OK)
             err = display_setup();
         if (err == ESP_OK) {
@@ -171,7 +158,8 @@ namespace {
         }
         if (err == ESP_OK) {
 
-            if (!provisioning_portal::start({ ap_netif, &published_status, submit, nullptr, ap.ip }))
+            if (!provisioning_portal::start(
+                    { provisioning_wifi::ap_netif(), &published_status, submit, nullptr, ap.ip }))
                 err = ESP_FAIL;
         }
         if (err != ESP_OK) {
@@ -251,35 +239,16 @@ namespace {
         dispatch_at(model, event, esp_timer_get_time());
     }
 
-    bool saved_station_associated() {
-        wifi_ap_record_t record { };
-        return esp_wifi_sta_get_ap_info(&record) == ESP_OK
-            && std::strncmp(reinterpret_cast<const char*>(record.ssid), saved.ssid, sizeof(record.ssid)) == 0;
-    }
-
-    bool saved_station_has_ip() {
-        esp_netif_ip_info_t info { };
-        return saved_station_associated() && sta_netif && esp_netif_get_ip_info(sta_netif, &info) == ESP_OK
-            && info.ip.addr != 0;
-    }
-
     void resync_wifi(state::StateMachine& model) {
         ESP_LOGE("mosaic_network", "Wi-Fi event queue overflow; resynchronizing radio state");
         const auto phase = model.snapshot().phase;
-        if (phase != state::Phase::saved_sta && phase != state::Phase::online && phase != state::Phase::offline)
+        if (!follows_station(phase))
             return;
-        wifi_ap_record_t record { };
-        esp_netif_ip_info_t info { };
-        const bool connected = esp_wifi_sta_get_ap_info(&record) == ESP_OK
-            && (phase != state::Phase::saved_sta
-                || std::strncmp(reinterpret_cast<const char*>(record.ssid), saved.ssid, sizeof(record.ssid)) == 0);
-        const bool has_ip = connected && sta_netif && esp_netif_get_ip_info(sta_netif, &info) == ESP_OK && info.ip.addr;
-        if (connected)
-            dispatch(model, state::Connected { });
-        if (has_ip)
-            dispatch(model, state::GotIp { });
-        else
-            dispatch(model, state::Disconnected { });
+        const char* ssid = needs_saved_network(phase) ? saved.ssid : nullptr;
+        const bool connected = provisioning_wifi::associated(ssid);
+        const auto events = resync(phase, { connected, connected && provisioning_wifi::has_ip(ssid) });
+        for (size_t i = 0; i < events.count; ++i)
+            dispatch(model, events.events[i]);
     }
 
     esp_err_t detach_recovery_callback() {
@@ -291,31 +260,8 @@ namespace {
         return err;
     }
 
-    esp_err_t unregister_wifi_handlers() {
-        if (ip_handler) {
-            const esp_err_t err = esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, ip_handler);
-            if (err != ESP_OK)
-                return err;
-            ip_handler = nullptr;
-        }
-        if (wifi_handler) {
-            const esp_err_t err = esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_handler);
-            if (err != ESP_OK)
-                return err;
-            wifi_handler = nullptr;
-        }
-        return ESP_OK;
-    }
-
     void release_owner_storage() {
-        if (sta_netif) {
-            esp_netif_destroy_default_wifi(sta_netif);
-            sta_netif = nullptr;
-        }
-        if (ap_netif) {
-            esp_netif_destroy_default_wifi(ap_netif);
-            ap_netif = nullptr;
-        }
+        provisioning_wifi::release();
         if (queue) {
             vQueueDelete(queue);
             queue = nullptr;
@@ -335,15 +281,9 @@ namespace {
         if (err != ESP_OK)
             return err;
         stop_portal_safely();
-        err = unregister_wifi_handlers();
+        err = provisioning_wifi::deinit();
         if (err != ESP_OK)
             return err;
-        if (wifi_initialized) {
-            err = esp_wifi_deinit();
-            if (err != ESP_OK)
-                return err;
-            wifi_initialized = false;
-        }
         release_owner_storage();
         return ESP_OK;
     }
@@ -360,29 +300,6 @@ namespace {
         ESP_LOGE("mosaic_network", "Startup cleanup incomplete; retaining dependencies and restarting");
         esp_restart();
     }
-    esp_err_t initialize_wifi(const char*& stage) {
-        stage = "Wi-Fi netifs";
-        ap_netif = esp_netif_create_default_wifi_ap();
-        sta_netif = esp_netif_create_default_wifi_sta();
-        if (!ap_netif || !sta_netif)
-            return ESP_ERR_NO_MEM;
-        stage = "Wi-Fi init";
-        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-        esp_err_t err = esp_wifi_init(&cfg);
-        if (err != ESP_OK)
-            return err;
-        wifi_initialized = true;
-        err = esp_wifi_set_storage(WIFI_STORAGE_RAM);
-        if (err != ESP_OK)
-            return err;
-        stage = "Wi-Fi event registration";
-        err = esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_wifi, nullptr, &wifi_handler);
-        if (err != ESP_OK)
-            return err;
-        stage = "IP event registration";
-        return esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_ip, nullptr, &ip_handler);
-    }
-
     esp_err_t initialize(state::StateMachine& model, const char*& stage) {
         stage = "UI readiness";
         if (!ui::ready())
@@ -401,7 +318,7 @@ namespace {
         err = provisioning_settings::load_setup_requested(setup_requested);
         if (err != ESP_OK)
             return err;
-        err = initialize_wifi(stage);
+        err = provisioning_wifi::init(on_wifi, stage);
         if (err != ESP_OK)
             return err;
         stage = "recovery callback";
@@ -419,13 +336,12 @@ namespace {
     void reconcile_lost_wifi_events(state::StateMachine& model) {
         if (!wifi_overflow.exchange(false))
             return;
-        ignored_wifi_through = wifi_sequence.load();
+        observation.ignore_through(wifi_sequence.load());
         resync_wifi(model);
     }
 
     bool stale_wifi_event(const Intent& event) {
-        return event.kind != Kind::submit && event.kind != Kind::recovery
-            && static_cast<int32_t>(event.wifi_sequence - ignored_wifi_through) <= 0;
+        return event.kind != Kind::submit && event.kind != Kind::recovery && observation.stale(event.wifi_sequence);
     }
 
     void handle_event(state::StateMachine& model, const Intent& event) {
@@ -444,13 +360,13 @@ namespace {
             dispatch(model, state::SetupTapped { event.admission_id, event.action_context });
             break;
         case Kind::connected:
-            if (model.snapshot().phase != state::Phase::saved_sta || saved_station_associated())
+            if (!needs_saved_network(model.snapshot().phase) || provisioning_wifi::associated(saved.ssid))
                 dispatch(model, state::Connected { });
             break;
         case Kind::got_ip:
             reconcile_lost_wifi_events(model);
             if (!stale_wifi_event(event)
-                && (model.snapshot().phase != state::Phase::saved_sta || saved_station_has_ip()))
+                && (!needs_saved_network(model.snapshot().phase) || provisioning_wifi::has_ip(saved.ssid)))
                 dispatch(model, state::GotIp { });
             break;
         case Kind::disconnected:

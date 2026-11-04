@@ -13,6 +13,8 @@ compiler = shlex.split(os.environ.get("CXX", "c++"))
 cases = [
     ("presentation", ["state_machine.cpp", "presentation/presenter.cpp", "tests/presentation_test.cpp"], []),
     ("state_machine", ["state_machine.cpp", "tests/state_machine_test.cpp"], []),
+    ("wifi_observation", ["wifi_observation.cpp", "tests/wifi_observation_test.cpp"], []),
+    ("portal_replies", ["portal_replies.cpp", "tests/portal_replies_test.cpp"], []),
     ("settings_validation", ["settings_validation.cpp", "tests/settings_validation_test.cpp"], []),
     (
         "settings",
