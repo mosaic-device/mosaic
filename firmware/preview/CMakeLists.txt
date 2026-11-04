@@ -51,6 +51,24 @@ string(APPEND SOUNDS_TEXT "}\nnamespace mosaic::features::audio_cues {\n"
   "}\n}\n")
 file(CONFIGURE OUTPUT "${SOUNDS_CPP}" CONTENT "${SOUNDS_TEXT}" @ONLY)
 
+# The setup page and script, as the firmware embeds them, ending in a terminator.
+set(SETUP_ASSETS_CPP "${CMAKE_CURRENT_BINARY_DIR}/setup_assets.cpp")
+set(SETUP_ASSETS_TEXT "")
+foreach(asset html js)
+  set(source "${MAIN}/features/provisioning/assets/setup.${asset}")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${source}")
+  file(READ "${source}" bytes HEX)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," bytes "${bytes}")
+  string(TOUPPER "${asset}" name)
+  if(name STREQUAL "HTML")
+    set(name "Html")
+  else()
+    set(name "Js")
+  endif()
+  string(APPEND SETUP_ASSETS_TEXT "extern const unsigned char kSetup${name}[] = {${bytes}0};\n")
+endforeach()
+file(CONFIGURE OUTPUT "${SETUP_ASSETS_CPP}" CONTENT "${SETUP_ASSETS_TEXT}" @ONLY)
+
 # Everything the device runs, except the adapters that talk to its hardware and radio;
 # adapters/ replaces those.
 add_executable(mosaic-preview
@@ -67,6 +85,7 @@ add_executable(mosaic-preview
   adapters/speaker.cpp
   adapters/wifi.cpp
   "${SOUNDS_CPP}"
+  "${SETUP_ASSETS_CPP}"
   "${MAIN}/app_main.cpp"
   "${MAIN}/app/screens.cpp"
   "${MAIN}/ui/runtime.cpp"
@@ -119,6 +138,9 @@ else()
   set(PREVIEW_SDL ${SDL2_LIBRARIES})
 endif()
 target_link_libraries(mosaic-preview PRIVATE preview_platform preview_assets preview_lvgl ${PREVIEW_SDL})
+if(WIN32)
+  target_link_libraries(mosaic-preview PRIVATE ws2_32)
+endif()
 if(APPLE)
   find_library(COREGRAPHICS_FRAMEWORK CoreGraphics REQUIRED)
   target_link_libraries(mosaic-preview PRIVATE ${COREGRAPHICS_FRAMEWORK})

@@ -53,10 +53,18 @@ The panel under the device drives the world around it, one labeled row each:
 **Start as** restarts into the states above; **This device** restarts, factory
 resets, or makes storage fail; **Server** sets the connection status or sends a
 notification; **Saved Wi-Fi** sets how the network answers or drops it;
-**Phone** submits the setup page while the device shows setup; and **Room
-light** sets the sensor's reading or unplugs it. The current choice in each row
+**Phone** opens the setup page or submits a ready-made form while the device
+shows setup; and **Room light** sets the sensor's reading or unplugs it. The current choice in each row
 is highlighted. Press F12 to save a BMP of the screen in
 `firmware/build/preview-shots`, or set a different directory with `--shots`.
+
+While the firmware shows setup, the preview serves its real setup page at
+`http://localhost:8080/` (or the next free port; the terminal and the Phone row
+show it). A phone on the same network can open it at this computer's address,
+also shown. Requests get the device's answers from the same rules: form
+validation, throttling, the status the page polls, then the save and restart.
+Only joining the device's own Wi-Fi is missing, since the preview has no radio;
+the QR code and `192.168.4.1` on screen are what the board would show.
 
 The terminal is the device's debug console, for anything the panel does not
 cover. It has the [debug triggers](#debug-triggers) plus the commands the panel
@@ -70,6 +78,7 @@ uses:
 | `storage ok\|full` | NVS writes failing, as on a full partition |
 | `screen settings\|back` | Opening Settings or going back, as the controls would |
 | `restart`, `erase` | A restart keeping NVS, or a factory reset |
+| `quit` | Closing the preview |
 
 ## Build and flash
 

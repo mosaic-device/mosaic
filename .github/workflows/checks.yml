@@ -234,6 +234,8 @@ jobs:
         run: python firmware/preview/run.py --state setup --screenshot firmware/build/preview-ci/setup.bmp
       - name: Boot into Home and open Settings
         run: python firmware/preview/run.py --state settings --screenshot firmware/build/preview-ci/settings.bmp
+      - name: Set up through the served setup page
+        run: python firmware/preview/check_setup_page.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

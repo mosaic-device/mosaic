@@ -144,6 +144,13 @@ namespace {
         esp_restart();
     }
 
+    int quit(int argc, char**) {
+        if (argc != 1)
+            return 1;
+        std::fflush(stdout);
+        std::_Exit(0);
+    }
+
     constexpr Command kPreviewCommands[] = {
         { "lux", "Show or set the light sensor reading, or unplug it", "[0-100000|off]", lux },
         { "wifi", "Show or set how the saved network answers, or drop it", "[joins|rejects|silent|drop]", wifi },
@@ -152,6 +159,7 @@ namespace {
         { "screen", "Open Settings or go back, like the controls would", "settings|back", screen },
         { "restart", "Restart the device, keeping NVS", "", restart },
         { "erase", "Erase NVS and restart, like a factory reset", "", erase },
+        { "quit", "Close the preview", "", quit },
     };
 
     std::mutex g_commands_lock;

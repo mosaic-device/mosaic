@@ -346,13 +346,20 @@ void DeviceView::draw_panel() {
         [] { run_in_background("wifi drop"); });
 
     // A phone on the setup network.
-    row_label(kPhoneRow, "Phone", "Uses the setup page");
+    row_label(kPhoneRow, "Phone", "The setup page, on this computer");
     const std::string setup = device::setup_status();
     const bool open = !setup.starts_with("No setup");
-    x = button(kControlsX, kPhoneRow, "Submit Wi-Fi \"Home\"", false, open,
+    const std::string page = device::setup_page();
+    x = button(kControlsX, kPhoneRow, "Open setup page", false, open && !page.empty(), [page] {
+        SDL_OpenURL(page.c_str());
+    }) + kButtonGap;
+    x = button(x, kPhoneRow, "Submit Wi-Fi \"Home\"", false, open,
         [] { run_in_background("setup Home home-password wss://mosaic.example.org/device"); });
-    text_.draw(renderer_, body, open ? setup : "Available while the device shows setup", x + 28, kPhoneRow + 13,
-        open ? kMuted : kFaint, Text::Align::left, 0.85F);
+    const std::string phone = device::setup_page_for_phone();
+    const std::string detail = !open ? "Available while the device shows setup"
+        : phone.empty()              ? setup
+                                     : setup + "   Phone on this network: " + phone;
+    text_.draw(renderer_, body, detail, x + 28, kPhoneRow + 13, open ? kMuted : kFaint, Text::Align::left, 0.85F);
 
     // The room's light at the sensor.
     row_label(kRoomRow, "Room light", "At the sensor on top");

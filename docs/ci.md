@@ -132,7 +132,11 @@ CMake, SDL2 and a C++23 compiler (see the [firmware guide](../firmware/README.md
 ```sh
 python3 firmware/preview/run.py --state setup --screenshot firmware/build/preview-ci/setup.bmp
 python3 firmware/preview/run.py --state settings --screenshot firmware/build/preview-ci/settings.bmp
+python3 firmware/preview/check_setup_page.py
 ```
+
+The last check sets up the device through the served setup page, as a phone would,
+and waits for the firmware to save, restart and join the network.
 
 ### Firmware build
 

@@ -63,8 +63,13 @@ Network network();
 void drop_network();
 
 // The phone's view of the setup portal: submits a form like the setup page would and
-// returns the portal's answer. Only works while the device shows setup.
+// returns the portal's answer, through the same rules as the served page. Only works
+// while the device shows setup.
 std::string submit_setup(std::string_view form_body);
 std::string setup_status();
+// The real setup page, served on this computer while setup is open; empty otherwise.
+std::string setup_page();
+// The same page as a phone on this computer's network reaches it; empty if unknown.
+std::string setup_page_for_phone();
 
 } // namespace mosaic::preview::device
