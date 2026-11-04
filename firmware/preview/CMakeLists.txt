@@ -141,6 +141,8 @@ else()
 endif()
 target_link_libraries(mosaic-preview PRIVATE preview_platform preview_assets preview_lvgl ${PREVIEW_SDL})
 if(WIN32)
+  # Winsock's min/max macros collide with std::min and std::max in preview sources.
+  target_compile_definitions(mosaic-preview PRIVATE NOMINMAX)
   target_link_libraries(mosaic-preview PRIVATE ws2_32)
 endif()
 if(APPLE)
