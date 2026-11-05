@@ -4,35 +4,31 @@ package mosaic.device.v1;
 
 import "nanopb.proto";
 
-enum NotificationPriority {
-  NOTIFICATION_PRIORITY_UNSPECIFIED = 0;
-  NOTIFICATION_PRIORITY_NORMAL = 1;
-  NOTIFICATION_PRIORITY_HIGH = 2;
-}
-
-enum DaemonActionId {
-  DAEMON_ACTION_UNSPECIFIED = 0;
-  OPEN_URL = 1;
-  TOGGLE_MUTE = 2;
-  OPEN_IDE = 3;
-  LOCK_SCREEN = 4;
-}
-
-// First frame from the device on every connection. See the wiki's
+// Each WebSocket binary message holds exactly one envelope. See the wiki's
 // Device Connection Protocol for ordering and receiver-enforced field rules.
-message DeviceConnect {
-  string mac_address = 1 [(nanopb).max_size = 18];
-  string auth_secret = 2 [(nanopb).max_size = 64];
-  // Wire protocol version. Currently 1; zero is unsupported. Never renumber.
-  uint32 protocol_version = 3;
+message DeviceToBackendEnvelope {
+  oneof payload {
+    // Never renumber: a future server needs it to tell an old device to update.
+    DeviceConnect connect = 1;
+  }
 }
 
-enum ConnectionRejectReason {
-  CONNECTION_REJECT_REASON_UNSPECIFIED = 0;
-  CONNECTION_REJECT_REASON_MALFORMED_REQUEST = 1;
-  CONNECTION_REJECT_REASON_UNSUPPORTED_VERSION = 2;
-  CONNECTION_REJECT_REASON_CREDENTIAL_REVOKED = 3;
-  CONNECTION_REJECT_REASON_SERVER_BUSY = 4;
+message BackendToDeviceEnvelope {
+  oneof payload {
+    PairingPending pairing_pending = 1;
+    DevicePaired paired = 2;
+    // Never renumber: a future server needs it to tell an old device to update.
+    ConnectionRejected rejected = 3;
+  }
+}
+
+// First frame from the device on every connection.
+message DeviceConnect {
+  // Wire protocol version. Currently 1; zero is unsupported. Never renumber.
+  uint32 protocol_version = 1;
+  // 32 random bytes the device generated for this server. The server stores
+  // only its SHA-256 hash.
+  bytes auth_secret = 2 [(nanopb).max_size = 32, (nanopb).fixed_length = true];
 }
 
 // The credential is not paired yet. The code is eight uppercase characters
@@ -45,68 +41,15 @@ message PairingPending {
 // The credential is paired; application frames are now allowed.
 message DevicePaired {}
 
+enum ConnectionRejectReason {
+  CONNECTION_REJECT_REASON_UNSPECIFIED = 0;
+  CONNECTION_REJECT_REASON_MALFORMED_REQUEST = 1;
+  CONNECTION_REJECT_REASON_UNSUPPORTED_VERSION = 2;
+  CONNECTION_REJECT_REASON_CREDENTIAL_REVOKED = 3;
+  CONNECTION_REJECT_REASON_SERVER_BUSY = 4;
+}
+
 // The server will close the connection after this frame. Never renumber.
 message ConnectionRejected {
   ConnectionRejectReason reason = 1;
-}
-
-message NotificationAction {
-  string id = 1 [(nanopb).max_size = 96];
-  string label = 2 [(nanopb).max_size = 48];
-  bool requires_confirmation = 3;
-  bool destructive = 4;
-}
-
-message AiSummaryNotification {
-  string title = 1 [(nanopb).max_size = 64];
-  string summary_text = 2 [(nanopb).max_size = 512];
-  NotificationPriority priority = 3;
-  string notification_id = 4 [(nanopb).max_size = 64];
-  repeated NotificationAction actions = 5 [(nanopb).max_count = 4];
-}
-
-message DeviceTelemetry {
-  float lux = 1;
-  int32 encoder_count = 2;
-  bool button_pressed = 3;
-}
-
-message DeviceActionTrigger {
-  DaemonActionId action_id = 1;
-  string payload = 2 [(nanopb).max_size = 256];
-}
-
-message IntegrationActionTrigger {
-  string notification_id = 1 [(nanopb).max_size = 64];
-  string action_id = 2 [(nanopb).max_size = 96];
-}
-
-message IntegrationActionResult {
-  string notification_id = 1 [(nanopb).max_size = 64];
-  string action_id = 2 [(nanopb).max_size = 96];
-  bool success = 3;
-  string message = 4 [(nanopb).max_size = 128];
-}
-
-message DeviceToBackendEnvelope {
-  string request_id = 1 [(nanopb).max_size = 64];
-
-  oneof payload {
-    DeviceTelemetry telemetry = 2;
-    DeviceActionTrigger daemon_action = 3;
-    IntegrationActionTrigger integration_action = 4;
-    DeviceConnect connect = 5;
-  }
-}
-
-message BackendToDeviceEnvelope {
-  string request_id = 1 [(nanopb).max_size = 64];
-
-  oneof payload {
-    AiSummaryNotification notification = 2;
-    IntegrationActionResult action_result = 3;
-    PairingPending pairing_pending = 4;
-    DevicePaired paired = 5;
-    ConnectionRejected rejected = 6;
-  }
 }

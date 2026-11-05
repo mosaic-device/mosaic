@@ -12,6 +12,9 @@ public sealed class DeviceEndpointTests : IDisposable
 {
     private const string CodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
+    // An envelope whose only field is an unknown payload, field 15.
+    private static readonly byte[] UnknownPayload = Convert.FromHexString("7A020801");
+
     private readonly DeviceApiFactory _factory = new();
 
     public void Dispose() => _factory.Dispose();
@@ -21,10 +24,9 @@ public sealed class DeviceEndpointTests : IDisposable
     {
         await using var device = await _factory.ConnectAsync();
 
-        var reply = await device.HandshakeAsync("req-0042");
+        var reply = await device.HandshakeAsync();
 
         Assert.Equal(PayloadCase.PairingPending, reply.PayloadCase);
-        Assert.Equal("req-0042", reply.RequestId);
         Assert.Equal(8, reply.PairingPending.Code.Length);
         Assert.All(reply.PairingPending.Code, character => Assert.Contains(character, CodeAlphabet));
         Assert.Equal(600u, reply.PairingPending.ExpiresInSeconds);
@@ -38,10 +40,9 @@ public sealed class DeviceEndpointTests : IDisposable
         _factory.Pair(identity);
         await using var device = await _factory.ConnectAsync(identity);
 
-        var reply = await device.HandshakeAsync("req-0007");
+        var reply = await device.HandshakeAsync();
 
         Assert.Equal(PayloadCase.Paired, reply.PayloadCase);
-        Assert.Equal("req-0007", reply.RequestId);
         Assert.True(_factory.Connections.IsConnected(identity.SecretHash));
         Assert.Equal(0, _factory.Codes.LiveCount);
     }
@@ -58,11 +59,10 @@ public sealed class DeviceEndpointTests : IDisposable
 
         _factory.Time.Advance(TimeSpan.FromMinutes(2));
         await using var second = await _factory.ConnectAsync(identity);
-        var reply = await second.HandshakeAsync("req-0002");
+        var reply = await second.HandshakeAsync();
 
         Assert.Equal(code, reply.PairingPending.Code);
         Assert.Equal(480u, reply.PairingPending.ExpiresInSeconds);
-        Assert.Equal("req-0002", reply.RequestId);
     }
 
     [Fact]
@@ -94,7 +94,6 @@ public sealed class DeviceEndpointTests : IDisposable
         var replacement = await device.ReceiveAsync();
 
         Assert.Equal(PayloadCase.PairingPending, replacement.PayloadCase);
-        Assert.Equal("", replacement.RequestId);
         Assert.NotEqual(first.PairingPending.Code, replacement.PairingPending.Code);
         Assert.Equal(600u, replacement.PairingPending.ExpiresInSeconds);
         Assert.Null(_factory.Codes.TryConsume(first.PairingPending.Code));
@@ -138,18 +137,16 @@ public sealed class DeviceEndpointTests : IDisposable
         var displayed = $"{code[..4]}-{code[4..]}".ToLowerInvariant();
         var pairing = Assert.IsType<PendingPairing>(_factory.Codes.TryConsume(displayed));
         Assert.Equal(device.Device.SecretHash, pairing.SecretHash);
-        Assert.Equal(device.Device.MacAddress, pairing.MacAddress);
-        _factory.Devices.Pair(pairing.SecretHash, pairing.MacAddress);
+        _factory.Devices.Pair(pairing.SecretHash);
         Assert.True(_factory.Connections.NotifyPaired(pairing.SecretHash));
 
         var reply = await device.ReceiveAsync();
         Assert.Equal(PayloadCase.Paired, reply.PayloadCase);
-        Assert.Equal("", reply.RequestId);
         Assert.Null(_factory.Codes.TryConsume(code));
 
         // Once paired, the code no longer expires into a new one.
         _factory.Time.Advance(PairingCodes.Lifetime * 2);
-        await device.SendAsync(new DeviceToBackendEnvelope { Telemetry = new DeviceTelemetry { Lux = 1 } });
+        await device.SendRawAsync(UnknownPayload);
         Assert.True(_factory.Connections.NotifyRevoked(pairing.SecretHash));
         Assert.Equal(WebSocketCloseStatus.NormalClosure, await device.ExpectRejectedAsync(ConnectionRejectReason.CredentialRevoked));
     }
@@ -160,7 +157,7 @@ public sealed class DeviceEndpointTests : IDisposable
         await using var device = await _factory.ConnectAsync();
         var code = (await device.HandshakeAsync()).PairingPending.Code;
         var pairing = _factory.Codes.TryConsume(code)!;
-        _factory.Devices.Pair(pairing.SecretHash, pairing.MacAddress);
+        _factory.Devices.Pair(pairing.SecretHash);
 
         // The claim committed but its notification hasn't arrived when the code would expire.
         _factory.Time.Advance(PairingCodes.Lifetime);
@@ -176,11 +173,11 @@ public sealed class DeviceEndpointTests : IDisposable
         Assert.True(_factory.Devices.Revoke(_factory.Pair(identity)));
         await using var device = await _factory.ConnectAsync(identity);
 
-        await device.SendAsync(identity.Connect("req-0009"));
+        await device.SendAsync(identity.Connect());
 
-        Assert.Equal(WebSocketCloseStatus.NormalClosure, await device.ExpectRejectedAsync(ConnectionRejectReason.CredentialRevoked, "req-0009"));
+        Assert.Equal(WebSocketCloseStatus.NormalClosure, await device.ExpectRejectedAsync(ConnectionRejectReason.CredentialRevoked));
         Assert.Equal(0, _factory.Codes.LiveCount);
-        Assert.Null(_factory.Devices.Pair(identity.SecretHash, identity.MacAddress));
+        Assert.Null(_factory.Devices.Pair(identity.SecretHash));
         Assert.False(_factory.Connections.IsConnected(identity.SecretHash));
     }
 
@@ -211,20 +208,11 @@ public sealed class DeviceEndpointTests : IDisposable
 
         return new TheoryData<string, byte[]>
         {
-            { "secret too short", With(connect => connect.AuthSecret = connect.AuthSecret[..42]).ToByteArray() },
-            { "secret padded", With(connect => connect.AuthSecret = connect.AuthSecret[..42] + "=").ToByteArray() },
-            { "secret not base64url", With(connect => connect.AuthSecret = "+" + connect.AuthSecret[1..]).ToByteArray() },
-            { "secret over the nanopb limit", With(connect => connect.AuthSecret = new string('A', 64)).ToByteArray() },
-            { "secret missing", With(connect => connect.AuthSecret = "").ToByteArray() },
-            { "lowercase MAC", With(connect => connect.MacAddress = "aa:bb:cc:dd:ee:ff").ToByteArray() },
-            { "MAC with dashes", With(connect => connect.MacAddress = "AA-BB-CC-DD-EE-FF").ToByteArray() },
-            { "MAC missing", With(connect => connect.MacAddress = "").ToByteArray() },
-            { "request_id missing", device.Connect(requestId: "").ToByteArray() },
-            { "request_id over 63 characters", device.Connect(requestId: new string('r', 64)).ToByteArray() },
-            { "request_id not ASCII", device.Connect(requestId: "réq").ToByteArray() },
-            { "empty envelope", new DeviceToBackendEnvelope { RequestId = "req-0001" }.ToByteArray() },
-            { "unknown payload", Convert.FromHexString("0A087265712D303030327A020801") },
-            { "telemetry first", new DeviceToBackendEnvelope { RequestId = "req-0001", Telemetry = new DeviceTelemetry() }.ToByteArray() },
+            { "secret too short", With(connect => connect.AuthSecret = ByteString.CopyFrom(device.Secret[..31])).ToByteArray() },
+            { "secret too long", With(connect => connect.AuthSecret = ByteString.CopyFrom([.. device.Secret, 0])).ToByteArray() },
+            { "secret missing", With(connect => connect.AuthSecret = ByteString.Empty).ToByteArray() },
+            { "empty envelope", new DeviceToBackendEnvelope().ToByteArray() },
+            { "unknown payload", UnknownPayload },
             { "not protobuf", [0xFF, 0xFF, 0xFF] },
         };
     }
@@ -252,12 +240,12 @@ public sealed class DeviceEndpointTests : IDisposable
     public async Task AnUnsupportedVersionIsRejectedBeforeTheFields(uint version)
     {
         await using var device = await _factory.ConnectAsync();
-        var frame = device.Device.Connect("req-0005", version);
-        frame.Connect.AuthSecret = "not a secret";
+        var frame = device.Device.Connect(version);
+        frame.Connect.AuthSecret = ByteString.CopyFromUtf8("not a secret");
 
         await device.SendAsync(frame);
 
-        Assert.Equal(WebSocketCloseStatus.PolicyViolation, await device.ExpectRejectedAsync(ConnectionRejectReason.UnsupportedVersion, "req-0005"));
+        Assert.Equal(WebSocketCloseStatus.PolicyViolation, await device.ExpectRejectedAsync(ConnectionRejectReason.UnsupportedVersion));
         Assert.Equal(0, _factory.Codes.LiveCount);
     }
 
@@ -303,7 +291,7 @@ public sealed class DeviceEndpointTests : IDisposable
         await using var device = await _factory.ConnectAsync();
         await device.HandshakeAsync();
 
-        await device.SendAsync(new DeviceToBackendEnvelope { Telemetry = new DeviceTelemetry() });
+        await device.SendRawAsync(UnknownPayload);
 
         Assert.Equal(WebSocketCloseStatus.PolicyViolation, await device.ExpectRejectedAsync(ConnectionRejectReason.MalformedRequest));
     }
@@ -316,9 +304,9 @@ public sealed class DeviceEndpointTests : IDisposable
         await using var device = await _factory.ConnectAsync(identity);
         await device.HandshakeAsync();
 
-        await device.SendRawAsync(Convert.FromHexString("0A087265712D303030327A020801"));
+        await device.SendRawAsync(UnknownPayload);
         await device.SendRawAsync(new DeviceToBackendEnvelope().ToByteArray());
-        await device.SendAsync(identity.Connect("req-0003"));
+        await device.SendAsync(identity.Connect());
 
         Assert.Equal(WebSocketCloseStatus.PolicyViolation, await device.ExpectRejectedAsync(ConnectionRejectReason.MalformedRequest));
     }
@@ -350,8 +338,8 @@ public sealed class DeviceEndpointTests : IDisposable
 
         // The first code outlives its connection, so it still holds the only slot.
         await using var second = await factory.ConnectAsync();
-        await second.SendAsync(second.Device.Connect("req-0010"));
-        Assert.Equal(WebSocketCloseStatus.PolicyViolation, await second.ExpectRejectedAsync(ConnectionRejectReason.ServerBusy, "req-0010"));
+        await second.SendAsync(second.Device.Connect());
+        Assert.Equal(WebSocketCloseStatus.PolicyViolation, await second.ExpectRejectedAsync(ConnectionRejectReason.ServerBusy));
 
         // A paired device never needs a slot.
         var paired = TestDevice.Create();
@@ -392,7 +380,7 @@ public sealed class DeviceEndpointTests : IDisposable
             settings["Devices:KeepAliveTimeout"] = "00:00:00.200";
         });
         var silent = TestDevice.Create();
-        var responsive = TestDevice.Create("AA:BB:CC:DD:EE:01");
+        var responsive = TestDevice.Create();
         factory.Pair(silent);
         factory.Pair(responsive);
         await using var silentDevice = await factory.ConnectAsync(silent);
@@ -415,21 +403,21 @@ public sealed class DeviceEndpointTests : IDisposable
         await using var device = await _factory.ConnectAsync();
         var code = (await device.HandshakeAsync()).PairingPending.Code;
         var pairing = _factory.Codes.TryConsume(code)!;
-        _factory.Devices.Pair(pairing.SecretHash, pairing.MacAddress);
+        _factory.Devices.Pair(pairing.SecretHash);
         _factory.Connections.NotifyPaired(pairing.SecretHash);
         await device.ReceiveAsync();
 
         using var connection = new MosaicDatabase(Path.Combine(_factory.Directory, "mosaic.db")).OpenConnection();
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT secret_hash, mac_address FROM devices";
+        command.CommandText = "SELECT secret_hash FROM devices";
         using var reader = command.ExecuteReader();
         Assert.True(reader.Read());
         Assert.Equal(device.Device.SecretHash, (byte[])reader[0]);
-        Assert.Equal(device.Device.MacAddress, reader.GetString(1));
         Assert.False(reader.Read());
 
         Assert.NotEmpty(_factory.Logs);
-        Assert.DoesNotContain(_factory.Logs, line => line.Contains(device.Device.Secret, StringComparison.Ordinal));
+        Assert.DoesNotContain(_factory.Logs, line => line.Contains(Convert.ToHexString(device.Device.Secret), StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(_factory.Logs, line => line.Contains(Convert.ToBase64String(device.Device.Secret), StringComparison.Ordinal));
         Assert.DoesNotContain(_factory.Logs, line => line.Contains(code, StringComparison.OrdinalIgnoreCase));
     }
 

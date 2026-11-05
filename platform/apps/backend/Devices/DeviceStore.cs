@@ -43,16 +43,15 @@ public sealed class DeviceStore(MosaicDatabase database, TimeProvider time)
     /// already paired keeps its ID, so a retried claim resolves to the same device. Returns
     /// null for a revoked credential, which can never be paired again.
     /// </summary>
-    public long? Pair(byte[] secretHash, string macAddress)
+    public long? Pair(byte[] secretHash)
     {
         using var connection = database.OpenConnection();
         using var command = connection.CreateCommand("""
-            INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES ($secretHash, $macAddress, $pairedAt)
+            INSERT INTO devices (secret_hash, paired_at) VALUES ($secretHash, $pairedAt)
             ON CONFLICT (secret_hash) DO UPDATE SET secret_hash = excluded.secret_hash WHERE revoked_at IS NULL
             RETURNING id
             """);
         command.Parameters.AddWithValue("$secretHash", secretHash);
-        command.Parameters.AddWithValue("$macAddress", macAddress);
         command.Parameters.AddWithValue("$pairedAt", Timestamps.Format(time.GetUtcNow()));
         return command.ExecuteScalar() is long id ? id : null;
     }

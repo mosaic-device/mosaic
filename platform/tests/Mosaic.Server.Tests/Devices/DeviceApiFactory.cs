@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
-using System.Buffers.Text;
 using Google.Protobuf;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -74,7 +73,7 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>Records <paramref name="device"/> as paired, as a completed claim would.</summary>
-    public long Pair(TestDevice device) => Devices.Pair(device.SecretHash, device.MacAddress)!.Value;
+    public long Pair(TestDevice device) => Devices.Pair(device.SecretHash)!.Value;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -121,19 +120,18 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
     }
 }
 
-/// <summary>A device's identity as the firmware would hold it: a random 32-byte secret and its MAC.</summary>
-public sealed record TestDevice(string Secret, byte[] SecretHash, string MacAddress)
+/// <summary>A device's identity as the firmware would hold it: a random 32-byte secret.</summary>
+public sealed record TestDevice(byte[] Secret, byte[] SecretHash)
 {
-    public static TestDevice Create(string macAddress = "AA:BB:CC:DD:EE:FF")
+    public static TestDevice Create()
     {
         var secret = RandomNumberGenerator.GetBytes(32);
-        return new TestDevice(Base64Url.EncodeToString(secret), SHA256.HashData(secret), macAddress);
+        return new TestDevice(secret, SHA256.HashData(secret));
     }
 
-    public DeviceToBackendEnvelope Connect(string requestId = "req-0001", uint version = 1) => new()
+    public DeviceToBackendEnvelope Connect(uint version = 1) => new()
     {
-        RequestId = requestId,
-        Connect = new DeviceConnect { MacAddress = MacAddress, AuthSecret = Secret, ProtocolVersion = version },
+        Connect = new DeviceConnect { ProtocolVersion = version, AuthSecret = ByteString.CopyFrom(Secret) },
     };
 }
 
@@ -152,9 +150,9 @@ public sealed class FakeDevice(ClientWebSocket socket, TestDevice device) : IAsy
         Socket.SendAsync(bytes, type, endOfMessage: true, TestContext.Current.CancellationToken);
 
     /// <summary>Sends <c>connect</c> and returns the server's reply.</summary>
-    public async Task<BackendToDeviceEnvelope> HandshakeAsync(string requestId = "req-0001")
+    public async Task<BackendToDeviceEnvelope> HandshakeAsync()
     {
-        await SendAsync(Device.Connect(requestId));
+        await SendAsync(Device.Connect());
         return await ReceiveAsync();
     }
 
@@ -175,12 +173,11 @@ public sealed class FakeDevice(ClientWebSocket socket, TestDevice device) : IAsy
     }
 
     /// <summary>Expects <c>rejected</c> with <paramref name="reason"/>, then a close.</summary>
-    public async Task<WebSocketCloseStatus?> ExpectRejectedAsync(ConnectionRejectReason reason, string requestId = "")
+    public async Task<WebSocketCloseStatus?> ExpectRejectedAsync(ConnectionRejectReason reason)
     {
         var reply = await ReceiveAsync();
         Assert.Equal(BackendToDeviceEnvelope.PayloadOneofCase.Rejected, reply.PayloadCase);
         Assert.Equal(reason, reply.Rejected.Reason);
-        Assert.Equal(requestId, reply.RequestId);
         return await ReceiveCloseAsync();
     }
 

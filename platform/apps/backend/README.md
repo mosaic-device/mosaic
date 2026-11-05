@@ -172,7 +172,7 @@ protobuf envelope. The device's first frame must be `connect`, within 10 seconds
 - A **revoked** credential, a **malformed** frame or an **unsupported version** gets
   `rejected` with the reason, then a close, before any device access.
 
-The `devices` table stores only the SHA-256 of each device's decoded 32-byte secret.
+The `devices` table stores only the SHA-256 of each device's 32-byte secret.
 Secrets and pairing codes are never logged. Requests with an `Origin` header get 403,
 so a web page cannot open device connections. The server pings every 15 seconds and
 drops a connection that misses its pong for 15 seconds. These settings can be changed

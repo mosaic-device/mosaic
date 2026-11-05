@@ -4,39 +4,35 @@
 # Format: <direction> <name> <kind> <hex>
 #   direction  d2s = DeviceToBackendEnvelope, b2d = BackendToDeviceEnvelope
 #   kind       valid      decodes to the expected fields and re-encodes to the same bytes
-#              ignored    decodes with no payload selected and request_id kept
+#              ignored    decodes with no payload selected
 #              truncated  fails to decode on both sides
-#              over_limit nanopb fails to decode; C# decodes it, so the server must
-#                         reject it by checking the field against its nanopb max_size
+#              bad_length nanopb fails to decode; C# decodes it, so the server must
+#                         reject it by checking the field length against its nanopb limit
 #
 # Each test keeps the expected field values for every name and fails if this file
-# and its table disagree. See the wiki's Device Connection Protocol, section 9.
+# and its table disagree. See the wiki's Device Connection Protocol.
 
-# connect: request_id "req-0001", mac AA:BB:CC:DD:EE:FF, protocol_version 1,
-# auth_secret = unpadded base64url of bytes 0x00..0x1F (43 characters).
-d2s connect valid 0A087265712D303030312A420A1141413A42423A43433A44443A45453A4646122B41414543417751464267634943516F4C4441304F4478415245684D554652595847426B61477877644868381801
-# request_id "req-0002" and an unknown payload field 15.
-d2s unknown_payload ignored 0A087265712D303030327A020801
-# connect for "req-0003" with its last byte removed.
-d2s connect_truncated truncated 0A087265712D303030332A420A1141413A42423A43433A44443A45453A4646122B41414543417751464267634943516F4C4441304F4478415245684D554652595847426B614778776448683818
-# connect for "req-0004" whose auth_secret is 64 characters (limit 63).
-d2s connect_secret_over_limit over_limit 0A087265712D303030342A570A1141413A42423A43433A44443A45453A46461240414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141414141411801
+# connect: protocol_version 1, auth_secret = bytes 0x00..0x1F.
+d2s connect valid 0A2408011220000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F
+# An unknown payload field 15.
+d2s unknown_payload ignored 7A020801
+# connect with its last byte removed.
+d2s connect_truncated truncated 0A2408011220000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E
+# connect whose auth_secret is 33 bytes (exactly 32 required).
+d2s connect_secret_long bad_length 0A2508011221000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20
+# connect whose auth_secret is 31 bytes (exactly 32 required).
+d2s connect_secret_short bad_length 0A230801121F000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E
 
-# paired, unsolicited after a claim (empty payload still selected).
-b2d paired valid 2A00
-# paired as the direct reply to connect "req-0001".
-b2d paired_reply valid 0A087265712D303030312A00
-# pairing_pending K7QF2M9X with 600 s left, unsolicited (code replaced at expiry).
-b2d pairing_pending valid 220D0A084B375146324D395810D804
-# The same, as the direct reply to connect "req-0001".
-b2d pairing_pending_reply valid 0A087265712D30303031220D0A084B375146324D395810D804
-b2d rejected_malformed_request valid 32020801
-b2d rejected_unsupported_version valid 32020802
-b2d rejected_credential_revoked valid 32020803
-b2d rejected_server_busy valid 32020804
-# request_id "req-0005" and an unknown payload field 15.
-b2d unknown_payload ignored 0A087265712D303030357A020801
+b2d paired valid 1200
+# pairing_pending K7QF2M9X with 600 s left.
+b2d pairing_pending valid 0A0D0A084B375146324D395810D804
+b2d rejected_malformed_request valid 1A020801
+b2d rejected_unsupported_version valid 1A020802
+b2d rejected_credential_revoked valid 1A020803
+b2d rejected_server_busy valid 1A020804
+# An unknown payload field 15.
+b2d unknown_payload ignored 7A020801
 # pairing_pending with its last byte removed.
-b2d pairing_pending_truncated truncated 220D0A084B375146324D395810D8
+b2d pairing_pending_truncated truncated 0A0D0A084B375146324D395810D8
 # pairing_pending whose code is 9 characters (limit 8).
-b2d pairing_pending_code_over_limit over_limit 220E0A094B375146324D39584110D804
+b2d pairing_pending_code_long bad_length 0A0E0A094B375146324D39584110D804

@@ -1,6 +1,6 @@
 // Checks the nanopb bindings against platform/packages/protocols/testdata/frames.txt.
 // The server's C# test checks the same file, so both sides agree on every byte.
-// See the wiki's Device Connection Protocol, section 9.
+// See the wiki's Device Connection Protocol.
 
 #include "events.pb.h"
 #include "pb_decode.h"
@@ -20,8 +20,15 @@ namespace {
 using DeviceFrame = mosaic_device_v1_DeviceToBackendEnvelope;
 using ServerFrame = mosaic_device_v1_BackendToDeviceEnvelope;
 
-constexpr const char* auth_secret = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
-constexpr const char* mac_address = "AA:BB:CC:DD:EE:FF";
+// Bytes 0x00..0x1F.
+bool is_test_secret(const pb_byte_t (&secret)[32]) {
+    for (size_t i = 0; i < sizeof secret; ++i) {
+        if (secret[i] != i) {
+            return false;
+        }
+    }
+    return true;
+}
 
 int failures = 0;
 
@@ -72,7 +79,7 @@ bool pending_k7qf2m9x(const ServerFrame& frame) {
 }
 
 bool rejected(const ServerFrame& frame, mosaic_device_v1_ConnectionRejectReason reason) {
-    return frame.which_payload == mosaic_device_v1_BackendToDeviceEnvelope_rejected_tag && frame.request_id[0] == '\0'
+    return frame.which_payload == mosaic_device_v1_BackendToDeviceEnvelope_rejected_tag
         && frame.payload.rejected.reason == reason;
 }
 
@@ -81,26 +88,16 @@ const std::map<std::string, bool (*)(const DeviceFrame&)> valid_device_frames = 
     { "d2s connect",
         [](const DeviceFrame& frame) {
             return frame.which_payload == mosaic_device_v1_DeviceToBackendEnvelope_connect_tag
-                && same(frame.request_id, "req-0001") && same(frame.payload.connect.mac_address, mac_address)
-                && same(frame.payload.connect.auth_secret, auth_secret) && frame.payload.connect.protocol_version == 1;
+                && is_test_secret(frame.payload.connect.auth_secret) && frame.payload.connect.protocol_version == 1;
         } },
 };
 
 const std::map<std::string, bool (*)(const ServerFrame&)> valid_server_frames = {
     { "b2d paired",
         [](const ServerFrame& frame) {
-            return frame.which_payload == mosaic_device_v1_BackendToDeviceEnvelope_paired_tag
-                && frame.request_id[0] == '\0';
+            return frame.which_payload == mosaic_device_v1_BackendToDeviceEnvelope_paired_tag;
         } },
-    { "b2d paired_reply",
-        [](const ServerFrame& frame) {
-            return frame.which_payload == mosaic_device_v1_BackendToDeviceEnvelope_paired_tag
-                && same(frame.request_id, "req-0001");
-        } },
-    { "b2d pairing_pending",
-        [](const ServerFrame& frame) { return pending_k7qf2m9x(frame) && frame.request_id[0] == '\0'; } },
-    { "b2d pairing_pending_reply",
-        [](const ServerFrame& frame) { return pending_k7qf2m9x(frame) && same(frame.request_id, "req-0001"); } },
+    { "b2d pairing_pending", pending_k7qf2m9x },
     { "b2d rejected_malformed_request",
         [](const ServerFrame& frame) {
             return rejected(frame, mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_MALFORMED_REQUEST);
@@ -120,14 +117,11 @@ const std::map<std::string, bool (*)(const ServerFrame&)> valid_server_frames = 
         } },
 };
 
-// An envelope with an unknown payload decodes with no payload and keeps its request_id.
-const std::map<std::string, const char*> ignored_frames = {
-    { "d2s unknown_payload", "req-0002" },
-    { "b2d unknown_payload", "req-0005" },
-};
+// An envelope with an unknown payload decodes with no payload selected.
+const std::set<std::string> ignored_frames = { "d2s unknown_payload", "b2d unknown_payload" };
 
-const std::set<std::string> over_limit_frames
-    = { "d2s connect_secret_over_limit", "b2d pairing_pending_code_over_limit" };
+const std::set<std::string> bad_length_frames
+    = { "d2s connect_secret_long", "d2s connect_secret_short", "b2d pairing_pending_code_long" };
 const std::set<std::string> truncated_frames = { "d2s connect_truncated", "b2d pairing_pending_truncated" };
 
 std::map<std::string, Frame> load(const char* path) {
@@ -178,18 +172,15 @@ void check_frame(const std::string& key, const Frame& frame) {
         }
         check(encode(frame, device, server) == frame.bytes, key, "re-encoding changed the bytes");
     } else if (frame.kind == "ignored") {
-        auto expected = ignored_frames.find(key);
+        check(ignored_frames.contains(key), key, "unexpected ignored frame");
         check(decoded, key, "unknown payload must be skipped, not fail");
-        check(expected != ignored_frames.end(), key, "no expected request_id");
-        if (decoded && expected != ignored_frames.end()) {
-            const char* request_id = frame.from_device ? device.request_id : server.request_id;
+        if (decoded) {
             pb_size_t which = frame.from_device ? device.which_payload : server.which_payload;
-            check(same(request_id, expected->second), key, "request_id not kept");
             check(which == 0, key, "a payload was selected");
         }
-    } else if (frame.kind == "over_limit") {
-        check(over_limit_frames.contains(key), key, "unexpected over_limit frame");
-        check(!decoded, key, "a field over its max_size must fail to decode");
+    } else if (frame.kind == "bad_length") {
+        check(bad_length_frames.contains(key), key, "unexpected bad_length frame");
+        check(!decoded, key, "a field outside its nanopb limit must fail to decode");
     } else if (frame.kind == "truncated") {
         check(truncated_frames.contains(key), key, "unexpected truncated frame");
         check(!decoded, key, "a truncated frame must fail to decode");
@@ -214,10 +205,8 @@ int main(int argc, char** argv) {
     for (const auto& [key, _] : valid_server_frames) {
         expected.insert(key);
     }
-    for (const auto& [key, _] : ignored_frames) {
-        expected.insert(key);
-    }
-    expected.insert(over_limit_frames.begin(), over_limit_frames.end());
+    expected.insert(ignored_frames.begin(), ignored_frames.end());
+    expected.insert(bad_length_frames.begin(), bad_length_frames.end());
     expected.insert(truncated_frames.begin(), truncated_frames.end());
 
     std::set<std::string> actual;

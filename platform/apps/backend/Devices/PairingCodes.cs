@@ -5,8 +5,8 @@ namespace Mosaic.Server.Devices;
 /// <summary>A live pairing code for one credential, and when it stops being claimable.</summary>
 public sealed record PendingCode(string Code, DateTimeOffset ExpiresAt);
 
-/// <summary>What a claim of a live code hands over: the credential to pair and the MAC it reported.</summary>
-public sealed record PendingPairing(byte[] SecretHash, string MacAddress);
+/// <summary>What a claim of a live code hands over: the credential to pair.</summary>
+public sealed record PendingPairing(byte[] SecretHash);
 
 /// <summary>
 /// Pairing codes for unknown credentials (Device Connection and Pairing Flow, section 2). Codes
@@ -48,7 +48,7 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
     /// A code with under a second left counts as expired, so a device is never told it has
     /// zero seconds (Device Connection Protocol, section 4).
     /// </remarks>
-    public PendingCode? Issue(byte[] secretHash, string macAddress)
+    public PendingCode? Issue(byte[] secretHash)
     {
         var key = Convert.ToHexString(secretHash);
         lock (_lock)
@@ -72,7 +72,7 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
             }
             while (_byCode.ContainsKey(code));
 
-            var entry = new Entry(new PendingCode(code, now + Lifetime), key, new PendingPairing(secretHash, macAddress));
+            var entry = new Entry(new PendingCode(code, now + Lifetime), key, new PendingPairing(secretHash));
             _byCode.Add(code, entry);
             _byCredential.Add(key, entry);
             return entry.Pending;

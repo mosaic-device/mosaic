@@ -14,10 +14,10 @@ public static class DeviceEndpoint
     public const string Path = "/ws/device";
 
     /// <summary>The largest device frame: the generated nanopb <c>DeviceToBackendEnvelope_size</c>.</summary>
-    public const int MaxDeviceFrameBytes = 328;
+    public const int MaxDeviceFrameBytes = 42;
 
     /// <summary>The largest server frame: the generated nanopb <c>BackendToDeviceEnvelope_size</c>.</summary>
-    public const int MaxServerFrameBytes = 1326;
+    public const int MaxServerFrameBytes = 18;
 
     public static void MapDeviceEndpoint(this WebApplication app)
     {
@@ -143,7 +143,7 @@ public sealed partial class DeviceConnectionHandler(
         }
         catch (InvalidProtocolBufferException)
         {
-            await RejectAsync(link, ConnectionRejectReason.MalformedRequest, "");
+            await RejectAsync(link, ConnectionRejectReason.MalformedRequest);
             return;
         }
 
@@ -151,7 +151,7 @@ public sealed partial class DeviceConnectionHandler(
         if (check.Connect is not { } connect)
         {
             LogRejected(check.Rejection!.Value);
-            await RejectAsync(link, check.Rejection!.Value, check.RequestId);
+            await RejectAsync(link, check.Rejection!.Value);
             return;
         }
 
@@ -160,7 +160,7 @@ public sealed partial class DeviceConnectionHandler(
         if (credential.State == CredentialState.Revoked)
         {
             LogRevokedCredential(credential.DeviceId!.Value);
-            await RejectAsync(link, ConnectionRejectReason.CredentialRevoked, connect.RequestId);
+            await RejectAsync(link, ConnectionRejectReason.CredentialRevoked);
             return;
         }
 
@@ -171,20 +171,20 @@ public sealed partial class DeviceConnectionHandler(
             if (credential.State == CredentialState.Paired)
             {
                 LogPaired(credential.DeviceId!.Value);
-                await SendAsync(link, new BackendToDeviceEnvelope { RequestId = connect.RequestId, Paired = new DevicePaired() });
+                await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
             }
             else
             {
-                code = codes.Issue(connect.SecretHash, connect.MacAddress);
+                code = codes.Issue(connect.SecretHash);
                 if (code is null)
                 {
                     LogPendingLimit(options.MaxPendingPairings);
-                    await RejectAsync(link, ConnectionRejectReason.ServerBusy, connect.RequestId);
+                    await RejectAsync(link, ConnectionRejectReason.ServerBusy);
                     return;
                 }
 
-                LogPending(connect.MacAddress);
-                await SendAsync(link, Pending(connect.RequestId, code));
+                LogPending();
+                await SendAsync(link, Pending(code));
             }
 
             await ConnectedAsync(link, stopping, connection, connect, code);
@@ -230,7 +230,7 @@ public sealed partial class DeviceConnectionHandler(
                 link.ReceiveNext();
                 if (code is not null || !IsIgnorableAfterPairing(frame))
                 {
-                    await RejectAsync(link, ConnectionRejectReason.MalformedRequest, "");
+                    await RejectAsync(link, ConnectionRejectReason.MalformedRequest);
                     return;
                 }
 
@@ -246,7 +246,7 @@ public sealed partial class DeviceConnectionHandler(
                         await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
                         break;
                     case DeviceSignal.Revoked:
-                        await RejectAsync(link, ConnectionRejectReason.CredentialRevoked, "");
+                        await RejectAsync(link, ConnectionRejectReason.CredentialRevoked);
                         return;
                     case DeviceSignal.Replaced:
                         await CloseAsync(link, WebSocketCloseStatus.NormalClosure);
@@ -265,18 +265,18 @@ public sealed partial class DeviceConnectionHandler(
                     await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
                     break;
                 case CredentialState.Revoked:
-                    await RejectAsync(link, ConnectionRejectReason.CredentialRevoked, "");
+                    await RejectAsync(link, ConnectionRejectReason.CredentialRevoked);
                     return;
                 default:
-                    code = codes.Issue(connect.SecretHash, connect.MacAddress);
+                    code = codes.Issue(connect.SecretHash);
                     if (code is null)
                     {
                         LogPendingLimit(options.MaxPendingPairings);
-                        await RejectAsync(link, ConnectionRejectReason.ServerBusy, "");
+                        await RejectAsync(link, ConnectionRejectReason.ServerBusy);
                         return;
                     }
 
-                    await SendAsync(link, Pending("", code));
+                    await SendAsync(link, Pending(code));
                     break;
             }
         }
@@ -322,20 +322,15 @@ public sealed partial class DeviceConnectionHandler(
         return remaining > TimeSpan.Zero ? remaining : TimeSpan.Zero;
     }
 
-    private BackendToDeviceEnvelope Pending(string requestId, PendingCode code) => new()
+    private BackendToDeviceEnvelope Pending(PendingCode code) => new()
     {
-        RequestId = requestId,
         PairingPending = new PairingPending { Code = code.Code, ExpiresInSeconds = (uint)codes.SecondsLeft(code) },
     };
 
     /// <summary>Sends <c>rejected</c>, then closes: 1000 after a revocation, 1008 otherwise (section 5).</summary>
-    private static async Task RejectAsync(Link link, ConnectionRejectReason reason, string requestId)
+    private static async Task RejectAsync(Link link, ConnectionRejectReason reason)
     {
-        await SendAsync(link, new BackendToDeviceEnvelope
-        {
-            RequestId = requestId,
-            Rejected = new ConnectionRejected { Reason = reason },
-        });
+        await SendAsync(link, new BackendToDeviceEnvelope { Rejected = new ConnectionRejected { Reason = reason } });
         await CloseAsync(
             link,
             reason == ConnectionRejectReason.CredentialRevoked ? WebSocketCloseStatus.NormalClosure : WebSocketCloseStatus.PolicyViolation);
@@ -409,12 +404,12 @@ public sealed partial class DeviceConnectionHandler(
         }
     }
 
-    // Secrets and pairing codes are never logged. A MAC is self-reported and for support only.
+    // Secrets and pairing codes are never logged.
     [LoggerMessage(Level = LogLevel.Information, Message = "Paired device {DeviceId} connected")]
     private partial void LogPaired(long deviceId);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Unpaired device reporting MAC {MacAddress} is waiting to be claimed")]
-    private partial void LogPending(string macAddress);
+    [LoggerMessage(Level = LogLevel.Information, Message = "An unpaired device is waiting to be claimed")]
+    private partial void LogPending();
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Rejected a device connection: {Reason}")]
     private partial void LogRejected(ConnectionRejectReason reason);

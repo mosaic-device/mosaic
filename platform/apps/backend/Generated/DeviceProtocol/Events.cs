@@ -25,100 +25,42 @@ namespace Mosaic.Device.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "CgxldmVudHMucHJvdG8SEG1vc2FpYy5kZXZpY2UudjEaDG5hbm9wYi5wcm90",
-            "byKKAQoNRGV2aWNlQ29ubmVjdBImCgttYWNfYWRkcmVzcxgBIAEoCUIFkj8C",
-            "CBJSCm1hY0FkZHJlc3MSJgoLYXV0aF9zZWNyZXQYAiABKAlCBZI/AghAUgph",
-            "dXRoU2VjcmV0EikKEHByb3RvY29sX3ZlcnNpb24YAyABKA1SD3Byb3RvY29s",
-            "VmVyc2lvbiJZCg5QYWlyaW5nUGVuZGluZxIZCgRjb2RlGAEgASgJQgWSPwII",
-            "CVIEY29kZRIsChJleHBpcmVzX2luX3NlY29uZHMYAiABKA1SEGV4cGlyZXNJ",
-            "blNlY29uZHMiDgoMRGV2aWNlUGFpcmVkIlYKEkNvbm5lY3Rpb25SZWplY3Rl",
-            "ZBJACgZyZWFzb24YASABKA4yKC5tb3NhaWMuZGV2aWNlLnYxLkNvbm5lY3Rp",
-            "b25SZWplY3RSZWFzb25SBnJlYXNvbiKfAQoSTm90aWZpY2F0aW9uQWN0aW9u",
-            "EhUKAmlkGAEgASgJQgWSPwIIYFICaWQSGwoFbGFiZWwYAiABKAlCBZI/Aggw",
-            "UgVsYWJlbBIzChVyZXF1aXJlc19jb25maXJtYXRpb24YAyABKAhSFHJlcXVp",
-            "cmVzQ29uZmlybWF0aW9uEiAKC2Rlc3RydWN0aXZlGAQgASgIUgtkZXN0cnVj",
-            "dGl2ZSKaAgoVQWlTdW1tYXJ5Tm90aWZpY2F0aW9uEhsKBXRpdGxlGAEgASgJ",
-            "QgWSPwIIQFIFdGl0bGUSKQoMc3VtbWFyeV90ZXh0GAIgASgJQgaSPwMIgARS",
-            "C3N1bW1hcnlUZXh0EkIKCHByaW9yaXR5GAMgASgOMiYubW9zYWljLmRldmlj",
-            "ZS52MS5Ob3RpZmljYXRpb25Qcmlvcml0eVIIcHJpb3JpdHkSLgoPbm90aWZp",
-            "Y2F0aW9uX2lkGAQgASgJQgWSPwIIQFIObm90aWZpY2F0aW9uSWQSRQoHYWN0",
-            "aW9ucxgFIAMoCzIkLm1vc2FpYy5kZXZpY2UudjEuTm90aWZpY2F0aW9uQWN0",
-            "aW9uQgWSPwIQBFIHYWN0aW9ucyJvCg9EZXZpY2VUZWxlbWV0cnkSEAoDbHV4",
-            "GAEgASgCUgNsdXgSIwoNZW5jb2Rlcl9jb3VudBgCIAEoBVIMZW5jb2RlckNv",
-            "dW50EiUKDmJ1dHRvbl9wcmVzc2VkGAMgASgIUg1idXR0b25QcmVzc2VkInYK",
-            "E0RldmljZUFjdGlvblRyaWdnZXISPQoJYWN0aW9uX2lkGAEgASgOMiAubW9z",
-            "YWljLmRldmljZS52MS5EYWVtb25BY3Rpb25JZFIIYWN0aW9uSWQSIAoHcGF5",
-            "bG9hZBgCIAEoCUIGkj8DCIACUgdwYXlsb2FkIm4KGEludGVncmF0aW9uQWN0",
-            "aW9uVHJpZ2dlchIuCg9ub3RpZmljYXRpb25faWQYASABKAlCBZI/AghAUg5u",
-            "b3RpZmljYXRpb25JZBIiCglhY3Rpb25faWQYAiABKAlCBZI/AghgUghhY3Rp",
-            "b25JZCKpAQoXSW50ZWdyYXRpb25BY3Rpb25SZXN1bHQSLgoPbm90aWZpY2F0",
-            "aW9uX2lkGAEgASgJQgWSPwIIQFIObm90aWZpY2F0aW9uSWQSIgoJYWN0aW9u",
-            "X2lkGAIgASgJQgWSPwIIYFIIYWN0aW9uSWQSGAoHc3VjY2VzcxgDIAEoCFIH",
-            "c3VjY2VzcxIgCgdtZXNzYWdlGAQgASgJQgaSPwMIgAFSB21lc3NhZ2Ui9QIK",
-            "F0RldmljZVRvQmFja2VuZEVudmVsb3BlEiQKCnJlcXVlc3RfaWQYASABKAlC",
-            "BZI/AghAUglyZXF1ZXN0SWQSQQoJdGVsZW1ldHJ5GAIgASgLMiEubW9zYWlj",
-            "LmRldmljZS52MS5EZXZpY2VUZWxlbWV0cnlIAFIJdGVsZW1ldHJ5EkwKDWRh",
-            "ZW1vbl9hY3Rpb24YAyABKAsyJS5tb3NhaWMuZGV2aWNlLnYxLkRldmljZUFj",
-            "dGlvblRyaWdnZXJIAFIMZGFlbW9uQWN0aW9uElsKEmludGVncmF0aW9uX2Fj",
-            "dGlvbhgEIAEoCzIqLm1vc2FpYy5kZXZpY2UudjEuSW50ZWdyYXRpb25BY3Rp",
-            "b25UcmlnZ2VySABSEWludGVncmF0aW9uQWN0aW9uEjsKB2Nvbm5lY3QYBSAB",
-            "KAsyHy5tb3NhaWMuZGV2aWNlLnYxLkRldmljZUNvbm5lY3RIAFIHY29ubmVj",
-            "dEIJCgdwYXlsb2FkIrYDChdCYWNrZW5kVG9EZXZpY2VFbnZlbG9wZRIkCgpy",
-            "ZXF1ZXN0X2lkGAEgASgJQgWSPwIIQFIJcmVxdWVzdElkEk0KDG5vdGlmaWNh",
-            "dGlvbhgCIAEoCzInLm1vc2FpYy5kZXZpY2UudjEuQWlTdW1tYXJ5Tm90aWZp",
-            "Y2F0aW9uSABSDG5vdGlmaWNhdGlvbhJQCg1hY3Rpb25fcmVzdWx0GAMgASgL",
-            "MikubW9zYWljLmRldmljZS52MS5JbnRlZ3JhdGlvbkFjdGlvblJlc3VsdEgA",
-            "UgxhY3Rpb25SZXN1bHQSSwoPcGFpcmluZ19wZW5kaW5nGAQgASgLMiAubW9z",
-            "YWljLmRldmljZS52MS5QYWlyaW5nUGVuZGluZ0gAUg5wYWlyaW5nUGVuZGlu",
-            "ZxI4CgZwYWlyZWQYBSABKAsyHi5tb3NhaWMuZGV2aWNlLnYxLkRldmljZVBh",
-            "aXJlZEgAUgZwYWlyZWQSQgoIcmVqZWN0ZWQYBiABKAsyJC5tb3NhaWMuZGV2",
-            "aWNlLnYxLkNvbm5lY3Rpb25SZWplY3RlZEgAUghyZWplY3RlZEIJCgdwYXls",
-            "b2FkKn8KFE5vdGlmaWNhdGlvblByaW9yaXR5EiUKIU5PVElGSUNBVElPTl9Q",
-            "UklPUklUWV9VTlNQRUNJRklFRBAAEiAKHE5PVElGSUNBVElPTl9QUklPUklU",
-            "WV9OT1JNQUwQARIeChpOT1RJRklDQVRJT05fUFJJT1JJVFlfSElHSBACKm0K",
-            "DkRhZW1vbkFjdGlvbklkEh0KGURBRU1PTl9BQ1RJT05fVU5TUEVDSUZJRUQQ",
-            "ABIMCghPUEVOX1VSTBABEg8KC1RPR0dMRV9NVVRFEAISDAoIT1BFTl9JREUQ",
-            "AxIPCgtMT0NLX1NDUkVFThAEKv8BChZDb25uZWN0aW9uUmVqZWN0UmVhc29u",
-            "EigKJENPTk5FQ1RJT05fUkVKRUNUX1JFQVNPTl9VTlNQRUNJRklFRBAAEi4K",
-            "KkNPTk5FQ1RJT05fUkVKRUNUX1JFQVNPTl9NQUxGT1JNRURfUkVRVUVTVBAB",
-            "EjAKLENPTk5FQ1RJT05fUkVKRUNUX1JFQVNPTl9VTlNVUFBPUlRFRF9WRVJT",
-            "SU9OEAISLworQ09OTkVDVElPTl9SRUpFQ1RfUkVBU09OX0NSRURFTlRJQUxf",
-            "UkVWT0tFRBADEigKJENPTk5FQ1RJT05fUkVKRUNUX1JFQVNPTl9TRVJWRVJf",
-            "QlVTWRAEYgZwcm90bzM="));
+            "byJhChdEZXZpY2VUb0JhY2tlbmRFbnZlbG9wZRI7Cgdjb25uZWN0GAEgASgL",
+            "Mh8ubW9zYWljLmRldmljZS52MS5EZXZpY2VDb25uZWN0SABSB2Nvbm5lY3RC",
+            "CQoHcGF5bG9hZCLvAQoXQmFja2VuZFRvRGV2aWNlRW52ZWxvcGUSSwoPcGFp",
+            "cmluZ19wZW5kaW5nGAEgASgLMiAubW9zYWljLmRldmljZS52MS5QYWlyaW5n",
+            "UGVuZGluZ0gAUg5wYWlyaW5nUGVuZGluZxI4CgZwYWlyZWQYAiABKAsyHi5t",
+            "b3NhaWMuZGV2aWNlLnYxLkRldmljZVBhaXJlZEgAUgZwYWlyZWQSQgoIcmVq",
+            "ZWN0ZWQYAyABKAsyJC5tb3NhaWMuZGV2aWNlLnYxLkNvbm5lY3Rpb25SZWpl",
+            "Y3RlZEgAUghyZWplY3RlZEIJCgdwYXlsb2FkImQKDURldmljZUNvbm5lY3QS",
+            "KQoQcHJvdG9jb2xfdmVyc2lvbhgBIAEoDVIPcHJvdG9jb2xWZXJzaW9uEigK",
+            "C2F1dGhfc2VjcmV0GAIgASgMQgeSPwQIIHgBUgphdXRoU2VjcmV0IlkKDlBh",
+            "aXJpbmdQZW5kaW5nEhkKBGNvZGUYASABKAlCBZI/AggJUgRjb2RlEiwKEmV4",
+            "cGlyZXNfaW5fc2Vjb25kcxgCIAEoDVIQZXhwaXJlc0luU2Vjb25kcyIOCgxE",
+            "ZXZpY2VQYWlyZWQiVgoSQ29ubmVjdGlvblJlamVjdGVkEkAKBnJlYXNvbhgB",
+            "IAEoDjIoLm1vc2FpYy5kZXZpY2UudjEuQ29ubmVjdGlvblJlamVjdFJlYXNv",
+            "blIGcmVhc29uKv8BChZDb25uZWN0aW9uUmVqZWN0UmVhc29uEigKJENPTk5F",
+            "Q1RJT05fUkVKRUNUX1JFQVNPTl9VTlNQRUNJRklFRBAAEi4KKkNPTk5FQ1RJ",
+            "T05fUkVKRUNUX1JFQVNPTl9NQUxGT1JNRURfUkVRVUVTVBABEjAKLENPTk5F",
+            "Q1RJT05fUkVKRUNUX1JFQVNPTl9VTlNVUFBPUlRFRF9WRVJTSU9OEAISLwor",
+            "Q09OTkVDVElPTl9SRUpFQ1RfUkVBU09OX0NSRURFTlRJQUxfUkVWT0tFRBAD",
+            "EigKJENPTk5FQ1RJT05fUkVKRUNUX1JFQVNPTl9TRVJWRVJfQlVTWRAEYgZw",
+            "cm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::NanopbReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Mosaic.Device.V1.NotificationPriority), typeof(global::Mosaic.Device.V1.DaemonActionId), typeof(global::Mosaic.Device.V1.ConnectionRejectReason), }, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceConnect), global::Mosaic.Device.V1.DeviceConnect.Parser, new[]{ "MacAddress", "AuthSecret", "ProtocolVersion" }, null, null, null, null),
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Mosaic.Device.V1.ConnectionRejectReason), }, null, new pbr::GeneratedClrTypeInfo[] {
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceToBackendEnvelope), global::Mosaic.Device.V1.DeviceToBackendEnvelope.Parser, new[]{ "Connect" }, new[]{ "Payload" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.BackendToDeviceEnvelope), global::Mosaic.Device.V1.BackendToDeviceEnvelope.Parser, new[]{ "PairingPending", "Paired", "Rejected" }, new[]{ "Payload" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceConnect), global::Mosaic.Device.V1.DeviceConnect.Parser, new[]{ "ProtocolVersion", "AuthSecret" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.PairingPending), global::Mosaic.Device.V1.PairingPending.Parser, new[]{ "Code", "ExpiresInSeconds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DevicePaired), global::Mosaic.Device.V1.DevicePaired.Parser, null, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.ConnectionRejected), global::Mosaic.Device.V1.ConnectionRejected.Parser, new[]{ "Reason" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.NotificationAction), global::Mosaic.Device.V1.NotificationAction.Parser, new[]{ "Id", "Label", "RequiresConfirmation", "Destructive" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.AiSummaryNotification), global::Mosaic.Device.V1.AiSummaryNotification.Parser, new[]{ "Title", "SummaryText", "Priority", "NotificationId", "Actions" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceTelemetry), global::Mosaic.Device.V1.DeviceTelemetry.Parser, new[]{ "Lux", "EncoderCount", "ButtonPressed" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceActionTrigger), global::Mosaic.Device.V1.DeviceActionTrigger.Parser, new[]{ "ActionId", "Payload" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.IntegrationActionTrigger), global::Mosaic.Device.V1.IntegrationActionTrigger.Parser, new[]{ "NotificationId", "ActionId" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.IntegrationActionResult), global::Mosaic.Device.V1.IntegrationActionResult.Parser, new[]{ "NotificationId", "ActionId", "Success", "Message" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceToBackendEnvelope), global::Mosaic.Device.V1.DeviceToBackendEnvelope.Parser, new[]{ "RequestId", "Telemetry", "DaemonAction", "IntegrationAction", "Connect" }, new[]{ "Payload" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.BackendToDeviceEnvelope), global::Mosaic.Device.V1.BackendToDeviceEnvelope.Parser, new[]{ "RequestId", "Notification", "ActionResult", "PairingPending", "Paired", "Rejected" }, new[]{ "Payload" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.ConnectionRejected), global::Mosaic.Device.V1.ConnectionRejected.Parser, new[]{ "Reason" }, null, null, null, null)
           }));
     }
     #endregion
 
   }
   #region Enums
-  public enum NotificationPriority {
-    [pbr::OriginalName("NOTIFICATION_PRIORITY_UNSPECIFIED")] Unspecified = 0,
-    [pbr::OriginalName("NOTIFICATION_PRIORITY_NORMAL")] Normal = 1,
-    [pbr::OriginalName("NOTIFICATION_PRIORITY_HIGH")] High = 2,
-  }
-
-  public enum DaemonActionId {
-    [pbr::OriginalName("DAEMON_ACTION_UNSPECIFIED")] DaemonActionUnspecified = 0,
-    [pbr::OriginalName("OPEN_URL")] OpenUrl = 1,
-    [pbr::OriginalName("TOGGLE_MUTE")] ToggleMute = 2,
-    [pbr::OriginalName("OPEN_IDE")] OpenIde = 3,
-    [pbr::OriginalName("LOCK_SCREEN")] LockScreen = 4,
-  }
-
   public enum ConnectionRejectReason {
     [pbr::OriginalName("CONNECTION_REJECT_REASON_UNSPECIFIED")] Unspecified = 0,
     [pbr::OriginalName("CONNECTION_REJECT_REASON_MALFORMED_REQUEST")] MalformedRequest = 1,
@@ -131,20 +73,20 @@ namespace Mosaic.Device.V1 {
 
   #region Messages
   /// <summary>
-  /// First frame from the device on every connection. See the wiki's
+  /// Each WebSocket binary message holds exactly one envelope. See the wiki's
   /// Device Connection Protocol for ordering and receiver-enforced field rules.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class DeviceConnect : pb::IMessage<DeviceConnect>
+  public sealed partial class DeviceToBackendEnvelope : pb::IMessage<DeviceToBackendEnvelope>
   #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       , pb::IBufferMessage
   #endif
   {
-    private static readonly pb::MessageParser<DeviceConnect> _parser = new pb::MessageParser<DeviceConnect>(() => new DeviceConnect());
+    private static readonly pb::MessageParser<DeviceToBackendEnvelope> _parser = new pb::MessageParser<DeviceToBackendEnvelope>(() => new DeviceToBackendEnvelope());
     private pb::UnknownFieldSet _unknownFields;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<DeviceConnect> Parser { get { return _parser; } }
+    public static pb::MessageParser<DeviceToBackendEnvelope> Parser { get { return _parser; } }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
@@ -160,7 +102,7 @@ namespace Mosaic.Device.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceConnect() {
+    public DeviceToBackendEnvelope() {
       OnConstruction();
     }
 
@@ -168,76 +110,74 @@ namespace Mosaic.Device.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceConnect(DeviceConnect other) : this() {
-      macAddress_ = other.macAddress_;
-      authSecret_ = other.authSecret_;
-      protocolVersion_ = other.protocolVersion_;
+    public DeviceToBackendEnvelope(DeviceToBackendEnvelope other) : this() {
+      switch (other.PayloadCase) {
+        case PayloadOneofCase.Connect:
+          Connect = other.Connect.Clone();
+          break;
+      }
+
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceConnect Clone() {
-      return new DeviceConnect(this);
+    public DeviceToBackendEnvelope Clone() {
+      return new DeviceToBackendEnvelope(this);
     }
 
-    /// <summary>Field number for the "mac_address" field.</summary>
-    public const int MacAddressFieldNumber = 1;
-    private string macAddress_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string MacAddress {
-      get { return macAddress_; }
-      set {
-        macAddress_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "auth_secret" field.</summary>
-    public const int AuthSecretFieldNumber = 2;
-    private string authSecret_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string AuthSecret {
-      get { return authSecret_; }
-      set {
-        authSecret_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "protocol_version" field.</summary>
-    public const int ProtocolVersionFieldNumber = 3;
-    private uint protocolVersion_;
+    /// <summary>Field number for the "connect" field.</summary>
+    public const int ConnectFieldNumber = 1;
     /// <summary>
-    /// Wire protocol version. Currently 1; zero is unsupported. Never renumber.
+    /// Never renumber: a future server needs it to tell an old device to update.
     /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public uint ProtocolVersion {
-      get { return protocolVersion_; }
+    public global::Mosaic.Device.V1.DeviceConnect Connect {
+      get { return payloadCase_ == PayloadOneofCase.Connect ? (global::Mosaic.Device.V1.DeviceConnect) payload_ : null; }
       set {
-        protocolVersion_ = value;
+        payload_ = value;
+        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Connect;
       }
+    }
+
+    private object payload_;
+    /// <summary>Enum of possible cases for the "payload" oneof.</summary>
+    public enum PayloadOneofCase {
+      None = 0,
+      Connect = 1,
+    }
+    private PayloadOneofCase payloadCase_ = PayloadOneofCase.None;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PayloadOneofCase PayloadCase {
+      get { return payloadCase_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearPayload() {
+      payloadCase_ = PayloadOneofCase.None;
+      payload_ = null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override bool Equals(object other) {
-      return Equals(other as DeviceConnect);
+      return Equals(other as DeviceToBackendEnvelope);
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(DeviceConnect other) {
+    public bool Equals(DeviceToBackendEnvelope other) {
       if (ReferenceEquals(other, null)) {
         return false;
       }
       if (ReferenceEquals(other, this)) {
         return true;
       }
-      if (MacAddress != other.MacAddress) return false;
-      if (AuthSecret != other.AuthSecret) return false;
-      if (ProtocolVersion != other.ProtocolVersion) return false;
+      if (!object.Equals(Connect, other.Connect)) return false;
+      if (PayloadCase != other.PayloadCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -245,9 +185,8 @@ namespace Mosaic.Device.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public override int GetHashCode() {
       int hash = 1;
-      if (MacAddress.Length != 0) hash ^= MacAddress.GetHashCode();
-      if (AuthSecret.Length != 0) hash ^= AuthSecret.GetHashCode();
-      if (ProtocolVersion != 0) hash ^= ProtocolVersion.GetHashCode();
+      if (payloadCase_ == PayloadOneofCase.Connect) hash ^= Connect.GetHashCode();
+      hash ^= (int) payloadCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -266,17 +205,9 @@ namespace Mosaic.Device.V1 {
     #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
       output.WriteRawMessage(this);
     #else
-      if (MacAddress.Length != 0) {
+      if (payloadCase_ == PayloadOneofCase.Connect) {
         output.WriteRawTag(10);
-        output.WriteString(MacAddress);
-      }
-      if (AuthSecret.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(AuthSecret);
-      }
-      if (ProtocolVersion != 0) {
-        output.WriteRawTag(24);
-        output.WriteUInt32(ProtocolVersion);
+        output.WriteMessage(Connect);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
@@ -288,17 +219,9 @@ namespace Mosaic.Device.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (MacAddress.Length != 0) {
+      if (payloadCase_ == PayloadOneofCase.Connect) {
         output.WriteRawTag(10);
-        output.WriteString(MacAddress);
-      }
-      if (AuthSecret.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(AuthSecret);
-      }
-      if (ProtocolVersion != 0) {
-        output.WriteRawTag(24);
-        output.WriteUInt32(ProtocolVersion);
+        output.WriteMessage(Connect);
       }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
@@ -310,14 +233,8 @@ namespace Mosaic.Device.V1 {
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public int CalculateSize() {
       int size = 0;
-      if (MacAddress.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(MacAddress);
-      }
-      if (AuthSecret.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(AuthSecret);
-      }
-      if (ProtocolVersion != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ProtocolVersion);
+      if (payloadCase_ == PayloadOneofCase.Connect) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Connect);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -327,19 +244,19 @@ namespace Mosaic.Device.V1 {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(DeviceConnect other) {
+    public void MergeFrom(DeviceToBackendEnvelope other) {
       if (other == null) {
         return;
       }
-      if (other.MacAddress.Length != 0) {
-        MacAddress = other.MacAddress;
+      switch (other.PayloadCase) {
+        case PayloadOneofCase.Connect:
+          if (Connect == null) {
+            Connect = new global::Mosaic.Device.V1.DeviceConnect();
+          }
+          Connect.MergeFrom(other.Connect);
+          break;
       }
-      if (other.AuthSecret.Length != 0) {
-        AuthSecret = other.AuthSecret;
-      }
-      if (other.ProtocolVersion != 0) {
-        ProtocolVersion = other.ProtocolVersion;
-      }
+
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
 
@@ -360,15 +277,12 @@ namespace Mosaic.Device.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
           case 10: {
-            MacAddress = input.ReadString();
-            break;
-          }
-          case 18: {
-            AuthSecret = input.ReadString();
-            break;
-          }
-          case 24: {
-            ProtocolVersion = input.ReadUInt32();
+            global::Mosaic.Device.V1.DeviceConnect subBuilder = new global::Mosaic.Device.V1.DeviceConnect();
+            if (payloadCase_ == PayloadOneofCase.Connect) {
+              subBuilder.MergeFrom(Connect);
+            }
+            input.ReadMessage(subBuilder);
+            Connect = subBuilder;
             break;
           }
         }
@@ -391,15 +305,607 @@ namespace Mosaic.Device.V1 {
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
             break;
           case 10: {
-            MacAddress = input.ReadString();
+            global::Mosaic.Device.V1.DeviceConnect subBuilder = new global::Mosaic.Device.V1.DeviceConnect();
+            if (payloadCase_ == PayloadOneofCase.Connect) {
+              subBuilder.MergeFrom(Connect);
+            }
+            input.ReadMessage(subBuilder);
+            Connect = subBuilder;
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class BackendToDeviceEnvelope : pb::IMessage<BackendToDeviceEnvelope>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<BackendToDeviceEnvelope> _parser = new pb::MessageParser<BackendToDeviceEnvelope>(() => new BackendToDeviceEnvelope());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<BackendToDeviceEnvelope> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BackendToDeviceEnvelope() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BackendToDeviceEnvelope(BackendToDeviceEnvelope other) : this() {
+      switch (other.PayloadCase) {
+        case PayloadOneofCase.PairingPending:
+          PairingPending = other.PairingPending.Clone();
+          break;
+        case PayloadOneofCase.Paired:
+          Paired = other.Paired.Clone();
+          break;
+        case PayloadOneofCase.Rejected:
+          Rejected = other.Rejected.Clone();
+          break;
+      }
+
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public BackendToDeviceEnvelope Clone() {
+      return new BackendToDeviceEnvelope(this);
+    }
+
+    /// <summary>Field number for the "pairing_pending" field.</summary>
+    public const int PairingPendingFieldNumber = 1;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Mosaic.Device.V1.PairingPending PairingPending {
+      get { return payloadCase_ == PayloadOneofCase.PairingPending ? (global::Mosaic.Device.V1.PairingPending) payload_ : null; }
+      set {
+        payload_ = value;
+        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.PairingPending;
+      }
+    }
+
+    /// <summary>Field number for the "paired" field.</summary>
+    public const int PairedFieldNumber = 2;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Mosaic.Device.V1.DevicePaired Paired {
+      get { return payloadCase_ == PayloadOneofCase.Paired ? (global::Mosaic.Device.V1.DevicePaired) payload_ : null; }
+      set {
+        payload_ = value;
+        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Paired;
+      }
+    }
+
+    /// <summary>Field number for the "rejected" field.</summary>
+    public const int RejectedFieldNumber = 3;
+    /// <summary>
+    /// Never renumber: a future server needs it to tell an old device to update.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Mosaic.Device.V1.ConnectionRejected Rejected {
+      get { return payloadCase_ == PayloadOneofCase.Rejected ? (global::Mosaic.Device.V1.ConnectionRejected) payload_ : null; }
+      set {
+        payload_ = value;
+        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Rejected;
+      }
+    }
+
+    private object payload_;
+    /// <summary>Enum of possible cases for the "payload" oneof.</summary>
+    public enum PayloadOneofCase {
+      None = 0,
+      PairingPending = 1,
+      Paired = 2,
+      Rejected = 3,
+    }
+    private PayloadOneofCase payloadCase_ = PayloadOneofCase.None;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public PayloadOneofCase PayloadCase {
+      get { return payloadCase_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void ClearPayload() {
+      payloadCase_ = PayloadOneofCase.None;
+      payload_ = null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as BackendToDeviceEnvelope);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(BackendToDeviceEnvelope other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!object.Equals(PairingPending, other.PairingPending)) return false;
+      if (!object.Equals(Paired, other.Paired)) return false;
+      if (!object.Equals(Rejected, other.Rejected)) return false;
+      if (PayloadCase != other.PayloadCase) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (payloadCase_ == PayloadOneofCase.PairingPending) hash ^= PairingPending.GetHashCode();
+      if (payloadCase_ == PayloadOneofCase.Paired) hash ^= Paired.GetHashCode();
+      if (payloadCase_ == PayloadOneofCase.Rejected) hash ^= Rejected.GetHashCode();
+      hash ^= (int) payloadCase_;
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (payloadCase_ == PayloadOneofCase.PairingPending) {
+        output.WriteRawTag(10);
+        output.WriteMessage(PairingPending);
+      }
+      if (payloadCase_ == PayloadOneofCase.Paired) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Paired);
+      }
+      if (payloadCase_ == PayloadOneofCase.Rejected) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Rejected);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (payloadCase_ == PayloadOneofCase.PairingPending) {
+        output.WriteRawTag(10);
+        output.WriteMessage(PairingPending);
+      }
+      if (payloadCase_ == PayloadOneofCase.Paired) {
+        output.WriteRawTag(18);
+        output.WriteMessage(Paired);
+      }
+      if (payloadCase_ == PayloadOneofCase.Rejected) {
+        output.WriteRawTag(26);
+        output.WriteMessage(Rejected);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (payloadCase_ == PayloadOneofCase.PairingPending) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(PairingPending);
+      }
+      if (payloadCase_ == PayloadOneofCase.Paired) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Paired);
+      }
+      if (payloadCase_ == PayloadOneofCase.Rejected) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Rejected);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(BackendToDeviceEnvelope other) {
+      if (other == null) {
+        return;
+      }
+      switch (other.PayloadCase) {
+        case PayloadOneofCase.PairingPending:
+          if (PairingPending == null) {
+            PairingPending = new global::Mosaic.Device.V1.PairingPending();
+          }
+          PairingPending.MergeFrom(other.PairingPending);
+          break;
+        case PayloadOneofCase.Paired:
+          if (Paired == null) {
+            Paired = new global::Mosaic.Device.V1.DevicePaired();
+          }
+          Paired.MergeFrom(other.Paired);
+          break;
+        case PayloadOneofCase.Rejected:
+          if (Rejected == null) {
+            Rejected = new global::Mosaic.Device.V1.ConnectionRejected();
+          }
+          Rejected.MergeFrom(other.Rejected);
+          break;
+      }
+
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            global::Mosaic.Device.V1.PairingPending subBuilder = new global::Mosaic.Device.V1.PairingPending();
+            if (payloadCase_ == PayloadOneofCase.PairingPending) {
+              subBuilder.MergeFrom(PairingPending);
+            }
+            input.ReadMessage(subBuilder);
+            PairingPending = subBuilder;
             break;
           }
           case 18: {
-            AuthSecret = input.ReadString();
+            global::Mosaic.Device.V1.DevicePaired subBuilder = new global::Mosaic.Device.V1.DevicePaired();
+            if (payloadCase_ == PayloadOneofCase.Paired) {
+              subBuilder.MergeFrom(Paired);
+            }
+            input.ReadMessage(subBuilder);
+            Paired = subBuilder;
             break;
           }
-          case 24: {
+          case 26: {
+            global::Mosaic.Device.V1.ConnectionRejected subBuilder = new global::Mosaic.Device.V1.ConnectionRejected();
+            if (payloadCase_ == PayloadOneofCase.Rejected) {
+              subBuilder.MergeFrom(Rejected);
+            }
+            input.ReadMessage(subBuilder);
+            Rejected = subBuilder;
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            global::Mosaic.Device.V1.PairingPending subBuilder = new global::Mosaic.Device.V1.PairingPending();
+            if (payloadCase_ == PayloadOneofCase.PairingPending) {
+              subBuilder.MergeFrom(PairingPending);
+            }
+            input.ReadMessage(subBuilder);
+            PairingPending = subBuilder;
+            break;
+          }
+          case 18: {
+            global::Mosaic.Device.V1.DevicePaired subBuilder = new global::Mosaic.Device.V1.DevicePaired();
+            if (payloadCase_ == PayloadOneofCase.Paired) {
+              subBuilder.MergeFrom(Paired);
+            }
+            input.ReadMessage(subBuilder);
+            Paired = subBuilder;
+            break;
+          }
+          case 26: {
+            global::Mosaic.Device.V1.ConnectionRejected subBuilder = new global::Mosaic.Device.V1.ConnectionRejected();
+            if (payloadCase_ == PayloadOneofCase.Rejected) {
+              subBuilder.MergeFrom(Rejected);
+            }
+            input.ReadMessage(subBuilder);
+            Rejected = subBuilder;
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// First frame from the device on every connection.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class DeviceConnect : pb::IMessage<DeviceConnect>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<DeviceConnect> _parser = new pb::MessageParser<DeviceConnect>(() => new DeviceConnect());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<DeviceConnect> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[2]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DeviceConnect() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DeviceConnect(DeviceConnect other) : this() {
+      protocolVersion_ = other.protocolVersion_;
+      authSecret_ = other.authSecret_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public DeviceConnect Clone() {
+      return new DeviceConnect(this);
+    }
+
+    /// <summary>Field number for the "protocol_version" field.</summary>
+    public const int ProtocolVersionFieldNumber = 1;
+    private uint protocolVersion_;
+    /// <summary>
+    /// Wire protocol version. Currently 1; zero is unsupported. Never renumber.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public uint ProtocolVersion {
+      get { return protocolVersion_; }
+      set {
+        protocolVersion_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "auth_secret" field.</summary>
+    public const int AuthSecretFieldNumber = 2;
+    private pb::ByteString authSecret_ = pb::ByteString.Empty;
+    /// <summary>
+    /// 32 random bytes the device generated for this server. The server stores
+    /// only its SHA-256 hash.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public pb::ByteString AuthSecret {
+      get { return authSecret_; }
+      set {
+        authSecret_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as DeviceConnect);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(DeviceConnect other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (ProtocolVersion != other.ProtocolVersion) return false;
+      if (AuthSecret != other.AuthSecret) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (ProtocolVersion != 0) hash ^= ProtocolVersion.GetHashCode();
+      if (AuthSecret.Length != 0) hash ^= AuthSecret.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (ProtocolVersion != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(ProtocolVersion);
+      }
+      if (AuthSecret.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteBytes(AuthSecret);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (ProtocolVersion != 0) {
+        output.WriteRawTag(8);
+        output.WriteUInt32(ProtocolVersion);
+      }
+      if (AuthSecret.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteBytes(AuthSecret);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (ProtocolVersion != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt32Size(ProtocolVersion);
+      }
+      if (AuthSecret.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeBytesSize(AuthSecret);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(DeviceConnect other) {
+      if (other == null) {
+        return;
+      }
+      if (other.ProtocolVersion != 0) {
+        ProtocolVersion = other.ProtocolVersion;
+      }
+      if (other.AuthSecret.Length != 0) {
+        AuthSecret = other.AuthSecret;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
             ProtocolVersion = input.ReadUInt32();
+            break;
+          }
+          case 18: {
+            AuthSecret = input.ReadBytes();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 8: {
+            ProtocolVersion = input.ReadUInt32();
+            break;
+          }
+          case 18: {
+            AuthSecret = input.ReadBytes();
             break;
           }
         }
@@ -428,7 +934,7 @@ namespace Mosaic.Device.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -666,7 +1172,7 @@ namespace Mosaic.Device.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -830,7 +1336,7 @@ namespace Mosaic.Device.V1 {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[3]; }
+      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1004,2628 +1510,6 @@ namespace Mosaic.Device.V1 {
             break;
           case 8: {
             Reason = (global::Mosaic.Device.V1.ConnectionRejectReason) input.ReadEnum();
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class NotificationAction : pb::IMessage<NotificationAction>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<NotificationAction> _parser = new pb::MessageParser<NotificationAction>(() => new NotificationAction());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<NotificationAction> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[4]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public NotificationAction() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public NotificationAction(NotificationAction other) : this() {
-      id_ = other.id_;
-      label_ = other.label_;
-      requiresConfirmation_ = other.requiresConfirmation_;
-      destructive_ = other.destructive_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public NotificationAction Clone() {
-      return new NotificationAction(this);
-    }
-
-    /// <summary>Field number for the "id" field.</summary>
-    public const int IdFieldNumber = 1;
-    private string id_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Id {
-      get { return id_; }
-      set {
-        id_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "label" field.</summary>
-    public const int LabelFieldNumber = 2;
-    private string label_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Label {
-      get { return label_; }
-      set {
-        label_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "requires_confirmation" field.</summary>
-    public const int RequiresConfirmationFieldNumber = 3;
-    private bool requiresConfirmation_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool RequiresConfirmation {
-      get { return requiresConfirmation_; }
-      set {
-        requiresConfirmation_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "destructive" field.</summary>
-    public const int DestructiveFieldNumber = 4;
-    private bool destructive_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Destructive {
-      get { return destructive_; }
-      set {
-        destructive_ = value;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as NotificationAction);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(NotificationAction other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (Id != other.Id) return false;
-      if (Label != other.Label) return false;
-      if (RequiresConfirmation != other.RequiresConfirmation) return false;
-      if (Destructive != other.Destructive) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (Id.Length != 0) hash ^= Id.GetHashCode();
-      if (Label.Length != 0) hash ^= Label.GetHashCode();
-      if (RequiresConfirmation != false) hash ^= RequiresConfirmation.GetHashCode();
-      if (Destructive != false) hash ^= Destructive.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (Id.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(Id);
-      }
-      if (Label.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Label);
-      }
-      if (RequiresConfirmation != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(RequiresConfirmation);
-      }
-      if (Destructive != false) {
-        output.WriteRawTag(32);
-        output.WriteBool(Destructive);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Id.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(Id);
-      }
-      if (Label.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Label);
-      }
-      if (RequiresConfirmation != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(RequiresConfirmation);
-      }
-      if (Destructive != false) {
-        output.WriteRawTag(32);
-        output.WriteBool(Destructive);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (Id.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Id);
-      }
-      if (Label.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Label);
-      }
-      if (RequiresConfirmation != false) {
-        size += 1 + 1;
-      }
-      if (Destructive != false) {
-        size += 1 + 1;
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(NotificationAction other) {
-      if (other == null) {
-        return;
-      }
-      if (other.Id.Length != 0) {
-        Id = other.Id;
-      }
-      if (other.Label.Length != 0) {
-        Label = other.Label;
-      }
-      if (other.RequiresConfirmation != false) {
-        RequiresConfirmation = other.RequiresConfirmation;
-      }
-      if (other.Destructive != false) {
-        Destructive = other.Destructive;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            Id = input.ReadString();
-            break;
-          }
-          case 18: {
-            Label = input.ReadString();
-            break;
-          }
-          case 24: {
-            RequiresConfirmation = input.ReadBool();
-            break;
-          }
-          case 32: {
-            Destructive = input.ReadBool();
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 10: {
-            Id = input.ReadString();
-            break;
-          }
-          case 18: {
-            Label = input.ReadString();
-            break;
-          }
-          case 24: {
-            RequiresConfirmation = input.ReadBool();
-            break;
-          }
-          case 32: {
-            Destructive = input.ReadBool();
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class AiSummaryNotification : pb::IMessage<AiSummaryNotification>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<AiSummaryNotification> _parser = new pb::MessageParser<AiSummaryNotification>(() => new AiSummaryNotification());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<AiSummaryNotification> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[5]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public AiSummaryNotification() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public AiSummaryNotification(AiSummaryNotification other) : this() {
-      title_ = other.title_;
-      summaryText_ = other.summaryText_;
-      priority_ = other.priority_;
-      notificationId_ = other.notificationId_;
-      actions_ = other.actions_.Clone();
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public AiSummaryNotification Clone() {
-      return new AiSummaryNotification(this);
-    }
-
-    /// <summary>Field number for the "title" field.</summary>
-    public const int TitleFieldNumber = 1;
-    private string title_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Title {
-      get { return title_; }
-      set {
-        title_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "summary_text" field.</summary>
-    public const int SummaryTextFieldNumber = 2;
-    private string summaryText_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string SummaryText {
-      get { return summaryText_; }
-      set {
-        summaryText_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "priority" field.</summary>
-    public const int PriorityFieldNumber = 3;
-    private global::Mosaic.Device.V1.NotificationPriority priority_ = global::Mosaic.Device.V1.NotificationPriority.Unspecified;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.NotificationPriority Priority {
-      get { return priority_; }
-      set {
-        priority_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "notification_id" field.</summary>
-    public const int NotificationIdFieldNumber = 4;
-    private string notificationId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string NotificationId {
-      get { return notificationId_; }
-      set {
-        notificationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "actions" field.</summary>
-    public const int ActionsFieldNumber = 5;
-    private static readonly pb::FieldCodec<global::Mosaic.Device.V1.NotificationAction> _repeated_actions_codec
-        = pb::FieldCodec.ForMessage(42, global::Mosaic.Device.V1.NotificationAction.Parser);
-    private readonly pbc::RepeatedField<global::Mosaic.Device.V1.NotificationAction> actions_ = new pbc::RepeatedField<global::Mosaic.Device.V1.NotificationAction>();
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public pbc::RepeatedField<global::Mosaic.Device.V1.NotificationAction> Actions {
-      get { return actions_; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as AiSummaryNotification);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(AiSummaryNotification other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (Title != other.Title) return false;
-      if (SummaryText != other.SummaryText) return false;
-      if (Priority != other.Priority) return false;
-      if (NotificationId != other.NotificationId) return false;
-      if(!actions_.Equals(other.actions_)) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (Title.Length != 0) hash ^= Title.GetHashCode();
-      if (SummaryText.Length != 0) hash ^= SummaryText.GetHashCode();
-      if (Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) hash ^= Priority.GetHashCode();
-      if (NotificationId.Length != 0) hash ^= NotificationId.GetHashCode();
-      hash ^= actions_.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (Title.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(Title);
-      }
-      if (SummaryText.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(SummaryText);
-      }
-      if (Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) {
-        output.WriteRawTag(24);
-        output.WriteEnum((int) Priority);
-      }
-      if (NotificationId.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(NotificationId);
-      }
-      actions_.WriteTo(output, _repeated_actions_codec);
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Title.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(Title);
-      }
-      if (SummaryText.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(SummaryText);
-      }
-      if (Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) {
-        output.WriteRawTag(24);
-        output.WriteEnum((int) Priority);
-      }
-      if (NotificationId.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(NotificationId);
-      }
-      actions_.WriteTo(ref output, _repeated_actions_codec);
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (Title.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Title);
-      }
-      if (SummaryText.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(SummaryText);
-      }
-      if (Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) {
-        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Priority);
-      }
-      if (NotificationId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(NotificationId);
-      }
-      size += actions_.CalculateSize(_repeated_actions_codec);
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(AiSummaryNotification other) {
-      if (other == null) {
-        return;
-      }
-      if (other.Title.Length != 0) {
-        Title = other.Title;
-      }
-      if (other.SummaryText.Length != 0) {
-        SummaryText = other.SummaryText;
-      }
-      if (other.Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) {
-        Priority = other.Priority;
-      }
-      if (other.NotificationId.Length != 0) {
-        NotificationId = other.NotificationId;
-      }
-      actions_.Add(other.actions_);
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            Title = input.ReadString();
-            break;
-          }
-          case 18: {
-            SummaryText = input.ReadString();
-            break;
-          }
-          case 24: {
-            Priority = (global::Mosaic.Device.V1.NotificationPriority) input.ReadEnum();
-            break;
-          }
-          case 34: {
-            NotificationId = input.ReadString();
-            break;
-          }
-          case 42: {
-            actions_.AddEntriesFrom(input, _repeated_actions_codec);
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 10: {
-            Title = input.ReadString();
-            break;
-          }
-          case 18: {
-            SummaryText = input.ReadString();
-            break;
-          }
-          case 24: {
-            Priority = (global::Mosaic.Device.V1.NotificationPriority) input.ReadEnum();
-            break;
-          }
-          case 34: {
-            NotificationId = input.ReadString();
-            break;
-          }
-          case 42: {
-            actions_.AddEntriesFrom(ref input, _repeated_actions_codec);
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class DeviceTelemetry : pb::IMessage<DeviceTelemetry>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<DeviceTelemetry> _parser = new pb::MessageParser<DeviceTelemetry>(() => new DeviceTelemetry());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<DeviceTelemetry> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[6]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceTelemetry() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceTelemetry(DeviceTelemetry other) : this() {
-      lux_ = other.lux_;
-      encoderCount_ = other.encoderCount_;
-      buttonPressed_ = other.buttonPressed_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceTelemetry Clone() {
-      return new DeviceTelemetry(this);
-    }
-
-    /// <summary>Field number for the "lux" field.</summary>
-    public const int LuxFieldNumber = 1;
-    private float lux_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public float Lux {
-      get { return lux_; }
-      set {
-        lux_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "encoder_count" field.</summary>
-    public const int EncoderCountFieldNumber = 2;
-    private int encoderCount_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int EncoderCount {
-      get { return encoderCount_; }
-      set {
-        encoderCount_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "button_pressed" field.</summary>
-    public const int ButtonPressedFieldNumber = 3;
-    private bool buttonPressed_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool ButtonPressed {
-      get { return buttonPressed_; }
-      set {
-        buttonPressed_ = value;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as DeviceTelemetry);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(DeviceTelemetry other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (!pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.Equals(Lux, other.Lux)) return false;
-      if (EncoderCount != other.EncoderCount) return false;
-      if (ButtonPressed != other.ButtonPressed) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (Lux != 0F) hash ^= pbc::ProtobufEqualityComparers.BitwiseSingleEqualityComparer.GetHashCode(Lux);
-      if (EncoderCount != 0) hash ^= EncoderCount.GetHashCode();
-      if (ButtonPressed != false) hash ^= ButtonPressed.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (Lux != 0F) {
-        output.WriteRawTag(13);
-        output.WriteFloat(Lux);
-      }
-      if (EncoderCount != 0) {
-        output.WriteRawTag(16);
-        output.WriteInt32(EncoderCount);
-      }
-      if (ButtonPressed != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(ButtonPressed);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (Lux != 0F) {
-        output.WriteRawTag(13);
-        output.WriteFloat(Lux);
-      }
-      if (EncoderCount != 0) {
-        output.WriteRawTag(16);
-        output.WriteInt32(EncoderCount);
-      }
-      if (ButtonPressed != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(ButtonPressed);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (Lux != 0F) {
-        size += 1 + 4;
-      }
-      if (EncoderCount != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(EncoderCount);
-      }
-      if (ButtonPressed != false) {
-        size += 1 + 1;
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(DeviceTelemetry other) {
-      if (other == null) {
-        return;
-      }
-      if (other.Lux != 0F) {
-        Lux = other.Lux;
-      }
-      if (other.EncoderCount != 0) {
-        EncoderCount = other.EncoderCount;
-      }
-      if (other.ButtonPressed != false) {
-        ButtonPressed = other.ButtonPressed;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 13: {
-            Lux = input.ReadFloat();
-            break;
-          }
-          case 16: {
-            EncoderCount = input.ReadInt32();
-            break;
-          }
-          case 24: {
-            ButtonPressed = input.ReadBool();
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 13: {
-            Lux = input.ReadFloat();
-            break;
-          }
-          case 16: {
-            EncoderCount = input.ReadInt32();
-            break;
-          }
-          case 24: {
-            ButtonPressed = input.ReadBool();
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class DeviceActionTrigger : pb::IMessage<DeviceActionTrigger>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<DeviceActionTrigger> _parser = new pb::MessageParser<DeviceActionTrigger>(() => new DeviceActionTrigger());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<DeviceActionTrigger> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[7]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceActionTrigger() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceActionTrigger(DeviceActionTrigger other) : this() {
-      actionId_ = other.actionId_;
-      payload_ = other.payload_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceActionTrigger Clone() {
-      return new DeviceActionTrigger(this);
-    }
-
-    /// <summary>Field number for the "action_id" field.</summary>
-    public const int ActionIdFieldNumber = 1;
-    private global::Mosaic.Device.V1.DaemonActionId actionId_ = global::Mosaic.Device.V1.DaemonActionId.DaemonActionUnspecified;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.DaemonActionId ActionId {
-      get { return actionId_; }
-      set {
-        actionId_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "payload" field.</summary>
-    public const int PayloadFieldNumber = 2;
-    private string payload_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Payload {
-      get { return payload_; }
-      set {
-        payload_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as DeviceActionTrigger);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(DeviceActionTrigger other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (ActionId != other.ActionId) return false;
-      if (Payload != other.Payload) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (ActionId != global::Mosaic.Device.V1.DaemonActionId.DaemonActionUnspecified) hash ^= ActionId.GetHashCode();
-      if (Payload.Length != 0) hash ^= Payload.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (ActionId != global::Mosaic.Device.V1.DaemonActionId.DaemonActionUnspecified) {
-        output.WriteRawTag(8);
-        output.WriteEnum((int) ActionId);
-      }
-      if (Payload.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Payload);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (ActionId != global::Mosaic.Device.V1.DaemonActionId.DaemonActionUnspecified) {
-        output.WriteRawTag(8);
-        output.WriteEnum((int) ActionId);
-      }
-      if (Payload.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(Payload);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (ActionId != global::Mosaic.Device.V1.DaemonActionId.DaemonActionUnspecified) {
-        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) ActionId);
-      }
-      if (Payload.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Payload);
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(DeviceActionTrigger other) {
-      if (other == null) {
-        return;
-      }
-      if (other.ActionId != global::Mosaic.Device.V1.DaemonActionId.DaemonActionUnspecified) {
-        ActionId = other.ActionId;
-      }
-      if (other.Payload.Length != 0) {
-        Payload = other.Payload;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 8: {
-            ActionId = (global::Mosaic.Device.V1.DaemonActionId) input.ReadEnum();
-            break;
-          }
-          case 18: {
-            Payload = input.ReadString();
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 8: {
-            ActionId = (global::Mosaic.Device.V1.DaemonActionId) input.ReadEnum();
-            break;
-          }
-          case 18: {
-            Payload = input.ReadString();
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class IntegrationActionTrigger : pb::IMessage<IntegrationActionTrigger>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<IntegrationActionTrigger> _parser = new pb::MessageParser<IntegrationActionTrigger>(() => new IntegrationActionTrigger());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<IntegrationActionTrigger> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[8]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public IntegrationActionTrigger() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public IntegrationActionTrigger(IntegrationActionTrigger other) : this() {
-      notificationId_ = other.notificationId_;
-      actionId_ = other.actionId_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public IntegrationActionTrigger Clone() {
-      return new IntegrationActionTrigger(this);
-    }
-
-    /// <summary>Field number for the "notification_id" field.</summary>
-    public const int NotificationIdFieldNumber = 1;
-    private string notificationId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string NotificationId {
-      get { return notificationId_; }
-      set {
-        notificationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "action_id" field.</summary>
-    public const int ActionIdFieldNumber = 2;
-    private string actionId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string ActionId {
-      get { return actionId_; }
-      set {
-        actionId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as IntegrationActionTrigger);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(IntegrationActionTrigger other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (NotificationId != other.NotificationId) return false;
-      if (ActionId != other.ActionId) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (NotificationId.Length != 0) hash ^= NotificationId.GetHashCode();
-      if (ActionId.Length != 0) hash ^= ActionId.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (NotificationId.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(NotificationId);
-      }
-      if (ActionId.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(ActionId);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (NotificationId.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(NotificationId);
-      }
-      if (ActionId.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(ActionId);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (NotificationId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(NotificationId);
-      }
-      if (ActionId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(ActionId);
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(IntegrationActionTrigger other) {
-      if (other == null) {
-        return;
-      }
-      if (other.NotificationId.Length != 0) {
-        NotificationId = other.NotificationId;
-      }
-      if (other.ActionId.Length != 0) {
-        ActionId = other.ActionId;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            NotificationId = input.ReadString();
-            break;
-          }
-          case 18: {
-            ActionId = input.ReadString();
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 10: {
-            NotificationId = input.ReadString();
-            break;
-          }
-          case 18: {
-            ActionId = input.ReadString();
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class IntegrationActionResult : pb::IMessage<IntegrationActionResult>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<IntegrationActionResult> _parser = new pb::MessageParser<IntegrationActionResult>(() => new IntegrationActionResult());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<IntegrationActionResult> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[9]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public IntegrationActionResult() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public IntegrationActionResult(IntegrationActionResult other) : this() {
-      notificationId_ = other.notificationId_;
-      actionId_ = other.actionId_;
-      success_ = other.success_;
-      message_ = other.message_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public IntegrationActionResult Clone() {
-      return new IntegrationActionResult(this);
-    }
-
-    /// <summary>Field number for the "notification_id" field.</summary>
-    public const int NotificationIdFieldNumber = 1;
-    private string notificationId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string NotificationId {
-      get { return notificationId_; }
-      set {
-        notificationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "action_id" field.</summary>
-    public const int ActionIdFieldNumber = 2;
-    private string actionId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string ActionId {
-      get { return actionId_; }
-      set {
-        actionId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "success" field.</summary>
-    public const int SuccessFieldNumber = 3;
-    private bool success_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Success {
-      get { return success_; }
-      set {
-        success_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "message" field.</summary>
-    public const int MessageFieldNumber = 4;
-    private string message_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string Message {
-      get { return message_; }
-      set {
-        message_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as IntegrationActionResult);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(IntegrationActionResult other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (NotificationId != other.NotificationId) return false;
-      if (ActionId != other.ActionId) return false;
-      if (Success != other.Success) return false;
-      if (Message != other.Message) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (NotificationId.Length != 0) hash ^= NotificationId.GetHashCode();
-      if (ActionId.Length != 0) hash ^= ActionId.GetHashCode();
-      if (Success != false) hash ^= Success.GetHashCode();
-      if (Message.Length != 0) hash ^= Message.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (NotificationId.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(NotificationId);
-      }
-      if (ActionId.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(ActionId);
-      }
-      if (Success != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(Success);
-      }
-      if (Message.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(Message);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (NotificationId.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(NotificationId);
-      }
-      if (ActionId.Length != 0) {
-        output.WriteRawTag(18);
-        output.WriteString(ActionId);
-      }
-      if (Success != false) {
-        output.WriteRawTag(24);
-        output.WriteBool(Success);
-      }
-      if (Message.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(Message);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (NotificationId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(NotificationId);
-      }
-      if (ActionId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(ActionId);
-      }
-      if (Success != false) {
-        size += 1 + 1;
-      }
-      if (Message.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Message);
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(IntegrationActionResult other) {
-      if (other == null) {
-        return;
-      }
-      if (other.NotificationId.Length != 0) {
-        NotificationId = other.NotificationId;
-      }
-      if (other.ActionId.Length != 0) {
-        ActionId = other.ActionId;
-      }
-      if (other.Success != false) {
-        Success = other.Success;
-      }
-      if (other.Message.Length != 0) {
-        Message = other.Message;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            NotificationId = input.ReadString();
-            break;
-          }
-          case 18: {
-            ActionId = input.ReadString();
-            break;
-          }
-          case 24: {
-            Success = input.ReadBool();
-            break;
-          }
-          case 34: {
-            Message = input.ReadString();
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 10: {
-            NotificationId = input.ReadString();
-            break;
-          }
-          case 18: {
-            ActionId = input.ReadString();
-            break;
-          }
-          case 24: {
-            Success = input.ReadBool();
-            break;
-          }
-          case 34: {
-            Message = input.ReadString();
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class DeviceToBackendEnvelope : pb::IMessage<DeviceToBackendEnvelope>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<DeviceToBackendEnvelope> _parser = new pb::MessageParser<DeviceToBackendEnvelope>(() => new DeviceToBackendEnvelope());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<DeviceToBackendEnvelope> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[10]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceToBackendEnvelope() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceToBackendEnvelope(DeviceToBackendEnvelope other) : this() {
-      requestId_ = other.requestId_;
-      switch (other.PayloadCase) {
-        case PayloadOneofCase.Telemetry:
-          Telemetry = other.Telemetry.Clone();
-          break;
-        case PayloadOneofCase.DaemonAction:
-          DaemonAction = other.DaemonAction.Clone();
-          break;
-        case PayloadOneofCase.IntegrationAction:
-          IntegrationAction = other.IntegrationAction.Clone();
-          break;
-        case PayloadOneofCase.Connect:
-          Connect = other.Connect.Clone();
-          break;
-      }
-
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public DeviceToBackendEnvelope Clone() {
-      return new DeviceToBackendEnvelope(this);
-    }
-
-    /// <summary>Field number for the "request_id" field.</summary>
-    public const int RequestIdFieldNumber = 1;
-    private string requestId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string RequestId {
-      get { return requestId_; }
-      set {
-        requestId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "telemetry" field.</summary>
-    public const int TelemetryFieldNumber = 2;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.DeviceTelemetry Telemetry {
-      get { return payloadCase_ == PayloadOneofCase.Telemetry ? (global::Mosaic.Device.V1.DeviceTelemetry) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Telemetry;
-      }
-    }
-
-    /// <summary>Field number for the "daemon_action" field.</summary>
-    public const int DaemonActionFieldNumber = 3;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.DeviceActionTrigger DaemonAction {
-      get { return payloadCase_ == PayloadOneofCase.DaemonAction ? (global::Mosaic.Device.V1.DeviceActionTrigger) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.DaemonAction;
-      }
-    }
-
-    /// <summary>Field number for the "integration_action" field.</summary>
-    public const int IntegrationActionFieldNumber = 4;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.IntegrationActionTrigger IntegrationAction {
-      get { return payloadCase_ == PayloadOneofCase.IntegrationAction ? (global::Mosaic.Device.V1.IntegrationActionTrigger) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.IntegrationAction;
-      }
-    }
-
-    /// <summary>Field number for the "connect" field.</summary>
-    public const int ConnectFieldNumber = 5;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.DeviceConnect Connect {
-      get { return payloadCase_ == PayloadOneofCase.Connect ? (global::Mosaic.Device.V1.DeviceConnect) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Connect;
-      }
-    }
-
-    private object payload_;
-    /// <summary>Enum of possible cases for the "payload" oneof.</summary>
-    public enum PayloadOneofCase {
-      None = 0,
-      Telemetry = 2,
-      DaemonAction = 3,
-      IntegrationAction = 4,
-      Connect = 5,
-    }
-    private PayloadOneofCase payloadCase_ = PayloadOneofCase.None;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public PayloadOneofCase PayloadCase {
-      get { return payloadCase_; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void ClearPayload() {
-      payloadCase_ = PayloadOneofCase.None;
-      payload_ = null;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as DeviceToBackendEnvelope);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(DeviceToBackendEnvelope other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (RequestId != other.RequestId) return false;
-      if (!object.Equals(Telemetry, other.Telemetry)) return false;
-      if (!object.Equals(DaemonAction, other.DaemonAction)) return false;
-      if (!object.Equals(IntegrationAction, other.IntegrationAction)) return false;
-      if (!object.Equals(Connect, other.Connect)) return false;
-      if (PayloadCase != other.PayloadCase) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (RequestId.Length != 0) hash ^= RequestId.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.Telemetry) hash ^= Telemetry.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.DaemonAction) hash ^= DaemonAction.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.IntegrationAction) hash ^= IntegrationAction.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.Connect) hash ^= Connect.GetHashCode();
-      hash ^= (int) payloadCase_;
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (RequestId.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(RequestId);
-      }
-      if (payloadCase_ == PayloadOneofCase.Telemetry) {
-        output.WriteRawTag(18);
-        output.WriteMessage(Telemetry);
-      }
-      if (payloadCase_ == PayloadOneofCase.DaemonAction) {
-        output.WriteRawTag(26);
-        output.WriteMessage(DaemonAction);
-      }
-      if (payloadCase_ == PayloadOneofCase.IntegrationAction) {
-        output.WriteRawTag(34);
-        output.WriteMessage(IntegrationAction);
-      }
-      if (payloadCase_ == PayloadOneofCase.Connect) {
-        output.WriteRawTag(42);
-        output.WriteMessage(Connect);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (RequestId.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(RequestId);
-      }
-      if (payloadCase_ == PayloadOneofCase.Telemetry) {
-        output.WriteRawTag(18);
-        output.WriteMessage(Telemetry);
-      }
-      if (payloadCase_ == PayloadOneofCase.DaemonAction) {
-        output.WriteRawTag(26);
-        output.WriteMessage(DaemonAction);
-      }
-      if (payloadCase_ == PayloadOneofCase.IntegrationAction) {
-        output.WriteRawTag(34);
-        output.WriteMessage(IntegrationAction);
-      }
-      if (payloadCase_ == PayloadOneofCase.Connect) {
-        output.WriteRawTag(42);
-        output.WriteMessage(Connect);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (RequestId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(RequestId);
-      }
-      if (payloadCase_ == PayloadOneofCase.Telemetry) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Telemetry);
-      }
-      if (payloadCase_ == PayloadOneofCase.DaemonAction) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(DaemonAction);
-      }
-      if (payloadCase_ == PayloadOneofCase.IntegrationAction) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(IntegrationAction);
-      }
-      if (payloadCase_ == PayloadOneofCase.Connect) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Connect);
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(DeviceToBackendEnvelope other) {
-      if (other == null) {
-        return;
-      }
-      if (other.RequestId.Length != 0) {
-        RequestId = other.RequestId;
-      }
-      switch (other.PayloadCase) {
-        case PayloadOneofCase.Telemetry:
-          if (Telemetry == null) {
-            Telemetry = new global::Mosaic.Device.V1.DeviceTelemetry();
-          }
-          Telemetry.MergeFrom(other.Telemetry);
-          break;
-        case PayloadOneofCase.DaemonAction:
-          if (DaemonAction == null) {
-            DaemonAction = new global::Mosaic.Device.V1.DeviceActionTrigger();
-          }
-          DaemonAction.MergeFrom(other.DaemonAction);
-          break;
-        case PayloadOneofCase.IntegrationAction:
-          if (IntegrationAction == null) {
-            IntegrationAction = new global::Mosaic.Device.V1.IntegrationActionTrigger();
-          }
-          IntegrationAction.MergeFrom(other.IntegrationAction);
-          break;
-        case PayloadOneofCase.Connect:
-          if (Connect == null) {
-            Connect = new global::Mosaic.Device.V1.DeviceConnect();
-          }
-          Connect.MergeFrom(other.Connect);
-          break;
-      }
-
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            RequestId = input.ReadString();
-            break;
-          }
-          case 18: {
-            global::Mosaic.Device.V1.DeviceTelemetry subBuilder = new global::Mosaic.Device.V1.DeviceTelemetry();
-            if (payloadCase_ == PayloadOneofCase.Telemetry) {
-              subBuilder.MergeFrom(Telemetry);
-            }
-            input.ReadMessage(subBuilder);
-            Telemetry = subBuilder;
-            break;
-          }
-          case 26: {
-            global::Mosaic.Device.V1.DeviceActionTrigger subBuilder = new global::Mosaic.Device.V1.DeviceActionTrigger();
-            if (payloadCase_ == PayloadOneofCase.DaemonAction) {
-              subBuilder.MergeFrom(DaemonAction);
-            }
-            input.ReadMessage(subBuilder);
-            DaemonAction = subBuilder;
-            break;
-          }
-          case 34: {
-            global::Mosaic.Device.V1.IntegrationActionTrigger subBuilder = new global::Mosaic.Device.V1.IntegrationActionTrigger();
-            if (payloadCase_ == PayloadOneofCase.IntegrationAction) {
-              subBuilder.MergeFrom(IntegrationAction);
-            }
-            input.ReadMessage(subBuilder);
-            IntegrationAction = subBuilder;
-            break;
-          }
-          case 42: {
-            global::Mosaic.Device.V1.DeviceConnect subBuilder = new global::Mosaic.Device.V1.DeviceConnect();
-            if (payloadCase_ == PayloadOneofCase.Connect) {
-              subBuilder.MergeFrom(Connect);
-            }
-            input.ReadMessage(subBuilder);
-            Connect = subBuilder;
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 10: {
-            RequestId = input.ReadString();
-            break;
-          }
-          case 18: {
-            global::Mosaic.Device.V1.DeviceTelemetry subBuilder = new global::Mosaic.Device.V1.DeviceTelemetry();
-            if (payloadCase_ == PayloadOneofCase.Telemetry) {
-              subBuilder.MergeFrom(Telemetry);
-            }
-            input.ReadMessage(subBuilder);
-            Telemetry = subBuilder;
-            break;
-          }
-          case 26: {
-            global::Mosaic.Device.V1.DeviceActionTrigger subBuilder = new global::Mosaic.Device.V1.DeviceActionTrigger();
-            if (payloadCase_ == PayloadOneofCase.DaemonAction) {
-              subBuilder.MergeFrom(DaemonAction);
-            }
-            input.ReadMessage(subBuilder);
-            DaemonAction = subBuilder;
-            break;
-          }
-          case 34: {
-            global::Mosaic.Device.V1.IntegrationActionTrigger subBuilder = new global::Mosaic.Device.V1.IntegrationActionTrigger();
-            if (payloadCase_ == PayloadOneofCase.IntegrationAction) {
-              subBuilder.MergeFrom(IntegrationAction);
-            }
-            input.ReadMessage(subBuilder);
-            IntegrationAction = subBuilder;
-            break;
-          }
-          case 42: {
-            global::Mosaic.Device.V1.DeviceConnect subBuilder = new global::Mosaic.Device.V1.DeviceConnect();
-            if (payloadCase_ == PayloadOneofCase.Connect) {
-              subBuilder.MergeFrom(Connect);
-            }
-            input.ReadMessage(subBuilder);
-            Connect = subBuilder;
-            break;
-          }
-        }
-      }
-    }
-    #endif
-
-  }
-
-  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
-  public sealed partial class BackendToDeviceEnvelope : pb::IMessage<BackendToDeviceEnvelope>
-  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      , pb::IBufferMessage
-  #endif
-  {
-    private static readonly pb::MessageParser<BackendToDeviceEnvelope> _parser = new pb::MessageParser<BackendToDeviceEnvelope>(() => new BackendToDeviceEnvelope());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pb::MessageParser<BackendToDeviceEnvelope> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[11]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public BackendToDeviceEnvelope() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public BackendToDeviceEnvelope(BackendToDeviceEnvelope other) : this() {
-      requestId_ = other.requestId_;
-      switch (other.PayloadCase) {
-        case PayloadOneofCase.Notification:
-          Notification = other.Notification.Clone();
-          break;
-        case PayloadOneofCase.ActionResult:
-          ActionResult = other.ActionResult.Clone();
-          break;
-        case PayloadOneofCase.PairingPending:
-          PairingPending = other.PairingPending.Clone();
-          break;
-        case PayloadOneofCase.Paired:
-          Paired = other.Paired.Clone();
-          break;
-        case PayloadOneofCase.Rejected:
-          Rejected = other.Rejected.Clone();
-          break;
-      }
-
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public BackendToDeviceEnvelope Clone() {
-      return new BackendToDeviceEnvelope(this);
-    }
-
-    /// <summary>Field number for the "request_id" field.</summary>
-    public const int RequestIdFieldNumber = 1;
-    private string requestId_ = "";
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public string RequestId {
-      get { return requestId_; }
-      set {
-        requestId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "notification" field.</summary>
-    public const int NotificationFieldNumber = 2;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.AiSummaryNotification Notification {
-      get { return payloadCase_ == PayloadOneofCase.Notification ? (global::Mosaic.Device.V1.AiSummaryNotification) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Notification;
-      }
-    }
-
-    /// <summary>Field number for the "action_result" field.</summary>
-    public const int ActionResultFieldNumber = 3;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.IntegrationActionResult ActionResult {
-      get { return payloadCase_ == PayloadOneofCase.ActionResult ? (global::Mosaic.Device.V1.IntegrationActionResult) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.ActionResult;
-      }
-    }
-
-    /// <summary>Field number for the "pairing_pending" field.</summary>
-    public const int PairingPendingFieldNumber = 4;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.PairingPending PairingPending {
-      get { return payloadCase_ == PayloadOneofCase.PairingPending ? (global::Mosaic.Device.V1.PairingPending) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.PairingPending;
-      }
-    }
-
-    /// <summary>Field number for the "paired" field.</summary>
-    public const int PairedFieldNumber = 5;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.DevicePaired Paired {
-      get { return payloadCase_ == PayloadOneofCase.Paired ? (global::Mosaic.Device.V1.DevicePaired) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Paired;
-      }
-    }
-
-    /// <summary>Field number for the "rejected" field.</summary>
-    public const int RejectedFieldNumber = 6;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public global::Mosaic.Device.V1.ConnectionRejected Rejected {
-      get { return payloadCase_ == PayloadOneofCase.Rejected ? (global::Mosaic.Device.V1.ConnectionRejected) payload_ : null; }
-      set {
-        payload_ = value;
-        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Rejected;
-      }
-    }
-
-    private object payload_;
-    /// <summary>Enum of possible cases for the "payload" oneof.</summary>
-    public enum PayloadOneofCase {
-      None = 0,
-      Notification = 2,
-      ActionResult = 3,
-      PairingPending = 4,
-      Paired = 5,
-      Rejected = 6,
-    }
-    private PayloadOneofCase payloadCase_ = PayloadOneofCase.None;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public PayloadOneofCase PayloadCase {
-      get { return payloadCase_; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void ClearPayload() {
-      payloadCase_ = PayloadOneofCase.None;
-      payload_ = null;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override bool Equals(object other) {
-      return Equals(other as BackendToDeviceEnvelope);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public bool Equals(BackendToDeviceEnvelope other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (RequestId != other.RequestId) return false;
-      if (!object.Equals(Notification, other.Notification)) return false;
-      if (!object.Equals(ActionResult, other.ActionResult)) return false;
-      if (!object.Equals(PairingPending, other.PairingPending)) return false;
-      if (!object.Equals(Paired, other.Paired)) return false;
-      if (!object.Equals(Rejected, other.Rejected)) return false;
-      if (PayloadCase != other.PayloadCase) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (RequestId.Length != 0) hash ^= RequestId.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.Notification) hash ^= Notification.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.ActionResult) hash ^= ActionResult.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.PairingPending) hash ^= PairingPending.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.Paired) hash ^= Paired.GetHashCode();
-      if (payloadCase_ == PayloadOneofCase.Rejected) hash ^= Rejected.GetHashCode();
-      hash ^= (int) payloadCase_;
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void WriteTo(pb::CodedOutputStream output) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      output.WriteRawMessage(this);
-    #else
-      if (RequestId.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(RequestId);
-      }
-      if (payloadCase_ == PayloadOneofCase.Notification) {
-        output.WriteRawTag(18);
-        output.WriteMessage(Notification);
-      }
-      if (payloadCase_ == PayloadOneofCase.ActionResult) {
-        output.WriteRawTag(26);
-        output.WriteMessage(ActionResult);
-      }
-      if (payloadCase_ == PayloadOneofCase.PairingPending) {
-        output.WriteRawTag(34);
-        output.WriteMessage(PairingPending);
-      }
-      if (payloadCase_ == PayloadOneofCase.Paired) {
-        output.WriteRawTag(42);
-        output.WriteMessage(Paired);
-      }
-      if (payloadCase_ == PayloadOneofCase.Rejected) {
-        output.WriteRawTag(50);
-        output.WriteMessage(Rejected);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
-      if (RequestId.Length != 0) {
-        output.WriteRawTag(10);
-        output.WriteString(RequestId);
-      }
-      if (payloadCase_ == PayloadOneofCase.Notification) {
-        output.WriteRawTag(18);
-        output.WriteMessage(Notification);
-      }
-      if (payloadCase_ == PayloadOneofCase.ActionResult) {
-        output.WriteRawTag(26);
-        output.WriteMessage(ActionResult);
-      }
-      if (payloadCase_ == PayloadOneofCase.PairingPending) {
-        output.WriteRawTag(34);
-        output.WriteMessage(PairingPending);
-      }
-      if (payloadCase_ == PayloadOneofCase.Paired) {
-        output.WriteRawTag(42);
-        output.WriteMessage(Paired);
-      }
-      if (payloadCase_ == PayloadOneofCase.Rejected) {
-        output.WriteRawTag(50);
-        output.WriteMessage(Rejected);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(ref output);
-      }
-    }
-    #endif
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public int CalculateSize() {
-      int size = 0;
-      if (RequestId.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(RequestId);
-      }
-      if (payloadCase_ == PayloadOneofCase.Notification) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Notification);
-      }
-      if (payloadCase_ == PayloadOneofCase.ActionResult) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ActionResult);
-      }
-      if (payloadCase_ == PayloadOneofCase.PairingPending) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(PairingPending);
-      }
-      if (payloadCase_ == PayloadOneofCase.Paired) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Paired);
-      }
-      if (payloadCase_ == PayloadOneofCase.Rejected) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Rejected);
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(BackendToDeviceEnvelope other) {
-      if (other == null) {
-        return;
-      }
-      if (other.RequestId.Length != 0) {
-        RequestId = other.RequestId;
-      }
-      switch (other.PayloadCase) {
-        case PayloadOneofCase.Notification:
-          if (Notification == null) {
-            Notification = new global::Mosaic.Device.V1.AiSummaryNotification();
-          }
-          Notification.MergeFrom(other.Notification);
-          break;
-        case PayloadOneofCase.ActionResult:
-          if (ActionResult == null) {
-            ActionResult = new global::Mosaic.Device.V1.IntegrationActionResult();
-          }
-          ActionResult.MergeFrom(other.ActionResult);
-          break;
-        case PayloadOneofCase.PairingPending:
-          if (PairingPending == null) {
-            PairingPending = new global::Mosaic.Device.V1.PairingPending();
-          }
-          PairingPending.MergeFrom(other.PairingPending);
-          break;
-        case PayloadOneofCase.Paired:
-          if (Paired == null) {
-            Paired = new global::Mosaic.Device.V1.DevicePaired();
-          }
-          Paired.MergeFrom(other.Paired);
-          break;
-        case PayloadOneofCase.Rejected:
-          if (Rejected == null) {
-            Rejected = new global::Mosaic.Device.V1.ConnectionRejected();
-          }
-          Rejected.MergeFrom(other.Rejected);
-          break;
-      }
-
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    public void MergeFrom(pb::CodedInputStream input) {
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-      input.ReadRawMessage(this);
-    #else
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 10: {
-            RequestId = input.ReadString();
-            break;
-          }
-          case 18: {
-            global::Mosaic.Device.V1.AiSummaryNotification subBuilder = new global::Mosaic.Device.V1.AiSummaryNotification();
-            if (payloadCase_ == PayloadOneofCase.Notification) {
-              subBuilder.MergeFrom(Notification);
-            }
-            input.ReadMessage(subBuilder);
-            Notification = subBuilder;
-            break;
-          }
-          case 26: {
-            global::Mosaic.Device.V1.IntegrationActionResult subBuilder = new global::Mosaic.Device.V1.IntegrationActionResult();
-            if (payloadCase_ == PayloadOneofCase.ActionResult) {
-              subBuilder.MergeFrom(ActionResult);
-            }
-            input.ReadMessage(subBuilder);
-            ActionResult = subBuilder;
-            break;
-          }
-          case 34: {
-            global::Mosaic.Device.V1.PairingPending subBuilder = new global::Mosaic.Device.V1.PairingPending();
-            if (payloadCase_ == PayloadOneofCase.PairingPending) {
-              subBuilder.MergeFrom(PairingPending);
-            }
-            input.ReadMessage(subBuilder);
-            PairingPending = subBuilder;
-            break;
-          }
-          case 42: {
-            global::Mosaic.Device.V1.DevicePaired subBuilder = new global::Mosaic.Device.V1.DevicePaired();
-            if (payloadCase_ == PayloadOneofCase.Paired) {
-              subBuilder.MergeFrom(Paired);
-            }
-            input.ReadMessage(subBuilder);
-            Paired = subBuilder;
-            break;
-          }
-          case 50: {
-            global::Mosaic.Device.V1.ConnectionRejected subBuilder = new global::Mosaic.Device.V1.ConnectionRejected();
-            if (payloadCase_ == PayloadOneofCase.Rejected) {
-              subBuilder.MergeFrom(Rejected);
-            }
-            input.ReadMessage(subBuilder);
-            Rejected = subBuilder;
-            break;
-          }
-        }
-      }
-    #endif
-    }
-
-    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
-    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-      if ((tag & 7) == 4) {
-        // Abort on any end group tag.
-        return;
-      }
-      switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
-            break;
-          case 10: {
-            RequestId = input.ReadString();
-            break;
-          }
-          case 18: {
-            global::Mosaic.Device.V1.AiSummaryNotification subBuilder = new global::Mosaic.Device.V1.AiSummaryNotification();
-            if (payloadCase_ == PayloadOneofCase.Notification) {
-              subBuilder.MergeFrom(Notification);
-            }
-            input.ReadMessage(subBuilder);
-            Notification = subBuilder;
-            break;
-          }
-          case 26: {
-            global::Mosaic.Device.V1.IntegrationActionResult subBuilder = new global::Mosaic.Device.V1.IntegrationActionResult();
-            if (payloadCase_ == PayloadOneofCase.ActionResult) {
-              subBuilder.MergeFrom(ActionResult);
-            }
-            input.ReadMessage(subBuilder);
-            ActionResult = subBuilder;
-            break;
-          }
-          case 34: {
-            global::Mosaic.Device.V1.PairingPending subBuilder = new global::Mosaic.Device.V1.PairingPending();
-            if (payloadCase_ == PayloadOneofCase.PairingPending) {
-              subBuilder.MergeFrom(PairingPending);
-            }
-            input.ReadMessage(subBuilder);
-            PairingPending = subBuilder;
-            break;
-          }
-          case 42: {
-            global::Mosaic.Device.V1.DevicePaired subBuilder = new global::Mosaic.Device.V1.DevicePaired();
-            if (payloadCase_ == PayloadOneofCase.Paired) {
-              subBuilder.MergeFrom(Paired);
-            }
-            input.ReadMessage(subBuilder);
-            Paired = subBuilder;
-            break;
-          }
-          case 50: {
-            global::Mosaic.Device.V1.ConnectionRejected subBuilder = new global::Mosaic.Device.V1.ConnectionRejected();
-            if (payloadCase_ == PayloadOneofCase.Rejected) {
-              subBuilder.MergeFrom(Rejected);
-            }
-            input.ReadMessage(subBuilder);
-            Rejected = subBuilder;
             break;
           }
         }

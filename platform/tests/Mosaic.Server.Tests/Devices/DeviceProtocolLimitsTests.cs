@@ -14,10 +14,12 @@ public sealed partial class DeviceProtocolLimitsTests
     [Fact]
     public void FieldRulesFitTheNanopbLimits()
     {
-        Assert.True(ConnectCheck.MaxRequestIdLength <= UsableLength(DeviceToBackendEnvelope.Descriptor, "request_id"));
-        Assert.True(ConnectCheck.MacAddressLength <= UsableLength(DeviceConnect.Descriptor, "mac_address"));
-        Assert.True(DeviceSecret.TextLength <= UsableLength(DeviceConnect.Descriptor, "auth_secret"));
-        Assert.Equal(PairingCodes.CodeLength, UsableLength(PairingPending.Descriptor, "code"));
+        var secret = Nanopb(DeviceConnect.Descriptor, "auth_secret");
+        Assert.Equal(DeviceSecret.SecretSize, secret.MaxSize);
+        Assert.True(secret.FixedLength);
+
+        // A nanopb string max_size includes the terminating NUL.
+        Assert.Equal(PairingCodes.CodeLength, Nanopb(PairingPending.Descriptor, "code").MaxSize - 1);
     }
 
     [Fact]
@@ -29,8 +31,8 @@ public sealed partial class DeviceProtocolLimitsTests
         Assert.Equal(DeviceEndpoint.MaxServerFrameBytes, Size(header, "BackendToDeviceEnvelope"));
     }
 
-    private static int UsableLength(MessageDescriptor message, string field) =>
-        message.FindFieldByName(field).GetOptions().GetExtension(NanopbExtensions.Nanopb).MaxSize - 1;
+    private static NanoPBOptions Nanopb(MessageDescriptor message, string field) =>
+        message.FindFieldByName(field).GetOptions().GetExtension(NanopbExtensions.Nanopb);
 
     private static int Size(string header, string message)
     {

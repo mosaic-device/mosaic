@@ -141,9 +141,9 @@ def field(number, value):
     return bytes([number << 3 | 2, len(value)]) + value
 
 
-def device_frame(request_id, secret):
-    connect = field(1, b"AA:BB:CC:DD:EE:FF") + field(2, base64.urlsafe_b64encode(secret).rstrip(b"=")) + b"\x18\x01"
-    return field(1, request_id) + field(5, connect)
+def device_frame(secret):
+    connect = b"\x08\x01" + field(2, secret)  # protocol_version 1, auth_secret
+    return field(1, connect)
 
 
 def device_handshake(frame):
@@ -172,17 +172,16 @@ def device_handshake(frame):
 
 
 def check_device(database, secret, paired):
-    reply = device_handshake(device_frame(b"smoke-1", secret))
-    echo = field(1, b"smoke-1")
+    reply = device_handshake(device_frame(secret))
     if paired:
-        expect(reply, echo + field(5, b""), "paired device handshake")
+        expect(reply, field(2, b""), "paired device handshake")
         return
     # pairing_pending: an 8-character code, then its seconds left as a two-byte varint. The
     # server rounds down, so a fresh code reports 599 or 600 depending on when it is sent.
-    expect((reply[: len(echo)], reply[len(echo)], reply[-3]), (echo, 0x22, 0x10), "unpaired device handshake")
+    expect((reply[0], reply[2], reply[-3]), (0x0A, 0x0A, 0x10), "unpaired device handshake")
     seconds = (reply[-2] & 0x7F) | (reply[-1] << 7)
     expect(590 <= seconds <= 600, True, f"pairing code lifetime ({seconds} s)")
-    code = reply[len(echo) + 4 : len(echo) + 12].decode()
+    code = reply[4:12].decode()
     expect(re.fullmatch(r"[A-HJ-NP-Z2-9]{8}", code) is not None, True, "pairing code alphabet")
     # The code is in memory only; the device table is untouched until a claim.
     expect(query(database, "SELECT COUNT(*) FROM devices"), [(0,)], "no device stored before a claim")
@@ -224,9 +223,9 @@ with tempfile.TemporaryDirectory() as directory:
         connection.execute(
             "INSERT INTO settings (key, value, updated_at) VALUES ('smoke', 'kept', '2026-01-01T00:00:00Z')"
         )
-        # Stands in for a claim: the server stores only the SHA-256 of the decoded secret.
+        # Stands in for a claim: the server stores only the SHA-256 of the secret.
         connection.execute(
-            "INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES (?, 'AA:BB:CC:DD:EE:FF', '2026-01-01T00:00:00Z')",
+            "INSERT INTO devices (secret_hash, paired_at) VALUES (?, '2026-01-01T00:00:00Z')",
             (hashlib.sha256(device_secret).digest(),),
         )
 

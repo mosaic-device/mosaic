@@ -6,49 +6,43 @@ namespace Mosaic.Server.Tests;
 
 // Checks the C# bindings against platform/packages/protocols/testdata/frames.txt.
 // The firmware host test checks the same file with nanopb, so both sides agree on
-// every byte. See the wiki's Device Connection Protocol, section 9.
+// every byte. See the wiki's Device Connection Protocol.
 public sealed class DeviceProtocolGoldenFrameTests
 {
-    private const string AuthSecret = "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8";
-    private const string MacAddress = "AA:BB:CC:DD:EE:FF";
+    private static readonly ByteString AuthSecret = ByteString.CopyFrom([.. Enumerable.Range(0, 32).Select(value => (byte)value)]);
 
     private static readonly IReadOnlyDictionary<string, IMessage> ValidDeviceFrames = new Dictionary<string, IMessage>
     {
         ["connect"] = new DeviceToBackendEnvelope
         {
-            RequestId = "req-0001",
-            Connect = new DeviceConnect { MacAddress = MacAddress, AuthSecret = AuthSecret, ProtocolVersion = 1 },
+            Connect = new DeviceConnect { ProtocolVersion = 1, AuthSecret = AuthSecret },
         },
     };
 
     private static readonly IReadOnlyDictionary<string, IMessage> ValidServerFrames = new Dictionary<string, IMessage>
     {
         ["paired"] = new BackendToDeviceEnvelope { Paired = new DevicePaired() },
-        ["paired_reply"] = new BackendToDeviceEnvelope { RequestId = "req-0001", Paired = new DevicePaired() },
         ["pairing_pending"] = new BackendToDeviceEnvelope { PairingPending = Pending() },
-        ["pairing_pending_reply"] = new BackendToDeviceEnvelope { RequestId = "req-0001", PairingPending = Pending() },
         ["rejected_malformed_request"] = Rejected(ConnectionRejectReason.MalformedRequest),
         ["rejected_unsupported_version"] = Rejected(ConnectionRejectReason.UnsupportedVersion),
         ["rejected_credential_revoked"] = Rejected(ConnectionRejectReason.CredentialRevoked),
         ["rejected_server_busy"] = Rejected(ConnectionRejectReason.ServerBusy),
     };
 
-    private static readonly IReadOnlyDictionary<string, string> IgnoredFrames = new Dictionary<string, string>
-    {
-        ["d2s unknown_payload"] = "req-0002",
-        ["b2d unknown_payload"] = "req-0005",
-    };
+    private static readonly string[] IgnoredFrames = ["d2s unknown_payload", "b2d unknown_payload"];
 
-    private static readonly IReadOnlyDictionary<string, (FieldDescriptor Field, Func<IMessage, string> Value)> OverLimitFrames =
-        new Dictionary<string, (FieldDescriptor, Func<IMessage, string>)>
+    // Each frame decodes in C#, but the field's length breaks its nanopb limit.
+    private static readonly IReadOnlyDictionary<string, Func<IMessage, bool>> BadLengthFrames =
+        new Dictionary<string, Func<IMessage, bool>>
         {
-            ["d2s connect_secret_over_limit"] = (
-                DeviceConnect.Descriptor.FindFieldByName("auth_secret"),
-                message => ((DeviceToBackendEnvelope)message).Connect.AuthSecret),
-            ["b2d pairing_pending_code_over_limit"] = (
-                PairingPending.Descriptor.FindFieldByName("code"),
-                message => ((BackendToDeviceEnvelope)message).PairingPending.Code),
+            ["d2s connect_secret_long"] = message => SecretLength(message) > AuthSecretLength,
+            ["d2s connect_secret_short"] = message => SecretLength(message) < AuthSecretLength,
+            ["b2d pairing_pending_code_long"] = message =>
+                ((BackendToDeviceEnvelope)message).PairingPending.Code.Length
+                    > UsableStringLength(PairingPending.Descriptor.FindFieldByName("code")),
         };
+
+    private static int AuthSecretLength => MaxSize(DeviceConnect.Descriptor.FindFieldByName("auth_secret"));
 
     private static readonly string[] TruncatedFrames = ["d2s connect_truncated", "b2d pairing_pending_truncated"];
 
@@ -61,8 +55,8 @@ public sealed class DeviceProtocolGoldenFrameTests
     {
         var expected = ValidDeviceFrames.Keys.Select(name => $"d2s {name}")
             .Concat(ValidServerFrames.Keys.Select(name => $"b2d {name}"))
-            .Concat(IgnoredFrames.Keys)
-            .Concat(OverLimitFrames.Keys)
+            .Concat(IgnoredFrames)
+            .Concat(BadLengthFrames.Keys)
             .Concat(TruncatedFrames)
             .Order(StringComparer.Ordinal);
 
@@ -101,17 +95,14 @@ public sealed class DeviceProtocolGoldenFrameTests
                 break;
 
             case "ignored":
-                var ignored = Parse(frame);
-                Assert.Equal(IgnoredFrames[key], RequestId(ignored));
-                Assert.Equal(0, PayloadCase(ignored));
+                Assert.Contains(key, IgnoredFrames);
+                Assert.Equal(0, PayloadCase(Parse(frame)));
                 break;
 
-            case "over_limit":
+            case "bad_length":
                 // The C# bindings enforce no nanopb limits, so this decodes. The server
-                // must reject it by comparing the field with its declared max_size.
-                var (field, value) = OverLimitFrames[key];
-                var oversized = Parse(frame);
-                Assert.True(value(oversized).Length > UsableLength(field));
+                // must reject it by comparing the field with its declared limit.
+                Assert.True(BadLengthFrames[key](Parse(frame)));
                 break;
 
             case "truncated":
@@ -128,11 +119,11 @@ public sealed class DeviceProtocolGoldenFrameTests
     public void NanopbLimitsAreReadableFromTheBindings()
     {
         // The server's field checks (#103) can read limits from the descriptors
-        // instead of copying them. A nanopb max_size includes the terminating NUL.
-        Assert.Equal(63, UsableLength(DeviceConnect.Descriptor.FindFieldByName("auth_secret")));
-        Assert.Equal(17, UsableLength(DeviceConnect.Descriptor.FindFieldByName("mac_address")));
-        Assert.Equal(8, UsableLength(PairingPending.Descriptor.FindFieldByName("code")));
-        Assert.Equal(63, UsableLength(DeviceToBackendEnvelope.Descriptor.FindFieldByName("request_id")));
+        // instead of copying them.
+        var secret = DeviceConnect.Descriptor.FindFieldByName("auth_secret");
+        Assert.Equal(32, MaxSize(secret));
+        Assert.True(secret.GetOptions().GetExtension(NanopbExtensions.Nanopb).FixedLength);
+        Assert.Equal(8, UsableStringLength(PairingPending.Descriptor.FindFieldByName("code")));
     }
 
     private static PairingPending Pending() => new() { Code = "K7QF2M9X", ExpiresInSeconds = 600 };
@@ -144,13 +135,6 @@ public sealed class DeviceProtocolGoldenFrameTests
         ? DeviceToBackendEnvelope.Parser.ParseFrom(frame.Bytes)
         : BackendToDeviceEnvelope.Parser.ParseFrom(frame.Bytes);
 
-    private static string RequestId(IMessage message) => message switch
-    {
-        DeviceToBackendEnvelope device => device.RequestId,
-        BackendToDeviceEnvelope server => server.RequestId,
-        _ => throw new ArgumentOutOfRangeException(nameof(message)),
-    };
-
     private static int PayloadCase(IMessage message) => message switch
     {
         DeviceToBackendEnvelope device => (int)device.PayloadCase,
@@ -158,12 +142,16 @@ public sealed class DeviceProtocolGoldenFrameTests
         _ => throw new ArgumentOutOfRangeException(nameof(message)),
     };
 
-    private static int UsableLength(FieldDescriptor field) =>
-        field.GetOptions().GetExtension(NanopbExtensions.Nanopb).MaxSize - 1;
+    private static int SecretLength(IMessage message) => ((DeviceToBackendEnvelope)message).Connect.AuthSecret.Length;
+
+    private static int MaxSize(FieldDescriptor field) => field.GetOptions().GetExtension(NanopbExtensions.Nanopb).MaxSize;
+
+    // A nanopb string max_size includes the terminating NUL.
+    private static int UsableStringLength(FieldDescriptor field) => MaxSize(field) - 1;
 
     // Mirrors the generated nanopb _size constants (events.pb.h) that bound each
     // WebSocket frame. Changing a limit means regenerating and updating the wiki.
-    private static int MaxFrameBytes(bool fromDevice) => fromDevice ? 328 : 1326;
+    private static int MaxFrameBytes(bool fromDevice) => fromDevice ? 42 : 18;
 
     private static IReadOnlyDictionary<string, Frame> LoadFrames()
     {

@@ -6,6 +6,12 @@
 #error Regenerate this file with the current version of nanopb generator.
 #endif
 
+PB_BIND(mosaic_device_v1_DeviceToBackendEnvelope, mosaic_device_v1_DeviceToBackendEnvelope, AUTO)
+
+
+PB_BIND(mosaic_device_v1_BackendToDeviceEnvelope, mosaic_device_v1_BackendToDeviceEnvelope, AUTO)
+
+
 PB_BIND(mosaic_device_v1_DeviceConnect, mosaic_device_v1_DeviceConnect, AUTO)
 
 
@@ -16,34 +22,6 @@ PB_BIND(mosaic_device_v1_DevicePaired, mosaic_device_v1_DevicePaired, AUTO)
 
 
 PB_BIND(mosaic_device_v1_ConnectionRejected, mosaic_device_v1_ConnectionRejected, AUTO)
-
-
-PB_BIND(mosaic_device_v1_NotificationAction, mosaic_device_v1_NotificationAction, AUTO)
-
-
-PB_BIND(mosaic_device_v1_AiSummaryNotification, mosaic_device_v1_AiSummaryNotification, 2)
-
-
-PB_BIND(mosaic_device_v1_DeviceTelemetry, mosaic_device_v1_DeviceTelemetry, AUTO)
-
-
-PB_BIND(mosaic_device_v1_DeviceActionTrigger, mosaic_device_v1_DeviceActionTrigger, 2)
-
-
-PB_BIND(mosaic_device_v1_IntegrationActionTrigger, mosaic_device_v1_IntegrationActionTrigger, AUTO)
-
-
-PB_BIND(mosaic_device_v1_IntegrationActionResult, mosaic_device_v1_IntegrationActionResult, 2)
-
-
-PB_BIND(mosaic_device_v1_DeviceToBackendEnvelope, mosaic_device_v1_DeviceToBackendEnvelope, 2)
-
-
-PB_BIND(mosaic_device_v1_BackendToDeviceEnvelope, mosaic_device_v1_BackendToDeviceEnvelope, 2)
-
-
-
-
 
 
 

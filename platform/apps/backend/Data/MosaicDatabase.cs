@@ -39,7 +39,6 @@ public sealed class MosaicDatabase
             CREATE TABLE devices (
                 id INTEGER PRIMARY KEY,
                 secret_hash BLOB NOT NULL UNIQUE CHECK (length(secret_hash) = 32),
-                mac_address TEXT NOT NULL,
                 paired_at TEXT NOT NULL,
                 revoked_at TEXT
             ) STRICT;

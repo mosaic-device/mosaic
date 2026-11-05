@@ -41,7 +41,7 @@ public sealed class MosaicDatabaseTests : IDisposable
             ["token_hash", "admin_id", "created_at", "idle_expires_at", "absolute_expires_at"],
             Strings(connection, "SELECT name FROM pragma_table_info('sessions')"));
         Assert.Equal(
-            ["id", "secret_hash", "mac_address", "paired_at", "revoked_at"],
+            ["id", "secret_hash", "paired_at", "revoked_at"],
             Strings(connection, "SELECT name FROM pragma_table_info('devices')"));
         Assert.Equal(
             ["1:initial_admin_and_settings", "2:admin_sessions", "3:devices"],
@@ -105,12 +105,12 @@ public sealed class MosaicDatabaseTests : IDisposable
         database.Migrate();
         using var connection = database.OpenConnection();
         var hash = "x'" + new string('a', 64) + "'";
-        Execute(connection, $"INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES ({hash}, 'AA:BB:CC:DD:EE:FF', 'now')");
+        Execute(connection, $"INSERT INTO devices (secret_hash, paired_at) VALUES ({hash}, 'now')");
 
         var duplicate = Assert.Throws<SqliteException>(() =>
-            Execute(connection, $"INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES ({hash}, 'AA:BB:CC:DD:EE:00', 'now')"));
+            Execute(connection, $"INSERT INTO devices (secret_hash, paired_at) VALUES ({hash}, 'now')"));
         var plainSecret = Assert.Throws<SqliteException>(() =>
-            Execute(connection, "INSERT INTO devices (secret_hash, mac_address, paired_at) VALUES (x'01', 'AA:BB:CC:DD:EE:01', 'now')"));
+            Execute(connection, "INSERT INTO devices (secret_hash, paired_at) VALUES (x'01', 'now')"));
 
         Assert.Equal(19, duplicate.SqliteErrorCode); // SQLITE_CONSTRAINT
         Assert.Equal(19, plainSecret.SqliteErrorCode);
