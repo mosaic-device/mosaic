@@ -5,11 +5,13 @@ package mosaic.device.v1;
 import "nanopb.proto";
 
 // Each WebSocket binary message holds exactly one envelope. See the wiki's
-// Device Connection Protocol for ordering and receiver-enforced field rules.
+// Device Connection Protocol and Notification Delivery Protocol for ordering
+// and receiver-enforced field rules.
 message DeviceToBackendEnvelope {
   oneof payload {
     // Never renumber: a future server needs it to tell an old device to update.
     DeviceConnect connect = 1;
+    NotificationReceipt notification_receipt = 2;
   }
 }
 
@@ -19,6 +21,7 @@ message BackendToDeviceEnvelope {
     DevicePaired paired = 2;
     // Never renumber: a future server needs it to tell an old device to update.
     ConnectionRejected rejected = 3;
+    Notification notification = 4;
   }
 }
 
@@ -52,4 +55,42 @@ enum ConnectionRejectReason {
 // The server will close the connection after this frame. Never renumber.
 message ConnectionRejected {
   ConnectionRejectReason reason = 1;
+}
+
+enum NotificationPriority {
+  NOTIFICATION_PRIORITY_UNSPECIFIED = 0;
+  NOTIFICATION_PRIORITY_NORMAL = 1;
+  // Interrupts even in focus mode.
+  NOTIFICATION_PRIORITY_HIGH = 2;
+}
+
+// Sent only after paired. String limits count UTF-8 bytes, including nanopb's
+// terminating NUL; the server truncates text to fit before sending.
+message Notification {
+  // Chosen by the server, unique per device, and kept when resent.
+  string id = 1 [(nanopb).max_size = 64];
+  NotificationPriority priority = 2;
+  // A display label such as "GitHub". The device never branches on it.
+  string source = 3 [(nanopb).max_size = 32];
+  string title = 4 [(nanopb).max_size = 128];
+  string text = 5 [(nanopb).max_size = 1024];
+  // When the event happened, in Unix seconds, not when it was sent.
+  int64 occurred_at = 6;
+}
+
+enum NotificationReceiptStatus {
+  NOTIFICATION_RECEIPT_STATUS_UNSPECIFIED = 0;
+  // New, and now in the device's list.
+  NOTIFICATION_RECEIPT_STATUS_STORED = 1;
+  // The device already held a notification with this ID.
+  NOTIFICATION_RECEIPT_STATUS_DUPLICATE = 2;
+  // Decoded, but a field breaks the rules. The server must not resend it.
+  NOTIFICATION_RECEIPT_STATUS_INVALID = 3;
+}
+
+// The device's reply to each notification, sent once it is stored and before
+// it is shown.
+message NotificationReceipt {
+  string notification_id = 1 [(nanopb).max_size = 64];
+  NotificationReceiptStatus status = 2;
 }

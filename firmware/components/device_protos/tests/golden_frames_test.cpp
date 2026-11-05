@@ -1,6 +1,6 @@
 // Checks the nanopb bindings against platform/packages/protocols/testdata/frames.txt.
 // The server's C# test checks the same file, so both sides agree on every byte.
-// See the wiki's Device Connection Protocol.
+// See the wiki's Device Connection Protocol and Notification Delivery Protocol.
 
 #include "events.pb.h"
 #include "pb_decode.h"
@@ -83,6 +83,33 @@ bool rejected(const ServerFrame& frame, mosaic_device_v1_ConnectionRejectReason 
         && frame.payload.rejected.reason == reason;
 }
 
+// 2026-11-05 18:30 UTC.
+constexpr int64_t k_test_occurred_at = 1793903400;
+
+std::string repeat(const char* text, size_t count) {
+    std::string out;
+    for (size_t i = 0; i < count; ++i) {
+        out += text;
+    }
+    return out;
+}
+
+bool test_notification(const ServerFrame& frame, mosaic_device_v1_NotificationPriority priority) {
+    if (frame.which_payload != mosaic_device_v1_BackendToDeviceEnvelope_notification_tag) {
+        return false;
+    }
+    const auto& notification = frame.payload.notification;
+    return same(notification.id, "n-0001") && notification.priority == priority && same(notification.source, "Mosaic")
+        && same(notification.title, "Test notification") && same(notification.text, "")
+        && notification.occurred_at == k_test_occurred_at;
+}
+
+bool receipt(const DeviceFrame& frame, int status) {
+    return frame.which_payload == mosaic_device_v1_DeviceToBackendEnvelope_notification_receipt_tag
+        && same(frame.payload.notification_receipt.notification_id, "n-0001")
+        && static_cast<int>(frame.payload.notification_receipt.status) == status;
+}
+
 // Expected field values for every "valid" frame, keyed by "<direction> <name>".
 const std::map<std::string, bool (*)(const DeviceFrame&)> valid_device_frames = {
     { "d2s connect",
@@ -90,6 +117,20 @@ const std::map<std::string, bool (*)(const DeviceFrame&)> valid_device_frames = 
             return frame.which_payload == mosaic_device_v1_DeviceToBackendEnvelope_connect_tag
                 && is_test_secret(frame.payload.connect.auth_secret) && frame.payload.connect.protocol_version == 1;
         } },
+    { "d2s receipt_stored",
+        [](const DeviceFrame& frame) {
+            return receipt(frame, mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_STORED);
+        } },
+    { "d2s receipt_duplicate",
+        [](const DeviceFrame& frame) {
+            return receipt(frame, mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_DUPLICATE);
+        } },
+    { "d2s receipt_invalid",
+        [](const DeviceFrame& frame) {
+            return receipt(frame, mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_INVALID);
+        } },
+    // A status this build doesn't know is kept, so it re-encodes unchanged.
+    { "d2s receipt_unknown_status", [](const DeviceFrame& frame) { return receipt(frame, 7); } },
 };
 
 const std::map<std::string, bool (*)(const ServerFrame&)> valid_server_frames = {
@@ -115,14 +156,33 @@ const std::map<std::string, bool (*)(const ServerFrame&)> valid_server_frames = 
         [](const ServerFrame& frame) {
             return rejected(frame, mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_SERVER_BUSY);
         } },
+    { "b2d notification",
+        [](const ServerFrame& frame) {
+            return test_notification(frame, mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_NORMAL);
+        } },
+    { "b2d notification_no_priority",
+        [](const ServerFrame& frame) {
+            return test_notification(frame, mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_UNSPECIFIED);
+        } },
+    { "b2d notification_full",
+        [](const ServerFrame& frame) {
+            // Every string at its limit; the title is 63 two-byte characters and "!".
+            const auto& notification = frame.payload.notification;
+            return frame.which_payload == mosaic_device_v1_BackendToDeviceEnvelope_notification_tag
+                && notification.id == repeat("I", 63)
+                && notification.priority == mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_HIGH
+                && notification.source == repeat("S", 31) && notification.title == repeat("\xC3\xA9", 63) + "!"
+                && notification.text == repeat("T", 1023) && notification.occurred_at == k_test_occurred_at;
+        } },
 };
 
 // An envelope with an unknown payload decodes with no payload selected.
 const std::set<std::string> ignored_frames = { "d2s unknown_payload", "b2d unknown_payload" };
 
-const std::set<std::string> bad_length_frames
-    = { "d2s connect_secret_long", "d2s connect_secret_short", "b2d pairing_pending_code_long" };
-const std::set<std::string> truncated_frames = { "d2s connect_truncated", "b2d pairing_pending_truncated" };
+const std::set<std::string> bad_length_frames = { "d2s connect_secret_long", "d2s connect_secret_short",
+    "b2d pairing_pending_code_long", "b2d notification_title_long" };
+const std::set<std::string> truncated_frames
+    = { "d2s connect_truncated", "b2d pairing_pending_truncated", "b2d notification_truncated" };
 
 std::map<std::string, Frame> load(const char* path) {
     std::map<std::string, Frame> frames;

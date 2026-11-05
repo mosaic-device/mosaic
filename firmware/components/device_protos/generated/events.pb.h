@@ -18,6 +18,23 @@ typedef enum _mosaic_device_v1_ConnectionRejectReason {
     mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_SERVER_BUSY = 4
 } mosaic_device_v1_ConnectionRejectReason;
 
+typedef enum _mosaic_device_v1_NotificationPriority {
+    mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_UNSPECIFIED = 0,
+    mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_NORMAL = 1,
+    /* Interrupts even in focus mode. */
+    mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_HIGH = 2
+} mosaic_device_v1_NotificationPriority;
+
+typedef enum _mosaic_device_v1_NotificationReceiptStatus {
+    mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_UNSPECIFIED = 0,
+    /* New, and now in the device's list. */
+    mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_STORED = 1,
+    /* The device already held a notification with this ID. */
+    mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_DUPLICATE = 2,
+    /* Decoded, but a field breaks the rules. The server must not resend it. */
+    mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_INVALID = 3
+} mosaic_device_v1_NotificationReceiptStatus;
+
 /* Struct definitions */
 /* First frame from the device on every connection. */
 typedef struct _mosaic_device_v1_DeviceConnect {
@@ -27,16 +44,6 @@ typedef struct _mosaic_device_v1_DeviceConnect {
  only its SHA-256 hash. */
     pb_byte_t auth_secret[32];
 } mosaic_device_v1_DeviceConnect;
-
-/* Each WebSocket binary message holds exactly one envelope. See the wiki's
- Device Connection Protocol for ordering and receiver-enforced field rules. */
-typedef struct _mosaic_device_v1_DeviceToBackendEnvelope {
-    pb_size_t which_payload;
-    union {
-        /* Never renumber: a future server needs it to tell an old device to update. */
-        mosaic_device_v1_DeviceConnect connect;
-    } payload;
-} mosaic_device_v1_DeviceToBackendEnvelope;
 
 /* The credential is not paired yet. The code is eight uppercase characters
  without the dash; the device displays it as XXXX-XXXX. */
@@ -55,6 +62,20 @@ typedef struct _mosaic_device_v1_ConnectionRejected {
     mosaic_device_v1_ConnectionRejectReason reason;
 } mosaic_device_v1_ConnectionRejected;
 
+/* Sent only after paired. String limits count UTF-8 bytes, including nanopb's
+ terminating NUL; the server truncates text to fit before sending. */
+typedef struct _mosaic_device_v1_Notification {
+    /* Chosen by the server, unique per device, and kept when resent. */
+    char id[64];
+    mosaic_device_v1_NotificationPriority priority;
+    /* A display label such as "GitHub". The device never branches on it. */
+    char source[32];
+    char title[128];
+    char text[1024];
+    /* When the event happened, in Unix seconds, not when it was sent. */
+    int64_t occurred_at;
+} mosaic_device_v1_Notification;
+
 typedef struct _mosaic_device_v1_BackendToDeviceEnvelope {
     pb_size_t which_payload;
     union {
@@ -62,8 +83,28 @@ typedef struct _mosaic_device_v1_BackendToDeviceEnvelope {
         mosaic_device_v1_DevicePaired paired;
         /* Never renumber: a future server needs it to tell an old device to update. */
         mosaic_device_v1_ConnectionRejected rejected;
+        mosaic_device_v1_Notification notification;
     } payload;
 } mosaic_device_v1_BackendToDeviceEnvelope;
+
+/* The device's reply to each notification, sent once it is stored and before
+ it is shown. */
+typedef struct _mosaic_device_v1_NotificationReceipt {
+    char notification_id[64];
+    mosaic_device_v1_NotificationReceiptStatus status;
+} mosaic_device_v1_NotificationReceipt;
+
+/* Each WebSocket binary message holds exactly one envelope. See the wiki's
+ Device Connection Protocol and Notification Delivery Protocol for ordering
+ and receiver-enforced field rules. */
+typedef struct _mosaic_device_v1_DeviceToBackendEnvelope {
+    pb_size_t which_payload;
+    union {
+        /* Never renumber: a future server needs it to tell an old device to update. */
+        mosaic_device_v1_DeviceConnect connect;
+        mosaic_device_v1_NotificationReceipt notification_receipt;
+    } payload;
+} mosaic_device_v1_DeviceToBackendEnvelope;
 
 
 #ifdef __cplusplus
@@ -75,12 +116,24 @@ extern "C" {
 #define _mosaic_device_v1_ConnectionRejectReason_MAX mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_SERVER_BUSY
 #define _mosaic_device_v1_ConnectionRejectReason_ARRAYSIZE ((mosaic_device_v1_ConnectionRejectReason)(mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_SERVER_BUSY+1))
 
+#define _mosaic_device_v1_NotificationPriority_MIN mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_UNSPECIFIED
+#define _mosaic_device_v1_NotificationPriority_MAX mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_HIGH
+#define _mosaic_device_v1_NotificationPriority_ARRAYSIZE ((mosaic_device_v1_NotificationPriority)(mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_HIGH+1))
+
+#define _mosaic_device_v1_NotificationReceiptStatus_MIN mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_UNSPECIFIED
+#define _mosaic_device_v1_NotificationReceiptStatus_MAX mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_INVALID
+#define _mosaic_device_v1_NotificationReceiptStatus_ARRAYSIZE ((mosaic_device_v1_NotificationReceiptStatus)(mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_INVALID+1))
+
 
 
 
 
 
 #define mosaic_device_v1_ConnectionRejected_reason_ENUMTYPE mosaic_device_v1_ConnectionRejectReason
+
+#define mosaic_device_v1_Notification_priority_ENUMTYPE mosaic_device_v1_NotificationPriority
+
+#define mosaic_device_v1_NotificationReceipt_status_ENUMTYPE mosaic_device_v1_NotificationReceiptStatus
 
 
 /* Initializer values for message structs */
@@ -90,40 +143,58 @@ extern "C" {
 #define mosaic_device_v1_PairingPending_init_default {"", 0}
 #define mosaic_device_v1_DevicePaired_init_default {0}
 #define mosaic_device_v1_ConnectionRejected_init_default {_mosaic_device_v1_ConnectionRejectReason_MIN}
+#define mosaic_device_v1_Notification_init_default {"", _mosaic_device_v1_NotificationPriority_MIN, "", "", "", 0}
+#define mosaic_device_v1_NotificationReceipt_init_default {"", _mosaic_device_v1_NotificationReceiptStatus_MIN}
 #define mosaic_device_v1_DeviceToBackendEnvelope_init_zero {0, {mosaic_device_v1_DeviceConnect_init_zero}}
 #define mosaic_device_v1_BackendToDeviceEnvelope_init_zero {0, {mosaic_device_v1_PairingPending_init_zero}}
 #define mosaic_device_v1_DeviceConnect_init_zero {0, {0}}
 #define mosaic_device_v1_PairingPending_init_zero {"", 0}
 #define mosaic_device_v1_DevicePaired_init_zero  {0}
 #define mosaic_device_v1_ConnectionRejected_init_zero {_mosaic_device_v1_ConnectionRejectReason_MIN}
+#define mosaic_device_v1_Notification_init_zero  {"", _mosaic_device_v1_NotificationPriority_MIN, "", "", "", 0}
+#define mosaic_device_v1_NotificationReceipt_init_zero {"", _mosaic_device_v1_NotificationReceiptStatus_MIN}
 
 /* Field tags (for use in manual encoding/decoding) */
 #define mosaic_device_v1_DeviceConnect_protocol_version_tag 1
 #define mosaic_device_v1_DeviceConnect_auth_secret_tag 2
-#define mosaic_device_v1_DeviceToBackendEnvelope_connect_tag 1
 #define mosaic_device_v1_PairingPending_code_tag 1
 #define mosaic_device_v1_PairingPending_expires_in_seconds_tag 2
 #define mosaic_device_v1_ConnectionRejected_reason_tag 1
+#define mosaic_device_v1_Notification_id_tag     1
+#define mosaic_device_v1_Notification_priority_tag 2
+#define mosaic_device_v1_Notification_source_tag 3
+#define mosaic_device_v1_Notification_title_tag  4
+#define mosaic_device_v1_Notification_text_tag   5
+#define mosaic_device_v1_Notification_occurred_at_tag 6
 #define mosaic_device_v1_BackendToDeviceEnvelope_pairing_pending_tag 1
 #define mosaic_device_v1_BackendToDeviceEnvelope_paired_tag 2
 #define mosaic_device_v1_BackendToDeviceEnvelope_rejected_tag 3
+#define mosaic_device_v1_BackendToDeviceEnvelope_notification_tag 4
+#define mosaic_device_v1_NotificationReceipt_notification_id_tag 1
+#define mosaic_device_v1_NotificationReceipt_status_tag 2
+#define mosaic_device_v1_DeviceToBackendEnvelope_connect_tag 1
+#define mosaic_device_v1_DeviceToBackendEnvelope_notification_receipt_tag 2
 
 /* Struct field encoding specification for nanopb */
 #define mosaic_device_v1_DeviceToBackendEnvelope_FIELDLIST(X, a) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,connect,payload.connect),   1)
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,connect,payload.connect),   1) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,notification_receipt,payload.notification_receipt),   2)
 #define mosaic_device_v1_DeviceToBackendEnvelope_CALLBACK NULL
 #define mosaic_device_v1_DeviceToBackendEnvelope_DEFAULT NULL
 #define mosaic_device_v1_DeviceToBackendEnvelope_payload_connect_MSGTYPE mosaic_device_v1_DeviceConnect
+#define mosaic_device_v1_DeviceToBackendEnvelope_payload_notification_receipt_MSGTYPE mosaic_device_v1_NotificationReceipt
 
 #define mosaic_device_v1_BackendToDeviceEnvelope_FIELDLIST(X, a) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload,pairing_pending,payload.pairing_pending),   1) \
 X(a, STATIC,   ONEOF,    MESSAGE,  (payload,paired,payload.paired),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,rejected,payload.rejected),   3)
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,rejected,payload.rejected),   3) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,notification,payload.notification),   4)
 #define mosaic_device_v1_BackendToDeviceEnvelope_CALLBACK NULL
 #define mosaic_device_v1_BackendToDeviceEnvelope_DEFAULT NULL
 #define mosaic_device_v1_BackendToDeviceEnvelope_payload_pairing_pending_MSGTYPE mosaic_device_v1_PairingPending
 #define mosaic_device_v1_BackendToDeviceEnvelope_payload_paired_MSGTYPE mosaic_device_v1_DevicePaired
 #define mosaic_device_v1_BackendToDeviceEnvelope_payload_rejected_MSGTYPE mosaic_device_v1_ConnectionRejected
+#define mosaic_device_v1_BackendToDeviceEnvelope_payload_notification_MSGTYPE mosaic_device_v1_Notification
 
 #define mosaic_device_v1_DeviceConnect_FIELDLIST(X, a) \
 X(a, STATIC,   SINGULAR, UINT32,   protocol_version,   1) \
@@ -147,12 +218,30 @@ X(a, STATIC,   SINGULAR, UENUM,    reason,            1)
 #define mosaic_device_v1_ConnectionRejected_CALLBACK NULL
 #define mosaic_device_v1_ConnectionRejected_DEFAULT NULL
 
+#define mosaic_device_v1_Notification_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, STRING,   id,                1) \
+X(a, STATIC,   SINGULAR, UENUM,    priority,          2) \
+X(a, STATIC,   SINGULAR, STRING,   source,            3) \
+X(a, STATIC,   SINGULAR, STRING,   title,             4) \
+X(a, STATIC,   SINGULAR, STRING,   text,              5) \
+X(a, STATIC,   SINGULAR, INT64,    occurred_at,       6)
+#define mosaic_device_v1_Notification_CALLBACK NULL
+#define mosaic_device_v1_Notification_DEFAULT NULL
+
+#define mosaic_device_v1_NotificationReceipt_FIELDLIST(X, a) \
+X(a, STATIC,   SINGULAR, STRING,   notification_id,   1) \
+X(a, STATIC,   SINGULAR, UENUM,    status,            2)
+#define mosaic_device_v1_NotificationReceipt_CALLBACK NULL
+#define mosaic_device_v1_NotificationReceipt_DEFAULT NULL
+
 extern const pb_msgdesc_t mosaic_device_v1_DeviceToBackendEnvelope_msg;
 extern const pb_msgdesc_t mosaic_device_v1_BackendToDeviceEnvelope_msg;
 extern const pb_msgdesc_t mosaic_device_v1_DeviceConnect_msg;
 extern const pb_msgdesc_t mosaic_device_v1_PairingPending_msg;
 extern const pb_msgdesc_t mosaic_device_v1_DevicePaired_msg;
 extern const pb_msgdesc_t mosaic_device_v1_ConnectionRejected_msg;
+extern const pb_msgdesc_t mosaic_device_v1_Notification_msg;
+extern const pb_msgdesc_t mosaic_device_v1_NotificationReceipt_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
 #define mosaic_device_v1_DeviceToBackendEnvelope_fields &mosaic_device_v1_DeviceToBackendEnvelope_msg
@@ -161,14 +250,18 @@ extern const pb_msgdesc_t mosaic_device_v1_ConnectionRejected_msg;
 #define mosaic_device_v1_PairingPending_fields &mosaic_device_v1_PairingPending_msg
 #define mosaic_device_v1_DevicePaired_fields &mosaic_device_v1_DevicePaired_msg
 #define mosaic_device_v1_ConnectionRejected_fields &mosaic_device_v1_ConnectionRejected_msg
+#define mosaic_device_v1_Notification_fields &mosaic_device_v1_Notification_msg
+#define mosaic_device_v1_NotificationReceipt_fields &mosaic_device_v1_NotificationReceipt_msg
 
 /* Maximum encoded size of messages (where known) */
-#define MOSAIC_DEVICE_V1_EVENTS_PB_H_MAX_SIZE    mosaic_device_v1_DeviceToBackendEnvelope_size
-#define mosaic_device_v1_BackendToDeviceEnvelope_size 18
+#define MOSAIC_DEVICE_V1_EVENTS_PB_H_MAX_SIZE    mosaic_device_v1_BackendToDeviceEnvelope_size
+#define mosaic_device_v1_BackendToDeviceEnvelope_size 1270
 #define mosaic_device_v1_ConnectionRejected_size 2
 #define mosaic_device_v1_DeviceConnect_size      40
 #define mosaic_device_v1_DevicePaired_size       0
-#define mosaic_device_v1_DeviceToBackendEnvelope_size 42
+#define mosaic_device_v1_DeviceToBackendEnvelope_size 69
+#define mosaic_device_v1_NotificationReceipt_size 67
+#define mosaic_device_v1_Notification_size       1267
 #define mosaic_device_v1_PairingPending_size     16
 
 #ifdef __cplusplus
