@@ -10,20 +10,6 @@
 #endif
 
 /* Enum definitions */
-typedef enum _mosaic_device_v1_NotificationPriority {
-    mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_UNSPECIFIED = 0,
-    mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_NORMAL = 1,
-    mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_HIGH = 2
-} mosaic_device_v1_NotificationPriority;
-
-typedef enum _mosaic_device_v1_DaemonActionId {
-    mosaic_device_v1_DaemonActionId_DAEMON_ACTION_UNSPECIFIED = 0,
-    mosaic_device_v1_DaemonActionId_OPEN_URL = 1,
-    mosaic_device_v1_DaemonActionId_TOGGLE_MUTE = 2,
-    mosaic_device_v1_DaemonActionId_OPEN_IDE = 3,
-    mosaic_device_v1_DaemonActionId_LOCK_SCREEN = 4
-} mosaic_device_v1_DaemonActionId;
-
 typedef enum _mosaic_device_v1_ConnectionRejectReason {
     mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_UNSPECIFIED = 0,
     mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_MALFORMED_REQUEST = 1,
@@ -33,14 +19,24 @@ typedef enum _mosaic_device_v1_ConnectionRejectReason {
 } mosaic_device_v1_ConnectionRejectReason;
 
 /* Struct definitions */
-/* First frame from the device on every connection. See the wiki's
- Device Connection Protocol for ordering and receiver-enforced field rules. */
+/* First frame from the device on every connection. */
 typedef struct _mosaic_device_v1_DeviceConnect {
-    char mac_address[18];
-    char auth_secret[64];
     /* Wire protocol version. Currently 1; zero is unsupported. Never renumber. */
     uint32_t protocol_version;
+    /* 32 random bytes the device generated for this server. The server stores
+ only its SHA-256 hash. */
+    pb_byte_t auth_secret[32];
 } mosaic_device_v1_DeviceConnect;
+
+/* Each WebSocket binary message holds exactly one envelope. See the wiki's
+ Device Connection Protocol for ordering and receiver-enforced field rules. */
+typedef struct _mosaic_device_v1_DeviceToBackendEnvelope {
+    pb_size_t which_payload;
+    union {
+        /* Never renumber: a future server needs it to tell an old device to update. */
+        mosaic_device_v1_DeviceConnect connect;
+    } payload;
+} mosaic_device_v1_DeviceToBackendEnvelope;
 
 /* The credential is not paired yet. The code is eight uppercase characters
  without the dash; the device displays it as XXXX-XXXX. */
@@ -59,64 +55,12 @@ typedef struct _mosaic_device_v1_ConnectionRejected {
     mosaic_device_v1_ConnectionRejectReason reason;
 } mosaic_device_v1_ConnectionRejected;
 
-typedef struct _mosaic_device_v1_NotificationAction {
-    char id[96];
-    char label[48];
-    bool requires_confirmation;
-    bool destructive;
-} mosaic_device_v1_NotificationAction;
-
-typedef struct _mosaic_device_v1_AiSummaryNotification {
-    char title[64];
-    char summary_text[512];
-    mosaic_device_v1_NotificationPriority priority;
-    char notification_id[64];
-    pb_size_t actions_count;
-    mosaic_device_v1_NotificationAction actions[4];
-} mosaic_device_v1_AiSummaryNotification;
-
-typedef struct _mosaic_device_v1_DeviceTelemetry {
-    float lux;
-    int32_t encoder_count;
-    bool button_pressed;
-} mosaic_device_v1_DeviceTelemetry;
-
-typedef struct _mosaic_device_v1_DeviceActionTrigger {
-    mosaic_device_v1_DaemonActionId action_id;
-    char payload[256];
-} mosaic_device_v1_DeviceActionTrigger;
-
-typedef struct _mosaic_device_v1_IntegrationActionTrigger {
-    char notification_id[64];
-    char action_id[96];
-} mosaic_device_v1_IntegrationActionTrigger;
-
-typedef struct _mosaic_device_v1_IntegrationActionResult {
-    char notification_id[64];
-    char action_id[96];
-    bool success;
-    char message[128];
-} mosaic_device_v1_IntegrationActionResult;
-
-typedef struct _mosaic_device_v1_DeviceToBackendEnvelope {
-    char request_id[64];
-    pb_size_t which_payload;
-    union {
-        mosaic_device_v1_DeviceTelemetry telemetry;
-        mosaic_device_v1_DeviceActionTrigger daemon_action;
-        mosaic_device_v1_IntegrationActionTrigger integration_action;
-        mosaic_device_v1_DeviceConnect connect;
-    } payload;
-} mosaic_device_v1_DeviceToBackendEnvelope;
-
 typedef struct _mosaic_device_v1_BackendToDeviceEnvelope {
-    char request_id[64];
     pb_size_t which_payload;
     union {
-        mosaic_device_v1_AiSummaryNotification notification;
-        mosaic_device_v1_IntegrationActionResult action_result;
         mosaic_device_v1_PairingPending pairing_pending;
         mosaic_device_v1_DevicePaired paired;
+        /* Never renumber: a future server needs it to tell an old device to update. */
         mosaic_device_v1_ConnectionRejected rejected;
     } payload;
 } mosaic_device_v1_BackendToDeviceEnvelope;
@@ -127,14 +71,6 @@ extern "C" {
 #endif
 
 /* Helper constants for enums */
-#define _mosaic_device_v1_NotificationPriority_MIN mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_UNSPECIFIED
-#define _mosaic_device_v1_NotificationPriority_MAX mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_HIGH
-#define _mosaic_device_v1_NotificationPriority_ARRAYSIZE ((mosaic_device_v1_NotificationPriority)(mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_HIGH+1))
-
-#define _mosaic_device_v1_DaemonActionId_MIN mosaic_device_v1_DaemonActionId_DAEMON_ACTION_UNSPECIFIED
-#define _mosaic_device_v1_DaemonActionId_MAX mosaic_device_v1_DaemonActionId_LOCK_SCREEN
-#define _mosaic_device_v1_DaemonActionId_ARRAYSIZE ((mosaic_device_v1_DaemonActionId)(mosaic_device_v1_DaemonActionId_LOCK_SCREEN+1))
-
 #define _mosaic_device_v1_ConnectionRejectReason_MIN mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_UNSPECIFIED
 #define _mosaic_device_v1_ConnectionRejectReason_MAX mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_SERVER_BUSY
 #define _mosaic_device_v1_ConnectionRejectReason_ARRAYSIZE ((mosaic_device_v1_ConnectionRejectReason)(mosaic_device_v1_ConnectionRejectReason_CONNECTION_REJECT_REASON_SERVER_BUSY+1))
@@ -142,89 +78,56 @@ extern "C" {
 
 
 
+
+
 #define mosaic_device_v1_ConnectionRejected_reason_ENUMTYPE mosaic_device_v1_ConnectionRejectReason
 
 
-#define mosaic_device_v1_AiSummaryNotification_priority_ENUMTYPE mosaic_device_v1_NotificationPriority
-
-
-#define mosaic_device_v1_DeviceActionTrigger_action_id_ENUMTYPE mosaic_device_v1_DaemonActionId
-
-
-
-
-
-
 /* Initializer values for message structs */
-#define mosaic_device_v1_DeviceConnect_init_default {"", "", 0}
+#define mosaic_device_v1_DeviceToBackendEnvelope_init_default {0, {mosaic_device_v1_DeviceConnect_init_default}}
+#define mosaic_device_v1_BackendToDeviceEnvelope_init_default {0, {mosaic_device_v1_PairingPending_init_default}}
+#define mosaic_device_v1_DeviceConnect_init_default {0, {0}}
 #define mosaic_device_v1_PairingPending_init_default {"", 0}
 #define mosaic_device_v1_DevicePaired_init_default {0}
 #define mosaic_device_v1_ConnectionRejected_init_default {_mosaic_device_v1_ConnectionRejectReason_MIN}
-#define mosaic_device_v1_NotificationAction_init_default {"", "", 0, 0}
-#define mosaic_device_v1_AiSummaryNotification_init_default {"", "", _mosaic_device_v1_NotificationPriority_MIN, "", 0, {mosaic_device_v1_NotificationAction_init_default, mosaic_device_v1_NotificationAction_init_default, mosaic_device_v1_NotificationAction_init_default, mosaic_device_v1_NotificationAction_init_default}}
-#define mosaic_device_v1_DeviceTelemetry_init_default {0, 0, 0}
-#define mosaic_device_v1_DeviceActionTrigger_init_default {_mosaic_device_v1_DaemonActionId_MIN, ""}
-#define mosaic_device_v1_IntegrationActionTrigger_init_default {"", ""}
-#define mosaic_device_v1_IntegrationActionResult_init_default {"", "", 0, ""}
-#define mosaic_device_v1_DeviceToBackendEnvelope_init_default {"", 0, {mosaic_device_v1_DeviceTelemetry_init_default}}
-#define mosaic_device_v1_BackendToDeviceEnvelope_init_default {"", 0, {mosaic_device_v1_AiSummaryNotification_init_default}}
-#define mosaic_device_v1_DeviceConnect_init_zero {"", "", 0}
+#define mosaic_device_v1_DeviceToBackendEnvelope_init_zero {0, {mosaic_device_v1_DeviceConnect_init_zero}}
+#define mosaic_device_v1_BackendToDeviceEnvelope_init_zero {0, {mosaic_device_v1_PairingPending_init_zero}}
+#define mosaic_device_v1_DeviceConnect_init_zero {0, {0}}
 #define mosaic_device_v1_PairingPending_init_zero {"", 0}
 #define mosaic_device_v1_DevicePaired_init_zero  {0}
 #define mosaic_device_v1_ConnectionRejected_init_zero {_mosaic_device_v1_ConnectionRejectReason_MIN}
-#define mosaic_device_v1_NotificationAction_init_zero {"", "", 0, 0}
-#define mosaic_device_v1_AiSummaryNotification_init_zero {"", "", _mosaic_device_v1_NotificationPriority_MIN, "", 0, {mosaic_device_v1_NotificationAction_init_zero, mosaic_device_v1_NotificationAction_init_zero, mosaic_device_v1_NotificationAction_init_zero, mosaic_device_v1_NotificationAction_init_zero}}
-#define mosaic_device_v1_DeviceTelemetry_init_zero {0, 0, 0}
-#define mosaic_device_v1_DeviceActionTrigger_init_zero {_mosaic_device_v1_DaemonActionId_MIN, ""}
-#define mosaic_device_v1_IntegrationActionTrigger_init_zero {"", ""}
-#define mosaic_device_v1_IntegrationActionResult_init_zero {"", "", 0, ""}
-#define mosaic_device_v1_DeviceToBackendEnvelope_init_zero {"", 0, {mosaic_device_v1_DeviceTelemetry_init_zero}}
-#define mosaic_device_v1_BackendToDeviceEnvelope_init_zero {"", 0, {mosaic_device_v1_AiSummaryNotification_init_zero}}
 
 /* Field tags (for use in manual encoding/decoding) */
-#define mosaic_device_v1_DeviceConnect_mac_address_tag 1
+#define mosaic_device_v1_DeviceConnect_protocol_version_tag 1
 #define mosaic_device_v1_DeviceConnect_auth_secret_tag 2
-#define mosaic_device_v1_DeviceConnect_protocol_version_tag 3
+#define mosaic_device_v1_DeviceToBackendEnvelope_connect_tag 1
 #define mosaic_device_v1_PairingPending_code_tag 1
 #define mosaic_device_v1_PairingPending_expires_in_seconds_tag 2
 #define mosaic_device_v1_ConnectionRejected_reason_tag 1
-#define mosaic_device_v1_NotificationAction_id_tag 1
-#define mosaic_device_v1_NotificationAction_label_tag 2
-#define mosaic_device_v1_NotificationAction_requires_confirmation_tag 3
-#define mosaic_device_v1_NotificationAction_destructive_tag 4
-#define mosaic_device_v1_AiSummaryNotification_title_tag 1
-#define mosaic_device_v1_AiSummaryNotification_summary_text_tag 2
-#define mosaic_device_v1_AiSummaryNotification_priority_tag 3
-#define mosaic_device_v1_AiSummaryNotification_notification_id_tag 4
-#define mosaic_device_v1_AiSummaryNotification_actions_tag 5
-#define mosaic_device_v1_DeviceTelemetry_lux_tag 1
-#define mosaic_device_v1_DeviceTelemetry_encoder_count_tag 2
-#define mosaic_device_v1_DeviceTelemetry_button_pressed_tag 3
-#define mosaic_device_v1_DeviceActionTrigger_action_id_tag 1
-#define mosaic_device_v1_DeviceActionTrigger_payload_tag 2
-#define mosaic_device_v1_IntegrationActionTrigger_notification_id_tag 1
-#define mosaic_device_v1_IntegrationActionTrigger_action_id_tag 2
-#define mosaic_device_v1_IntegrationActionResult_notification_id_tag 1
-#define mosaic_device_v1_IntegrationActionResult_action_id_tag 2
-#define mosaic_device_v1_IntegrationActionResult_success_tag 3
-#define mosaic_device_v1_IntegrationActionResult_message_tag 4
-#define mosaic_device_v1_DeviceToBackendEnvelope_request_id_tag 1
-#define mosaic_device_v1_DeviceToBackendEnvelope_telemetry_tag 2
-#define mosaic_device_v1_DeviceToBackendEnvelope_daemon_action_tag 3
-#define mosaic_device_v1_DeviceToBackendEnvelope_integration_action_tag 4
-#define mosaic_device_v1_DeviceToBackendEnvelope_connect_tag 5
-#define mosaic_device_v1_BackendToDeviceEnvelope_request_id_tag 1
-#define mosaic_device_v1_BackendToDeviceEnvelope_notification_tag 2
-#define mosaic_device_v1_BackendToDeviceEnvelope_action_result_tag 3
-#define mosaic_device_v1_BackendToDeviceEnvelope_pairing_pending_tag 4
-#define mosaic_device_v1_BackendToDeviceEnvelope_paired_tag 5
-#define mosaic_device_v1_BackendToDeviceEnvelope_rejected_tag 6
+#define mosaic_device_v1_BackendToDeviceEnvelope_pairing_pending_tag 1
+#define mosaic_device_v1_BackendToDeviceEnvelope_paired_tag 2
+#define mosaic_device_v1_BackendToDeviceEnvelope_rejected_tag 3
 
 /* Struct field encoding specification for nanopb */
+#define mosaic_device_v1_DeviceToBackendEnvelope_FIELDLIST(X, a) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,connect,payload.connect),   1)
+#define mosaic_device_v1_DeviceToBackendEnvelope_CALLBACK NULL
+#define mosaic_device_v1_DeviceToBackendEnvelope_DEFAULT NULL
+#define mosaic_device_v1_DeviceToBackendEnvelope_payload_connect_MSGTYPE mosaic_device_v1_DeviceConnect
+
+#define mosaic_device_v1_BackendToDeviceEnvelope_FIELDLIST(X, a) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,pairing_pending,payload.pairing_pending),   1) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,paired,payload.paired),   2) \
+X(a, STATIC,   ONEOF,    MESSAGE,  (payload,rejected,payload.rejected),   3)
+#define mosaic_device_v1_BackendToDeviceEnvelope_CALLBACK NULL
+#define mosaic_device_v1_BackendToDeviceEnvelope_DEFAULT NULL
+#define mosaic_device_v1_BackendToDeviceEnvelope_payload_pairing_pending_MSGTYPE mosaic_device_v1_PairingPending
+#define mosaic_device_v1_BackendToDeviceEnvelope_payload_paired_MSGTYPE mosaic_device_v1_DevicePaired
+#define mosaic_device_v1_BackendToDeviceEnvelope_payload_rejected_MSGTYPE mosaic_device_v1_ConnectionRejected
+
 #define mosaic_device_v1_DeviceConnect_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   mac_address,       1) \
-X(a, STATIC,   SINGULAR, STRING,   auth_secret,       2) \
-X(a, STATIC,   SINGULAR, UINT32,   protocol_version,   3)
+X(a, STATIC,   SINGULAR, UINT32,   protocol_version,   1) \
+X(a, STATIC,   SINGULAR, FIXED_LENGTH_BYTES, auth_secret,       2)
 #define mosaic_device_v1_DeviceConnect_CALLBACK NULL
 #define mosaic_device_v1_DeviceConnect_DEFAULT NULL
 
@@ -244,119 +147,28 @@ X(a, STATIC,   SINGULAR, UENUM,    reason,            1)
 #define mosaic_device_v1_ConnectionRejected_CALLBACK NULL
 #define mosaic_device_v1_ConnectionRejected_DEFAULT NULL
 
-#define mosaic_device_v1_NotificationAction_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   id,                1) \
-X(a, STATIC,   SINGULAR, STRING,   label,             2) \
-X(a, STATIC,   SINGULAR, BOOL,     requires_confirmation,   3) \
-X(a, STATIC,   SINGULAR, BOOL,     destructive,       4)
-#define mosaic_device_v1_NotificationAction_CALLBACK NULL
-#define mosaic_device_v1_NotificationAction_DEFAULT NULL
-
-#define mosaic_device_v1_AiSummaryNotification_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   title,             1) \
-X(a, STATIC,   SINGULAR, STRING,   summary_text,      2) \
-X(a, STATIC,   SINGULAR, UENUM,    priority,          3) \
-X(a, STATIC,   SINGULAR, STRING,   notification_id,   4) \
-X(a, STATIC,   REPEATED, MESSAGE,  actions,           5)
-#define mosaic_device_v1_AiSummaryNotification_CALLBACK NULL
-#define mosaic_device_v1_AiSummaryNotification_DEFAULT NULL
-#define mosaic_device_v1_AiSummaryNotification_actions_MSGTYPE mosaic_device_v1_NotificationAction
-
-#define mosaic_device_v1_DeviceTelemetry_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, FLOAT,    lux,               1) \
-X(a, STATIC,   SINGULAR, INT32,    encoder_count,     2) \
-X(a, STATIC,   SINGULAR, BOOL,     button_pressed,    3)
-#define mosaic_device_v1_DeviceTelemetry_CALLBACK NULL
-#define mosaic_device_v1_DeviceTelemetry_DEFAULT NULL
-
-#define mosaic_device_v1_DeviceActionTrigger_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, UENUM,    action_id,         1) \
-X(a, STATIC,   SINGULAR, STRING,   payload,           2)
-#define mosaic_device_v1_DeviceActionTrigger_CALLBACK NULL
-#define mosaic_device_v1_DeviceActionTrigger_DEFAULT NULL
-
-#define mosaic_device_v1_IntegrationActionTrigger_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   notification_id,   1) \
-X(a, STATIC,   SINGULAR, STRING,   action_id,         2)
-#define mosaic_device_v1_IntegrationActionTrigger_CALLBACK NULL
-#define mosaic_device_v1_IntegrationActionTrigger_DEFAULT NULL
-
-#define mosaic_device_v1_IntegrationActionResult_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   notification_id,   1) \
-X(a, STATIC,   SINGULAR, STRING,   action_id,         2) \
-X(a, STATIC,   SINGULAR, BOOL,     success,           3) \
-X(a, STATIC,   SINGULAR, STRING,   message,           4)
-#define mosaic_device_v1_IntegrationActionResult_CALLBACK NULL
-#define mosaic_device_v1_IntegrationActionResult_DEFAULT NULL
-
-#define mosaic_device_v1_DeviceToBackendEnvelope_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   request_id,        1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,telemetry,payload.telemetry),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,daemon_action,payload.daemon_action),   3) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,integration_action,payload.integration_action),   4) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,connect,payload.connect),   5)
-#define mosaic_device_v1_DeviceToBackendEnvelope_CALLBACK NULL
-#define mosaic_device_v1_DeviceToBackendEnvelope_DEFAULT NULL
-#define mosaic_device_v1_DeviceToBackendEnvelope_payload_telemetry_MSGTYPE mosaic_device_v1_DeviceTelemetry
-#define mosaic_device_v1_DeviceToBackendEnvelope_payload_daemon_action_MSGTYPE mosaic_device_v1_DeviceActionTrigger
-#define mosaic_device_v1_DeviceToBackendEnvelope_payload_integration_action_MSGTYPE mosaic_device_v1_IntegrationActionTrigger
-#define mosaic_device_v1_DeviceToBackendEnvelope_payload_connect_MSGTYPE mosaic_device_v1_DeviceConnect
-
-#define mosaic_device_v1_BackendToDeviceEnvelope_FIELDLIST(X, a) \
-X(a, STATIC,   SINGULAR, STRING,   request_id,        1) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,notification,payload.notification),   2) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,action_result,payload.action_result),   3) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,pairing_pending,payload.pairing_pending),   4) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,paired,payload.paired),   5) \
-X(a, STATIC,   ONEOF,    MESSAGE,  (payload,rejected,payload.rejected),   6)
-#define mosaic_device_v1_BackendToDeviceEnvelope_CALLBACK NULL
-#define mosaic_device_v1_BackendToDeviceEnvelope_DEFAULT NULL
-#define mosaic_device_v1_BackendToDeviceEnvelope_payload_notification_MSGTYPE mosaic_device_v1_AiSummaryNotification
-#define mosaic_device_v1_BackendToDeviceEnvelope_payload_action_result_MSGTYPE mosaic_device_v1_IntegrationActionResult
-#define mosaic_device_v1_BackendToDeviceEnvelope_payload_pairing_pending_MSGTYPE mosaic_device_v1_PairingPending
-#define mosaic_device_v1_BackendToDeviceEnvelope_payload_paired_MSGTYPE mosaic_device_v1_DevicePaired
-#define mosaic_device_v1_BackendToDeviceEnvelope_payload_rejected_MSGTYPE mosaic_device_v1_ConnectionRejected
-
+extern const pb_msgdesc_t mosaic_device_v1_DeviceToBackendEnvelope_msg;
+extern const pb_msgdesc_t mosaic_device_v1_BackendToDeviceEnvelope_msg;
 extern const pb_msgdesc_t mosaic_device_v1_DeviceConnect_msg;
 extern const pb_msgdesc_t mosaic_device_v1_PairingPending_msg;
 extern const pb_msgdesc_t mosaic_device_v1_DevicePaired_msg;
 extern const pb_msgdesc_t mosaic_device_v1_ConnectionRejected_msg;
-extern const pb_msgdesc_t mosaic_device_v1_NotificationAction_msg;
-extern const pb_msgdesc_t mosaic_device_v1_AiSummaryNotification_msg;
-extern const pb_msgdesc_t mosaic_device_v1_DeviceTelemetry_msg;
-extern const pb_msgdesc_t mosaic_device_v1_DeviceActionTrigger_msg;
-extern const pb_msgdesc_t mosaic_device_v1_IntegrationActionTrigger_msg;
-extern const pb_msgdesc_t mosaic_device_v1_IntegrationActionResult_msg;
-extern const pb_msgdesc_t mosaic_device_v1_DeviceToBackendEnvelope_msg;
-extern const pb_msgdesc_t mosaic_device_v1_BackendToDeviceEnvelope_msg;
 
 /* Defines for backwards compatibility with code written before nanopb-0.4.0 */
+#define mosaic_device_v1_DeviceToBackendEnvelope_fields &mosaic_device_v1_DeviceToBackendEnvelope_msg
+#define mosaic_device_v1_BackendToDeviceEnvelope_fields &mosaic_device_v1_BackendToDeviceEnvelope_msg
 #define mosaic_device_v1_DeviceConnect_fields &mosaic_device_v1_DeviceConnect_msg
 #define mosaic_device_v1_PairingPending_fields &mosaic_device_v1_PairingPending_msg
 #define mosaic_device_v1_DevicePaired_fields &mosaic_device_v1_DevicePaired_msg
 #define mosaic_device_v1_ConnectionRejected_fields &mosaic_device_v1_ConnectionRejected_msg
-#define mosaic_device_v1_NotificationAction_fields &mosaic_device_v1_NotificationAction_msg
-#define mosaic_device_v1_AiSummaryNotification_fields &mosaic_device_v1_AiSummaryNotification_msg
-#define mosaic_device_v1_DeviceTelemetry_fields &mosaic_device_v1_DeviceTelemetry_msg
-#define mosaic_device_v1_DeviceActionTrigger_fields &mosaic_device_v1_DeviceActionTrigger_msg
-#define mosaic_device_v1_IntegrationActionTrigger_fields &mosaic_device_v1_IntegrationActionTrigger_msg
-#define mosaic_device_v1_IntegrationActionResult_fields &mosaic_device_v1_IntegrationActionResult_msg
-#define mosaic_device_v1_DeviceToBackendEnvelope_fields &mosaic_device_v1_DeviceToBackendEnvelope_msg
-#define mosaic_device_v1_BackendToDeviceEnvelope_fields &mosaic_device_v1_BackendToDeviceEnvelope_msg
 
 /* Maximum encoded size of messages (where known) */
-#define MOSAIC_DEVICE_V1_EVENTS_PB_H_MAX_SIZE    mosaic_device_v1_BackendToDeviceEnvelope_size
-#define mosaic_device_v1_AiSummaryNotification_size 1258
-#define mosaic_device_v1_BackendToDeviceEnvelope_size 1326
+#define MOSAIC_DEVICE_V1_EVENTS_PB_H_MAX_SIZE    mosaic_device_v1_DeviceToBackendEnvelope_size
+#define mosaic_device_v1_BackendToDeviceEnvelope_size 18
 #define mosaic_device_v1_ConnectionRejected_size 2
-#define mosaic_device_v1_DeviceActionTrigger_size 260
-#define mosaic_device_v1_DeviceConnect_size      90
+#define mosaic_device_v1_DeviceConnect_size      40
 #define mosaic_device_v1_DevicePaired_size       0
-#define mosaic_device_v1_DeviceTelemetry_size    18
-#define mosaic_device_v1_DeviceToBackendEnvelope_size 328
-#define mosaic_device_v1_IntegrationActionResult_size 294
-#define mosaic_device_v1_IntegrationActionTrigger_size 162
-#define mosaic_device_v1_NotificationAction_size 150
+#define mosaic_device_v1_DeviceToBackendEnvelope_size 42
 #define mosaic_device_v1_PairingPending_size     16
 
 #ifdef __cplusplus
