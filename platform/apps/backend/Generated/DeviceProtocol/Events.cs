@@ -25,36 +25,57 @@ namespace Mosaic.Device.V1 {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
             "CgxldmVudHMucHJvdG8SEG1vc2FpYy5kZXZpY2UudjEaDG5hbm9wYi5wcm90",
-            "byJhChdEZXZpY2VUb0JhY2tlbmRFbnZlbG9wZRI7Cgdjb25uZWN0GAEgASgL",
-            "Mh8ubW9zYWljLmRldmljZS52MS5EZXZpY2VDb25uZWN0SABSB2Nvbm5lY3RC",
-            "CQoHcGF5bG9hZCLvAQoXQmFja2VuZFRvRGV2aWNlRW52ZWxvcGUSSwoPcGFp",
-            "cmluZ19wZW5kaW5nGAEgASgLMiAubW9zYWljLmRldmljZS52MS5QYWlyaW5n",
-            "UGVuZGluZ0gAUg5wYWlyaW5nUGVuZGluZxI4CgZwYWlyZWQYAiABKAsyHi5t",
-            "b3NhaWMuZGV2aWNlLnYxLkRldmljZVBhaXJlZEgAUgZwYWlyZWQSQgoIcmVq",
-            "ZWN0ZWQYAyABKAsyJC5tb3NhaWMuZGV2aWNlLnYxLkNvbm5lY3Rpb25SZWpl",
-            "Y3RlZEgAUghyZWplY3RlZEIJCgdwYXlsb2FkImQKDURldmljZUNvbm5lY3QS",
-            "KQoQcHJvdG9jb2xfdmVyc2lvbhgBIAEoDVIPcHJvdG9jb2xWZXJzaW9uEigK",
-            "C2F1dGhfc2VjcmV0GAIgASgMQgeSPwQIIHgBUgphdXRoU2VjcmV0IlkKDlBh",
-            "aXJpbmdQZW5kaW5nEhkKBGNvZGUYASABKAlCBZI/AggJUgRjb2RlEiwKEmV4",
-            "cGlyZXNfaW5fc2Vjb25kcxgCIAEoDVIQZXhwaXJlc0luU2Vjb25kcyIOCgxE",
-            "ZXZpY2VQYWlyZWQiVgoSQ29ubmVjdGlvblJlamVjdGVkEkAKBnJlYXNvbhgB",
-            "IAEoDjIoLm1vc2FpYy5kZXZpY2UudjEuQ29ubmVjdGlvblJlamVjdFJlYXNv",
-            "blIGcmVhc29uKv8BChZDb25uZWN0aW9uUmVqZWN0UmVhc29uEigKJENPTk5F",
-            "Q1RJT05fUkVKRUNUX1JFQVNPTl9VTlNQRUNJRklFRBAAEi4KKkNPTk5FQ1RJ",
-            "T05fUkVKRUNUX1JFQVNPTl9NQUxGT1JNRURfUkVRVUVTVBABEjAKLENPTk5F",
-            "Q1RJT05fUkVKRUNUX1JFQVNPTl9VTlNVUFBPUlRFRF9WRVJTSU9OEAISLwor",
-            "Q09OTkVDVElPTl9SRUpFQ1RfUkVBU09OX0NSRURFTlRJQUxfUkVWT0tFRBAD",
-            "EigKJENPTk5FQ1RJT05fUkVKRUNUX1JFQVNPTl9TRVJWRVJfQlVTWRAEYgZw",
-            "cm90bzM="));
+            "byK9AQoXRGV2aWNlVG9CYWNrZW5kRW52ZWxvcGUSOwoHY29ubmVjdBgBIAEo",
+            "CzIfLm1vc2FpYy5kZXZpY2UudjEuRGV2aWNlQ29ubmVjdEgAUgdjb25uZWN0",
+            "EloKFG5vdGlmaWNhdGlvbl9yZWNlaXB0GAIgASgLMiUubW9zYWljLmRldmlj",
+            "ZS52MS5Ob3RpZmljYXRpb25SZWNlaXB0SABSE25vdGlmaWNhdGlvblJlY2Vp",
+            "cHRCCQoHcGF5bG9hZCK1AgoXQmFja2VuZFRvRGV2aWNlRW52ZWxvcGUSSwoP",
+            "cGFpcmluZ19wZW5kaW5nGAEgASgLMiAubW9zYWljLmRldmljZS52MS5QYWly",
+            "aW5nUGVuZGluZ0gAUg5wYWlyaW5nUGVuZGluZxI4CgZwYWlyZWQYAiABKAsy",
+            "Hi5tb3NhaWMuZGV2aWNlLnYxLkRldmljZVBhaXJlZEgAUgZwYWlyZWQSQgoI",
+            "cmVqZWN0ZWQYAyABKAsyJC5tb3NhaWMuZGV2aWNlLnYxLkNvbm5lY3Rpb25S",
+            "ZWplY3RlZEgAUghyZWplY3RlZBJECgxub3RpZmljYXRpb24YBCABKAsyHi5t",
+            "b3NhaWMuZGV2aWNlLnYxLk5vdGlmaWNhdGlvbkgAUgxub3RpZmljYXRpb25C",
+            "CQoHcGF5bG9hZCJkCg1EZXZpY2VDb25uZWN0EikKEHByb3RvY29sX3ZlcnNp",
+            "b24YASABKA1SD3Byb3RvY29sVmVyc2lvbhIoCgthdXRoX3NlY3JldBgCIAEo",
+            "DEIHkj8ECCB4AVIKYXV0aFNlY3JldCJZCg5QYWlyaW5nUGVuZGluZxIZCgRj",
+            "b2RlGAEgASgJQgWSPwIICVIEY29kZRIsChJleHBpcmVzX2luX3NlY29uZHMY",
+            "AiABKA1SEGV4cGlyZXNJblNlY29uZHMiDgoMRGV2aWNlUGFpcmVkIlYKEkNv",
+            "bm5lY3Rpb25SZWplY3RlZBJACgZyZWFzb24YASABKA4yKC5tb3NhaWMuZGV2",
+            "aWNlLnYxLkNvbm5lY3Rpb25SZWplY3RSZWFzb25SBnJlYXNvbiLjAQoMTm90",
+            "aWZpY2F0aW9uEhUKAmlkGAEgASgJQgWSPwIIQFICaWQSQgoIcHJpb3JpdHkY",
+            "AiABKA4yJi5tb3NhaWMuZGV2aWNlLnYxLk5vdGlmaWNhdGlvblByaW9yaXR5",
+            "Ughwcmlvcml0eRIdCgZzb3VyY2UYAyABKAlCBZI/AgggUgZzb3VyY2USHAoF",
+            "dGl0bGUYBCABKAlCBpI/AwiAAVIFdGl0bGUSGgoEdGV4dBgFIAEoCUIGkj8D",
+            "CIAIUgR0ZXh0Eh8KC29jY3VycmVkX2F0GAYgASgDUgpvY2N1cnJlZEF0IooB",
+            "ChNOb3RpZmljYXRpb25SZWNlaXB0Ei4KD25vdGlmaWNhdGlvbl9pZBgBIAEo",
+            "CUIFkj8CCEBSDm5vdGlmaWNhdGlvbklkEkMKBnN0YXR1cxgCIAEoDjIrLm1v",
+            "c2FpYy5kZXZpY2UudjEuTm90aWZpY2F0aW9uUmVjZWlwdFN0YXR1c1IGc3Rh",
+            "dHVzKv8BChZDb25uZWN0aW9uUmVqZWN0UmVhc29uEigKJENPTk5FQ1RJT05f",
+            "UkVKRUNUX1JFQVNPTl9VTlNQRUNJRklFRBAAEi4KKkNPTk5FQ1RJT05fUkVK",
+            "RUNUX1JFQVNPTl9NQUxGT1JNRURfUkVRVUVTVBABEjAKLENPTk5FQ1RJT05f",
+            "UkVKRUNUX1JFQVNPTl9VTlNVUFBPUlRFRF9WRVJTSU9OEAISLworQ09OTkVD",
+            "VElPTl9SRUpFQ1RfUkVBU09OX0NSRURFTlRJQUxfUkVWT0tFRBADEigKJENP",
+            "Tk5FQ1RJT05fUkVKRUNUX1JFQVNPTl9TRVJWRVJfQlVTWRAEKn8KFE5vdGlm",
+            "aWNhdGlvblByaW9yaXR5EiUKIU5PVElGSUNBVElPTl9QUklPUklUWV9VTlNQ",
+            "RUNJRklFRBAAEiAKHE5PVElGSUNBVElPTl9QUklPUklUWV9OT1JNQUwQARIe",
+            "ChpOT1RJRklDQVRJT05fUFJJT1JJVFlfSElHSBACKsQBChlOb3RpZmljYXRp",
+            "b25SZWNlaXB0U3RhdHVzEisKJ05PVElGSUNBVElPTl9SRUNFSVBUX1NUQVRV",
+            "U19VTlNQRUNJRklFRBAAEiYKIk5PVElGSUNBVElPTl9SRUNFSVBUX1NUQVRV",
+            "U19TVE9SRUQQARIpCiVOT1RJRklDQVRJT05fUkVDRUlQVF9TVEFUVVNfRFVQ",
+            "TElDQVRFEAISJwojTk9USUZJQ0FUSU9OX1JFQ0VJUFRfU1RBVFVTX0lOVkFM",
+            "SUQQA2IGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { global::NanopbReflection.Descriptor, },
-          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Mosaic.Device.V1.ConnectionRejectReason), }, null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceToBackendEnvelope), global::Mosaic.Device.V1.DeviceToBackendEnvelope.Parser, new[]{ "Connect" }, new[]{ "Payload" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.BackendToDeviceEnvelope), global::Mosaic.Device.V1.BackendToDeviceEnvelope.Parser, new[]{ "PairingPending", "Paired", "Rejected" }, new[]{ "Payload" }, null, null, null),
+          new pbr::GeneratedClrTypeInfo(new[] {typeof(global::Mosaic.Device.V1.ConnectionRejectReason), typeof(global::Mosaic.Device.V1.NotificationPriority), typeof(global::Mosaic.Device.V1.NotificationReceiptStatus), }, null, new pbr::GeneratedClrTypeInfo[] {
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceToBackendEnvelope), global::Mosaic.Device.V1.DeviceToBackendEnvelope.Parser, new[]{ "Connect", "NotificationReceipt" }, new[]{ "Payload" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.BackendToDeviceEnvelope), global::Mosaic.Device.V1.BackendToDeviceEnvelope.Parser, new[]{ "PairingPending", "Paired", "Rejected", "Notification" }, new[]{ "Payload" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DeviceConnect), global::Mosaic.Device.V1.DeviceConnect.Parser, new[]{ "ProtocolVersion", "AuthSecret" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.PairingPending), global::Mosaic.Device.V1.PairingPending.Parser, new[]{ "Code", "ExpiresInSeconds" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.DevicePaired), global::Mosaic.Device.V1.DevicePaired.Parser, null, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.ConnectionRejected), global::Mosaic.Device.V1.ConnectionRejected.Parser, new[]{ "Reason" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.ConnectionRejected), global::Mosaic.Device.V1.ConnectionRejected.Parser, new[]{ "Reason" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.Notification), global::Mosaic.Device.V1.Notification.Parser, new[]{ "Id", "Priority", "Source", "Title", "Text", "OccurredAt" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Mosaic.Device.V1.NotificationReceipt), global::Mosaic.Device.V1.NotificationReceipt.Parser, new[]{ "NotificationId", "Status" }, null, null, null, null)
           }));
     }
     #endregion
@@ -69,12 +90,38 @@ namespace Mosaic.Device.V1 {
     [pbr::OriginalName("CONNECTION_REJECT_REASON_SERVER_BUSY")] ServerBusy = 4,
   }
 
+  public enum NotificationPriority {
+    [pbr::OriginalName("NOTIFICATION_PRIORITY_UNSPECIFIED")] Unspecified = 0,
+    [pbr::OriginalName("NOTIFICATION_PRIORITY_NORMAL")] Normal = 1,
+    /// <summary>
+    /// Interrupts even in focus mode.
+    /// </summary>
+    [pbr::OriginalName("NOTIFICATION_PRIORITY_HIGH")] High = 2,
+  }
+
+  public enum NotificationReceiptStatus {
+    [pbr::OriginalName("NOTIFICATION_RECEIPT_STATUS_UNSPECIFIED")] Unspecified = 0,
+    /// <summary>
+    /// New, and now in the device's list.
+    /// </summary>
+    [pbr::OriginalName("NOTIFICATION_RECEIPT_STATUS_STORED")] Stored = 1,
+    /// <summary>
+    /// The device already held a notification with this ID.
+    /// </summary>
+    [pbr::OriginalName("NOTIFICATION_RECEIPT_STATUS_DUPLICATE")] Duplicate = 2,
+    /// <summary>
+    /// Decoded, but a field breaks the rules. The server must not resend it.
+    /// </summary>
+    [pbr::OriginalName("NOTIFICATION_RECEIPT_STATUS_INVALID")] Invalid = 3,
+  }
+
   #endregion
 
   #region Messages
   /// <summary>
   /// Each WebSocket binary message holds exactly one envelope. See the wiki's
-  /// Device Connection Protocol for ordering and receiver-enforced field rules.
+  /// Device Connection Protocol and Notification Delivery Protocol for ordering
+  /// and receiver-enforced field rules.
   /// </summary>
   [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
   public sealed partial class DeviceToBackendEnvelope : pb::IMessage<DeviceToBackendEnvelope>
@@ -115,6 +162,9 @@ namespace Mosaic.Device.V1 {
         case PayloadOneofCase.Connect:
           Connect = other.Connect.Clone();
           break;
+        case PayloadOneofCase.NotificationReceipt:
+          NotificationReceipt = other.NotificationReceipt.Clone();
+          break;
       }
 
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -141,11 +191,24 @@ namespace Mosaic.Device.V1 {
       }
     }
 
+    /// <summary>Field number for the "notification_receipt" field.</summary>
+    public const int NotificationReceiptFieldNumber = 2;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Mosaic.Device.V1.NotificationReceipt NotificationReceipt {
+      get { return payloadCase_ == PayloadOneofCase.NotificationReceipt ? (global::Mosaic.Device.V1.NotificationReceipt) payload_ : null; }
+      set {
+        payload_ = value;
+        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.NotificationReceipt;
+      }
+    }
+
     private object payload_;
     /// <summary>Enum of possible cases for the "payload" oneof.</summary>
     public enum PayloadOneofCase {
       None = 0,
       Connect = 1,
+      NotificationReceipt = 2,
     }
     private PayloadOneofCase payloadCase_ = PayloadOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -177,6 +240,7 @@ namespace Mosaic.Device.V1 {
         return true;
       }
       if (!object.Equals(Connect, other.Connect)) return false;
+      if (!object.Equals(NotificationReceipt, other.NotificationReceipt)) return false;
       if (PayloadCase != other.PayloadCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -186,6 +250,7 @@ namespace Mosaic.Device.V1 {
     public override int GetHashCode() {
       int hash = 1;
       if (payloadCase_ == PayloadOneofCase.Connect) hash ^= Connect.GetHashCode();
+      if (payloadCase_ == PayloadOneofCase.NotificationReceipt) hash ^= NotificationReceipt.GetHashCode();
       hash ^= (int) payloadCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -209,6 +274,10 @@ namespace Mosaic.Device.V1 {
         output.WriteRawTag(10);
         output.WriteMessage(Connect);
       }
+      if (payloadCase_ == PayloadOneofCase.NotificationReceipt) {
+        output.WriteRawTag(18);
+        output.WriteMessage(NotificationReceipt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -223,6 +292,10 @@ namespace Mosaic.Device.V1 {
         output.WriteRawTag(10);
         output.WriteMessage(Connect);
       }
+      if (payloadCase_ == PayloadOneofCase.NotificationReceipt) {
+        output.WriteRawTag(18);
+        output.WriteMessage(NotificationReceipt);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -235,6 +308,9 @@ namespace Mosaic.Device.V1 {
       int size = 0;
       if (payloadCase_ == PayloadOneofCase.Connect) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Connect);
+      }
+      if (payloadCase_ == PayloadOneofCase.NotificationReceipt) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(NotificationReceipt);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -254,6 +330,12 @@ namespace Mosaic.Device.V1 {
             Connect = new global::Mosaic.Device.V1.DeviceConnect();
           }
           Connect.MergeFrom(other.Connect);
+          break;
+        case PayloadOneofCase.NotificationReceipt:
+          if (NotificationReceipt == null) {
+            NotificationReceipt = new global::Mosaic.Device.V1.NotificationReceipt();
+          }
+          NotificationReceipt.MergeFrom(other.NotificationReceipt);
           break;
       }
 
@@ -285,6 +367,15 @@ namespace Mosaic.Device.V1 {
             Connect = subBuilder;
             break;
           }
+          case 18: {
+            global::Mosaic.Device.V1.NotificationReceipt subBuilder = new global::Mosaic.Device.V1.NotificationReceipt();
+            if (payloadCase_ == PayloadOneofCase.NotificationReceipt) {
+              subBuilder.MergeFrom(NotificationReceipt);
+            }
+            input.ReadMessage(subBuilder);
+            NotificationReceipt = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -311,6 +402,15 @@ namespace Mosaic.Device.V1 {
             }
             input.ReadMessage(subBuilder);
             Connect = subBuilder;
+            break;
+          }
+          case 18: {
+            global::Mosaic.Device.V1.NotificationReceipt subBuilder = new global::Mosaic.Device.V1.NotificationReceipt();
+            if (payloadCase_ == PayloadOneofCase.NotificationReceipt) {
+              subBuilder.MergeFrom(NotificationReceipt);
+            }
+            input.ReadMessage(subBuilder);
+            NotificationReceipt = subBuilder;
             break;
           }
         }
@@ -365,6 +465,9 @@ namespace Mosaic.Device.V1 {
         case PayloadOneofCase.Rejected:
           Rejected = other.Rejected.Clone();
           break;
+        case PayloadOneofCase.Notification:
+          Notification = other.Notification.Clone();
+          break;
       }
 
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
@@ -415,6 +518,18 @@ namespace Mosaic.Device.V1 {
       }
     }
 
+    /// <summary>Field number for the "notification" field.</summary>
+    public const int NotificationFieldNumber = 4;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Mosaic.Device.V1.Notification Notification {
+      get { return payloadCase_ == PayloadOneofCase.Notification ? (global::Mosaic.Device.V1.Notification) payload_ : null; }
+      set {
+        payload_ = value;
+        payloadCase_ = value == null ? PayloadOneofCase.None : PayloadOneofCase.Notification;
+      }
+    }
+
     private object payload_;
     /// <summary>Enum of possible cases for the "payload" oneof.</summary>
     public enum PayloadOneofCase {
@@ -422,6 +537,7 @@ namespace Mosaic.Device.V1 {
       PairingPending = 1,
       Paired = 2,
       Rejected = 3,
+      Notification = 4,
     }
     private PayloadOneofCase payloadCase_ = PayloadOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -455,6 +571,7 @@ namespace Mosaic.Device.V1 {
       if (!object.Equals(PairingPending, other.PairingPending)) return false;
       if (!object.Equals(Paired, other.Paired)) return false;
       if (!object.Equals(Rejected, other.Rejected)) return false;
+      if (!object.Equals(Notification, other.Notification)) return false;
       if (PayloadCase != other.PayloadCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -466,6 +583,7 @@ namespace Mosaic.Device.V1 {
       if (payloadCase_ == PayloadOneofCase.PairingPending) hash ^= PairingPending.GetHashCode();
       if (payloadCase_ == PayloadOneofCase.Paired) hash ^= Paired.GetHashCode();
       if (payloadCase_ == PayloadOneofCase.Rejected) hash ^= Rejected.GetHashCode();
+      if (payloadCase_ == PayloadOneofCase.Notification) hash ^= Notification.GetHashCode();
       hash ^= (int) payloadCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -497,6 +615,10 @@ namespace Mosaic.Device.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Rejected);
       }
+      if (payloadCase_ == PayloadOneofCase.Notification) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Notification);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -519,6 +641,10 @@ namespace Mosaic.Device.V1 {
         output.WriteRawTag(26);
         output.WriteMessage(Rejected);
       }
+      if (payloadCase_ == PayloadOneofCase.Notification) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Notification);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(ref output);
       }
@@ -537,6 +663,9 @@ namespace Mosaic.Device.V1 {
       }
       if (payloadCase_ == PayloadOneofCase.Rejected) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Rejected);
+      }
+      if (payloadCase_ == PayloadOneofCase.Notification) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Notification);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -568,6 +697,12 @@ namespace Mosaic.Device.V1 {
             Rejected = new global::Mosaic.Device.V1.ConnectionRejected();
           }
           Rejected.MergeFrom(other.Rejected);
+          break;
+        case PayloadOneofCase.Notification:
+          if (Notification == null) {
+            Notification = new global::Mosaic.Device.V1.Notification();
+          }
+          Notification.MergeFrom(other.Notification);
           break;
       }
 
@@ -617,6 +752,15 @@ namespace Mosaic.Device.V1 {
             Rejected = subBuilder;
             break;
           }
+          case 34: {
+            global::Mosaic.Device.V1.Notification subBuilder = new global::Mosaic.Device.V1.Notification();
+            if (payloadCase_ == PayloadOneofCase.Notification) {
+              subBuilder.MergeFrom(Notification);
+            }
+            input.ReadMessage(subBuilder);
+            Notification = subBuilder;
+            break;
+          }
         }
       }
     #endif
@@ -661,6 +805,15 @@ namespace Mosaic.Device.V1 {
             }
             input.ReadMessage(subBuilder);
             Rejected = subBuilder;
+            break;
+          }
+          case 34: {
+            global::Mosaic.Device.V1.Notification subBuilder = new global::Mosaic.Device.V1.Notification();
+            if (payloadCase_ == PayloadOneofCase.Notification) {
+              subBuilder.MergeFrom(Notification);
+            }
+            input.ReadMessage(subBuilder);
+            Notification = subBuilder;
             break;
           }
         }
@@ -1510,6 +1663,641 @@ namespace Mosaic.Device.V1 {
             break;
           case 8: {
             Reason = (global::Mosaic.Device.V1.ConnectionRejectReason) input.ReadEnum();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// Sent only after paired. String limits count UTF-8 bytes, including nanopb's
+  /// terminating NUL; the server truncates text to fit before sending.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class Notification : pb::IMessage<Notification>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<Notification> _parser = new pb::MessageParser<Notification>(() => new Notification());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<Notification> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[6]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Notification() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Notification(Notification other) : this() {
+      id_ = other.id_;
+      priority_ = other.priority_;
+      source_ = other.source_;
+      title_ = other.title_;
+      text_ = other.text_;
+      occurredAt_ = other.occurredAt_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public Notification Clone() {
+      return new Notification(this);
+    }
+
+    /// <summary>Field number for the "id" field.</summary>
+    public const int IdFieldNumber = 1;
+    private string id_ = "";
+    /// <summary>
+    /// Chosen by the server, unique per device, and kept when resent.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Id {
+      get { return id_; }
+      set {
+        id_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "priority" field.</summary>
+    public const int PriorityFieldNumber = 2;
+    private global::Mosaic.Device.V1.NotificationPriority priority_ = global::Mosaic.Device.V1.NotificationPriority.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Mosaic.Device.V1.NotificationPriority Priority {
+      get { return priority_; }
+      set {
+        priority_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "source" field.</summary>
+    public const int SourceFieldNumber = 3;
+    private string source_ = "";
+    /// <summary>
+    /// A display label such as "GitHub". The device never branches on it.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Source {
+      get { return source_; }
+      set {
+        source_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "title" field.</summary>
+    public const int TitleFieldNumber = 4;
+    private string title_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Title {
+      get { return title_; }
+      set {
+        title_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "text" field.</summary>
+    public const int TextFieldNumber = 5;
+    private string text_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string Text {
+      get { return text_; }
+      set {
+        text_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "occurred_at" field.</summary>
+    public const int OccurredAtFieldNumber = 6;
+    private long occurredAt_;
+    /// <summary>
+    /// When the event happened, in Unix seconds, not when it was sent.
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public long OccurredAt {
+      get { return occurredAt_; }
+      set {
+        occurredAt_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as Notification);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(Notification other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Id != other.Id) return false;
+      if (Priority != other.Priority) return false;
+      if (Source != other.Source) return false;
+      if (Title != other.Title) return false;
+      if (Text != other.Text) return false;
+      if (OccurredAt != other.OccurredAt) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Id.Length != 0) hash ^= Id.GetHashCode();
+      if (Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) hash ^= Priority.GetHashCode();
+      if (Source.Length != 0) hash ^= Source.GetHashCode();
+      if (Title.Length != 0) hash ^= Title.GetHashCode();
+      if (Text.Length != 0) hash ^= Text.GetHashCode();
+      if (OccurredAt != 0L) hash ^= OccurredAt.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (Id.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Id);
+      }
+      if (Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Priority);
+      }
+      if (Source.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Source);
+      }
+      if (Title.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Title);
+      }
+      if (Text.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Text);
+      }
+      if (OccurredAt != 0L) {
+        output.WriteRawTag(48);
+        output.WriteInt64(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (Id.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Id);
+      }
+      if (Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Priority);
+      }
+      if (Source.Length != 0) {
+        output.WriteRawTag(26);
+        output.WriteString(Source);
+      }
+      if (Title.Length != 0) {
+        output.WriteRawTag(34);
+        output.WriteString(Title);
+      }
+      if (Text.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(Text);
+      }
+      if (OccurredAt != 0L) {
+        output.WriteRawTag(48);
+        output.WriteInt64(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (Id.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Id);
+      }
+      if (Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Priority);
+      }
+      if (Source.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Source);
+      }
+      if (Title.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Title);
+      }
+      if (Text.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Text);
+      }
+      if (OccurredAt != 0L) {
+        size += 1 + pb::CodedOutputStream.ComputeInt64Size(OccurredAt);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(Notification other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Id.Length != 0) {
+        Id = other.Id;
+      }
+      if (other.Priority != global::Mosaic.Device.V1.NotificationPriority.Unspecified) {
+        Priority = other.Priority;
+      }
+      if (other.Source.Length != 0) {
+        Source = other.Source;
+      }
+      if (other.Title.Length != 0) {
+        Title = other.Title;
+      }
+      if (other.Text.Length != 0) {
+        Text = other.Text;
+      }
+      if (other.OccurredAt != 0L) {
+        OccurredAt = other.OccurredAt;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Id = input.ReadString();
+            break;
+          }
+          case 16: {
+            Priority = (global::Mosaic.Device.V1.NotificationPriority) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            Source = input.ReadString();
+            break;
+          }
+          case 34: {
+            Title = input.ReadString();
+            break;
+          }
+          case 42: {
+            Text = input.ReadString();
+            break;
+          }
+          case 48: {
+            OccurredAt = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            Id = input.ReadString();
+            break;
+          }
+          case 16: {
+            Priority = (global::Mosaic.Device.V1.NotificationPriority) input.ReadEnum();
+            break;
+          }
+          case 26: {
+            Source = input.ReadString();
+            break;
+          }
+          case 34: {
+            Title = input.ReadString();
+            break;
+          }
+          case 42: {
+            Text = input.ReadString();
+            break;
+          }
+          case 48: {
+            OccurredAt = input.ReadInt64();
+            break;
+          }
+        }
+      }
+    }
+    #endif
+
+  }
+
+  /// <summary>
+  /// The device's reply to each notification, sent once it is stored and before
+  /// it is shown.
+  /// </summary>
+  [global::System.Diagnostics.DebuggerDisplayAttribute("{ToString(),nq}")]
+  public sealed partial class NotificationReceipt : pb::IMessage<NotificationReceipt>
+  #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      , pb::IBufferMessage
+  #endif
+  {
+    private static readonly pb::MessageParser<NotificationReceipt> _parser = new pb::MessageParser<NotificationReceipt>(() => new NotificationReceipt());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pb::MessageParser<NotificationReceipt> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Mosaic.Device.V1.EventsReflection.Descriptor.MessageTypes[7]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NotificationReceipt() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NotificationReceipt(NotificationReceipt other) : this() {
+      notificationId_ = other.notificationId_;
+      status_ = other.status_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public NotificationReceipt Clone() {
+      return new NotificationReceipt(this);
+    }
+
+    /// <summary>Field number for the "notification_id" field.</summary>
+    public const int NotificationIdFieldNumber = 1;
+    private string notificationId_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public string NotificationId {
+      get { return notificationId_; }
+      set {
+        notificationId_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "status" field.</summary>
+    public const int StatusFieldNumber = 2;
+    private global::Mosaic.Device.V1.NotificationReceiptStatus status_ = global::Mosaic.Device.V1.NotificationReceiptStatus.Unspecified;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public global::Mosaic.Device.V1.NotificationReceiptStatus Status {
+      get { return status_; }
+      set {
+        status_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override bool Equals(object other) {
+      return Equals(other as NotificationReceipt);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public bool Equals(NotificationReceipt other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (NotificationId != other.NotificationId) return false;
+      if (Status != other.Status) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (NotificationId.Length != 0) hash ^= NotificationId.GetHashCode();
+      if (Status != global::Mosaic.Device.V1.NotificationReceiptStatus.Unspecified) hash ^= Status.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void WriteTo(pb::CodedOutputStream output) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      output.WriteRawMessage(this);
+    #else
+      if (NotificationId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(NotificationId);
+      }
+      if (Status != global::Mosaic.Device.V1.NotificationReceiptStatus.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Status);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalWriteTo(ref pb::WriteContext output) {
+      if (NotificationId.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(NotificationId);
+      }
+      if (Status != global::Mosaic.Device.V1.NotificationReceiptStatus.Unspecified) {
+        output.WriteRawTag(16);
+        output.WriteEnum((int) Status);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(ref output);
+      }
+    }
+    #endif
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public int CalculateSize() {
+      int size = 0;
+      if (NotificationId.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(NotificationId);
+      }
+      if (Status != global::Mosaic.Device.V1.NotificationReceiptStatus.Unspecified) {
+        size += 1 + pb::CodedOutputStream.ComputeEnumSize((int) Status);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(NotificationReceipt other) {
+      if (other == null) {
+        return;
+      }
+      if (other.NotificationId.Length != 0) {
+        NotificationId = other.NotificationId;
+      }
+      if (other.Status != global::Mosaic.Device.V1.NotificationReceiptStatus.Unspecified) {
+        Status = other.Status;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    public void MergeFrom(pb::CodedInputStream input) {
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+      input.ReadRawMessage(this);
+    #else
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            NotificationId = input.ReadString();
+            break;
+          }
+          case 16: {
+            Status = (global::Mosaic.Device.V1.NotificationReceiptStatus) input.ReadEnum();
+            break;
+          }
+        }
+      }
+    #endif
+    }
+
+    #if !GOOGLE_PROTOBUF_REFSTRUCT_COMPATIBILITY_MODE
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    [global::System.CodeDom.Compiler.GeneratedCode("protoc", null)]
+    void pb::IBufferMessage.InternalMergeFrom(ref pb::ParseContext input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+      if ((tag & 7) == 4) {
+        // Abort on any end group tag.
+        return;
+      }
+      switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, ref input);
+            break;
+          case 10: {
+            NotificationId = input.ReadString();
+            break;
+          }
+          case 16: {
+            Status = (global::Mosaic.Device.V1.NotificationReceiptStatus) input.ReadEnum();
             break;
           }
         }
