@@ -34,11 +34,11 @@ dotnet format platform/Mosaic.slnx --verify-no-changes --no-restore
 dotnet build platform/Mosaic.slnx --configuration Release --no-restore
 dotnet test platform/Mosaic.slnx --configuration Release --no-build --no-restore
 pnpm build:admin-assets
-dotnet publish platform/apps/backend/Mosaic.Server.csproj --configuration Release --runtime linux-x64 -p:PublishAot=true -p:ILLinkTreatWarningsAsErrors=true -p:IlcTreatWarningsAsErrors=true --output publish/ci
+dotnet publish platform/apps/server/Mosaic.Server.csproj --configuration Release --runtime linux-x64 -p:PublishAot=true -p:ILLinkTreatWarningsAsErrors=true -p:IlcTreatWarningsAsErrors=true --output publish/ci
 python3 scripts/smoke-server.py publish/ci/Mosaic.Server
 ```
 
-The publish and smoke steps work as written only on Linux x64, with `clang` and `zlib1g-dev` installed; elsewhere, use the [verify container](../platform/apps/backend/README.md#automated-publish-and-startup-verification). Publish into a fresh output directory. The smoke test checks static assets, SPA routing, missing API and WebSocket routes, first-run setup, login and sessions, an unpaired and a paired device handshake, and that data survives a restart without migrations running twice.
+The publish and smoke steps work as written only on Linux x64, with `clang` and `zlib1g-dev` installed; elsewhere, use the [verify container](../platform/apps/server/README.md#automated-publish-and-startup-verification). Publish into a fresh output directory. The smoke test checks static assets, SPA routing, missing API and WebSocket routes, first-run setup, login and sessions, an unpaired and a paired device handshake, and that data survives a restart without migrations running twice.
 
 ### Rust
 
@@ -56,11 +56,11 @@ Tauri needs the webview built before Rust compiles, hence the first command. `pn
 ```sh
 pnpm --filter @mosaic/protocols lint
 pnpm generate-protos
-git status --short -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/backend/Generated/DeviceProtocol
+git status --short -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/server/Generated/DeviceProtocol
 pnpm --filter @mosaic/tokens test
 ```
 
-Protocol generation needs access to `buf.build`. CI deletes `firmware/components/device_protos/generated` and `platform/apps/backend/Generated/DeviceProtocol` before generating, so obsolete files show up too, then fails on any modified, deleted or untracked binding. To reproduce that, delete the same two directories first, once you're sure you have no work there. Fix a failure by regenerating and committing the bindings. Token outputs are ignored by Git; the generator tests check them instead.
+Protocol generation needs access to `buf.build`. CI deletes `firmware/components/device_protos/generated` and `platform/apps/server/Generated/DeviceProtocol` before generating, so obsolete files show up too, then fails on any modified, deleted or untracked binding. To reproduce that, delete the same two directories first, once you're sure you have no work there. Fix a failure by regenerating and committing the bindings. Token outputs are ignored by Git; the generator tests check them instead.
 
 ### Firmware build
 

@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '..')
 const source = resolve(root, 'platform/apps/admin/dist')
-const destination = resolve(root, 'platform/apps/backend/wwwroot')
+const destination = resolve(root, 'platform/apps/server/wwwroot')
 
 if (!(await readdir(source)).includes('index.html')) {
   throw new Error('Build admin before copying: dist/index.html is missing')

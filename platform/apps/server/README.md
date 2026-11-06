@@ -34,7 +34,7 @@ origins and non-Secure cookie for `localhost`. Rider, Visual Studio and VS Code
 use the same profile. `RunWorkingDirectory` in the project file starts it in this
 directory, so the content root finds `appsettings*.json` and `wwwroot/` wherever
 you run it from. Started any other way, the server needs
-`--contentRoot <absolute path to platform/apps/backend> --environment Development`;
+`--contentRoot <absolute path to platform/apps/server> --environment Development`;
 without the Development environment it refuses to start, because
 `Auth:PublicOrigin` is unset.
 
@@ -295,7 +295,7 @@ docker scout cves local://mosaic-server:aot --only-severity critical,high
 A warning on the Node build image is distinct from findings in the final runtime
 image. Review findings in both; a scan is not proof that application code is secure.
 
-Build, format and test checks for the backend:
+Build, format and test checks for the server:
 
 ```sh
 pnpm server:build

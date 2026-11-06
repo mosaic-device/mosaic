@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/apps/" />
-  <Folder Name="/apps/backend/">
-    <Project Path="apps/backend/Mosaic.Server.csproj" />
+  <Folder Name="/apps/server/">
+    <Project Path="apps/server/Mosaic.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Mosaic.Server.Tests/Mosaic.Server.Tests.csproj" />

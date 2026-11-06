@@ -3,5 +3,5 @@ plugins:
   - remote: buf.build/community/nanopb:v0.4.9
     out: ../../../firmware/components/device_protos/generated
   - remote: buf.build/protocolbuffers/csharp:v33.2
-    out: ../../apps/backend/Generated/DeviceProtocol
+    out: ../../apps/server/Generated/DeviceProtocol
     include_imports: true

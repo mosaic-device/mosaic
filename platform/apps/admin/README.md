@@ -5,7 +5,7 @@ top bar and menu sheet on narrow ones) and Home, Devices, Settings and not-found
 in their empty states, the shared API client in `src/api/`, and the first-run setup
 and login pages, and session handling. Routes live in `src/router.ts`, pages in
 `src/pages/`, the shell in `src/components/shell/`. `/dev/components` is development-only and excluded from
-production. `pnpm build:admin-assets` copies `dist/` into the backend's `wwwroot/`;
+production. `pnpm build:admin-assets` copies `dist/` into the server's `wwwroot/`;
 local `/api` and `/ws` proxies target `http://localhost:5000`.
 
 Run from the repository root after [setup](../../../docs/setup.md). Start the
@@ -38,7 +38,7 @@ Every call returns its data or throws an `ApiError` whose `kind` is:
   `title` as-is, put `fieldErrors` under the matching inputs, and wait
   `retryAfterSeconds` after `too_many_requests`.
 - `unavailable`: the server could not be reached, or something other than the API
-  answered (the dev proxy with the backend stopped, for example).
+  answered (the dev proxy with the server stopped, for example).
 - `malformed`: the server's answer did not match the contract.
 
 A cancelled call rejects with the browser's `AbortError` instead. It is not an

@@ -20,10 +20,10 @@ RUN apt-get update \
 
 WORKDIR /src
 COPY global.json ./
-COPY platform/apps/backend/ platform/apps/backend/
-COPY --from=admin /src/platform/apps/backend/wwwroot/ platform/apps/backend/wwwroot/
+COPY platform/apps/server/ platform/apps/server/
+COPY --from=admin /src/platform/apps/server/wwwroot/ platform/apps/server/wwwroot/
 
-RUN dotnet publish platform/apps/backend/Mosaic.Server.csproj \
+RUN dotnet publish platform/apps/server/Mosaic.Server.csproj \
     -c Release \
     -r linux-x64 \
     --self-contained true \
