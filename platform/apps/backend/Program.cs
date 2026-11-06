@@ -1,6 +1,7 @@
 using Microsoft.Extensions.FileProviders;
 using Mosaic.Server.Auth;
 using Mosaic.Server.Data;
+using Mosaic.Server.Devices;
 using Mosaic.Server.Network;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +19,11 @@ builder.Services.AddSingleton<SessionCookie>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddAuthRateLimiting();
 builder.Services.AddTrustedProxies();
+builder.Services.AddSingleton(services => DeviceConnectionOptions.FromConfiguration(services.GetRequiredService<IConfiguration>()));
+builder.Services.AddSingleton<DeviceStore>();
+builder.Services.AddSingleton<PairingCodes>();
+builder.Services.AddSingleton<DeviceConnections>();
+builder.Services.AddSingleton<DeviceConnectionHandler>();
 var app = builder.Build();
 
 // Resolve configuration-backed services now so a misconfiguration fails at startup, not on first request.
@@ -25,6 +31,7 @@ var database = app.Services.GetRequiredService<MosaicDatabase>();
 var authOptions = app.Services.GetRequiredService<AuthOptions>();
 var rateLimits = app.Services.GetRequiredService<AuthRateLimitOptions>();
 var trustedProxies = app.Services.GetRequiredService<TrustedProxies>();
+var deviceOptions = app.Services.GetRequiredService<DeviceConnectionOptions>();
 var appliedMigrations = database.Migrate();
 app.Logger.LogInformation(
     "Database {Path} at schema version {Version}; applied {Applied} migration(s) at startup",
@@ -37,6 +44,10 @@ app.Logger.LogInformation(
     rateLimits.AttemptsPerMinute,
     rateLimits.ConcurrentPasswordChecks,
     rateLimits.QueuedPasswordChecks);
+app.Logger.LogInformation(
+    "Devices connect at {Path}; at most {Limit} pairing codes live at once",
+    DeviceEndpoint.Path,
+    deviceOptions.MaxPendingPairings);
 if (trustedProxies.Addresses.Count == 0)
 {
     app.Logger.LogInformation("Client addresses come from the connection; X-Forwarded-For is ignored");
@@ -82,6 +93,7 @@ if (Directory.Exists(webRoot))
     app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
 }
 
+app.UseWebSockets();
 app.UseOriginCheck();
 app.UseRateLimiter();
 // After the Origin check, so a cross-site request gets 403 before any session lookup.
@@ -94,6 +106,7 @@ app.MapGet("/healthz", async context =>
 });
 
 app.MapAuthEndpoints();
+app.MapDeviceEndpoint();
 
 // SPA routes are navigation requests; API, WebSocket, and asset misses must remain 404s.
 app.MapFallback(async context =>
