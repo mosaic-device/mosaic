@@ -530,6 +530,20 @@ function ensureDirectories() {
   fs.mkdirSync(firmwareOut, { recursive: true })
 }
 
+// Several builds can regenerate tokens at once while others read them, so an
+// unchanged file is left alone and a changed one is replaced in a single rename;
+// readers never see a partly written file.
+function writeOutput(file, content) {
+  try {
+    if (fs.readFileSync(file, 'utf8') === content) return
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error
+  }
+  const temporary = `${file}.${process.pid}.tmp`
+  fs.writeFileSync(temporary, content)
+  fs.renameSync(temporary, file)
+}
+
 function build() {
   ensureDirectories()
 
@@ -541,29 +555,29 @@ function build() {
   compareThemePaths(lightTokens, darkTokens)
   validateTokenValues([...darkTokens, ...lightTokens])
 
-  fs.writeFileSync(
+  writeOutput(
     path.join(distCssDir, 'dark.css'),
     themeCss(':root, [data-theme="dark"]', darkTokens),
   )
-  fs.writeFileSync(
+  writeOutput(
     path.join(distCssDir, 'light.css'),
     themeCss('[data-theme="light"]', lightTokens),
   )
-  fs.writeFileSync(
+  writeOutput(
     path.join(distCssDir, 'tailwind-theme.css'),
     tailwindThemeCss(lightTokens),
   )
-  fs.writeFileSync(path.join(distCssDir, 'shadcn.css'), shadcnCss())
-  fs.writeFileSync(
+  writeOutput(path.join(distCssDir, 'shadcn.css'), shadcnCss())
+  writeOutput(
     path.join(distCssDir, 'tokens.css'),
     '@import "./dark.css";\n@import "./light.css";\n@import "./tailwind-theme.css";\n',
   )
 
-  fs.writeFileSync(
+  writeOutput(
     path.join(distJsDir, 'eslint-restricted.js'),
     eslintRestrictedSyntax(lightTokens),
   )
-  fs.writeFileSync(
+  writeOutput(
     path.join(distJsDir, 'eslint-restricted.d.ts'),
     'export declare const restrictedSyntax: ReadonlyArray<{ selector: string; message: string }>\n',
   )
@@ -579,7 +593,7 @@ function build() {
     ]
       .filter(Boolean)
       .join('\n\n') + '\n'
-  fs.writeFileSync(path.join(firmwareOut, 'design_tokens.h'), firmwareHeader)
+  writeOutput(path.join(firmwareOut, 'design_tokens.h'), firmwareHeader)
 
   console.log('Built CSS tokens -> packages/tokens/dist/css/')
   console.log('Built C header -> firmware/main/ui/generated/design_tokens.h')
