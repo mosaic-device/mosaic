@@ -23,12 +23,21 @@ public sealed partial class DeviceProtocolLimitsTests
     }
 
     [Fact]
-    public void FrameLimitsMatchTheGeneratedNanopbSizes()
+    public void FrameLimitsAreTheFixedProtocolValues()
     {
+        // Part of protocol version 1: changing them needs a version bump, so a change here is deliberate.
+        Assert.Equal(512, DeviceEndpoint.MaxDeviceFrameBytes);
+        Assert.Equal(4096, DeviceEndpoint.MaxServerFrameBytes);
+    }
+
+    [Fact]
+    public void EveryGeneratedMessageFitsItsFrameLimit()
+    {
+        // A schema change that would outgrow a limit needs a protocol version bump instead.
         var header = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "testdata", "events.pb.h"));
 
-        Assert.Equal(DeviceEndpoint.MaxDeviceFrameBytes, Size(header, "DeviceToBackendEnvelope"));
-        Assert.Equal(DeviceEndpoint.MaxServerFrameBytes, Size(header, "BackendToDeviceEnvelope"));
+        Assert.True(Size(header, "DeviceToBackendEnvelope") <= DeviceEndpoint.MaxDeviceFrameBytes);
+        Assert.True(Size(header, "BackendToDeviceEnvelope") <= DeviceEndpoint.MaxServerFrameBytes);
     }
 
     private static NanoPBOptions Nanopb(MessageDescriptor message, string field) =>

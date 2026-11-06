@@ -13,11 +13,15 @@ public static class DeviceEndpoint
 {
     public const string Path = "/ws/device";
 
-    /// <summary>The largest device frame: the generated nanopb <c>DeviceToBackendEnvelope_size</c>.</summary>
-    public const int MaxDeviceFrameBytes = 42;
+    // Fixed frame limits, part of protocol version 1 (Device Connection Protocol, section 1). They
+    // leave room above the generated nanopb sizes, so a field added later still reaches the
+    // decoder and is skipped as unknown. They never go down.
 
-    /// <summary>The largest server frame: the generated nanopb <c>BackendToDeviceEnvelope_size</c>.</summary>
-    public const int MaxServerFrameBytes = 18;
+    /// <summary>The largest frame the server accepts from a device.</summary>
+    public const int MaxDeviceFrameBytes = 512;
+
+    /// <summary>The largest frame a device accepts; the server never sends more.</summary>
+    public const int MaxServerFrameBytes = 4096;
 
     public static void MapDeviceEndpoint(this WebApplication app)
     {

@@ -172,6 +172,11 @@ protobuf envelope. The device's first frame must be `connect`, within 10 seconds
 - A **revoked** credential, a **malformed** frame or an **unsupported version** gets
   `rejected` with the reason, then a close, before any device access.
 
+Frames are limited to 512 bytes from the device (larger ones close with 1009) and
+4,096 bytes to it. These limits are fixed by the protocol, with room above today's
+messages so a field added later still reaches the decoder; a test checks that every
+generated message fits.
+
 The `devices` table stores only the SHA-256 of each device's 32-byte secret.
 Secrets and pairing codes are never logged. Requests with an `Origin` header get 403,
 so a web page cannot open device connections. The server pings every 15 seconds and
