@@ -1,78 +1,41 @@
 # Mosaic
 
-Mosaic is a connected desk-display project: ESP32-P4 firmware, web apps, a .NET server and a Tauri companion.
+Mosaic is a connected desk display: an ESP32-P4 device, a .NET server it connects to, a web admin app for its owner, and a desktop companion.
 
-See the [firmware guide](firmware/README.md) for board setup and hardware status.
+Run every command from the repository root. Install the tools for the pieces you work on first: [setup](docs/setup.md) lists what each piece needs.
 
-Run the commands below from **this directory** (`mosaic/`) unless noted otherwise.
+## Pieces
 
-## Install
+| Piece                                          | What it is                                                                   | Needs               | Run it                                        |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- | ------------------- | --------------------------------------------- |
+| [Server](platform/apps/backend/README.md)      | ASP.NET Core server: admin API, device WebSocket, serves the built admin app | .NET                | `pnpm server:dev`                             |
+| [Admin](platform/apps/admin/README.md)         | React web app for the device owner                                           | Node, server        | `pnpm admin:dev`                              |
+| [Companion](platform/apps/companion/README.md) | Tauri desktop app                                                            | Node, Rust/Tauri    | `pnpm companion:dev`                          |
+| [Surface](platform/apps/surface/README.md)     | Browser prototype of device UI, not the firmware screens                     | Node                | `pnpm surface:dev`                            |
+| [Device preview](firmware/README.md#preview)   | The real firmware running in a window on your computer                       | Python, CMake, SDL2 | `pnpm fw:preview`                             |
+| [Firmware](firmware/README.md#build-and-flash) | ESP32-P4 firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5               | ESP-IDF             | `pnpm fw:build`, then `pnpm fw:flash monitor` |
 
-You need:
+The admin app expects the server on port 5000, so start `pnpm server:dev` in another terminal first. On first start the server logs a setup code; enter it on the admin app's setup page. Open the URL Vite prints.
 
-- Node 24 LTS (24.19.0, see `.nvmrc`; `engines` in `package.json` accepts 24.11+) and pnpm 12.8.1. With fnm or nvm, run `fnm use` / `nvm use` in the repo root.
-- .NET SDK 10.0.401 (see `global.json`)
-- For the desktop shell: Rust/Cargo and the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/) for your OS
-- For firmware: ESP-IDF 5.5.4 with the ESP32-P4 toolchain, activated in your shell; see [`firmware/README.md`](firmware/README.md)
+Shared packages under `platform/packages/` hold the [device protocol](platform/packages/protocols/README.md), [design tokens](platform/packages/tokens/README.md) and [fonts, icons and sounds](platform/packages/assets/README.md).
 
-```sh
-pnpm install --frozen-lockfile
-dotnet restore platform/Mosaic.slnx
-```
+## Check your changes
 
-The root pnpm workspace installs the web apps under `platform/`. .NET and ESP-IDF use their own toolchains; root pnpm scripts for them are shortcuts, not replacements for those toolchains.
+Pull requests run these checks; [CI](docs/ci.md) has the full list and how to reproduce each job.
 
-## Run locally
+| Area      | Fix formatting          | Check                                                               |
+| --------- | ----------------------- | ------------------------------------------------------------------- |
+| Web       | `pnpm web:format`       | `pnpm web:format:check`, `pnpm web:check`, `pnpm design:check`      |
+| Server    | `pnpm server:format`    | `pnpm server:format:check`, `pnpm server:build`, `pnpm server:test` |
+| Companion | `pnpm companion:format` | `pnpm companion:check`                                              |
+| Firmware  | `pnpm fw:format`        | `pnpm fw:format:check`, `pnpm fw:test`, `pnpm fw:build`             |
 
-Start the server in one terminal:
-
-```sh
-dotnet run --project platform/apps/backend/Mosaic.Server.csproj -- --contentRoot platform/apps/backend --urls http://localhost:5000
-```
-
-Start whichever web app you need in another terminal:
-
-```sh
-pnpm --filter @mosaic/admin dev       # Vite; proxies /api and /ws to localhost:5000
-pnpm --filter @mosaic/surface dev     # browser prototype, not firmware UI
-pnpm --filter @mosaic/companion tauri dev  # desktop app; requires Rust/Tauri setup
-```
-
-Run these separately; use the URL printed by Vite. See the [backend guide](platform/apps/backend/README.md) for supported server behavior.
-
-## Check and build
-
-Every pull request runs web, .NET, Rust, generated-code, firmware host, and firmware build checks. See the [CI guide](docs/ci.md) for tool versions, local commands, and formatting fixes.
-
-| Area                  | Format (changes files)                                                   | Check / build                                                                           |
-| --------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| Web apps and tooling  | `pnpm web:format`                                                        | `pnpm web:format:check` and `pnpm web:check` (lint, types, build)                       |
-| .NET server           | `pnpm server:format`                                                     | `pnpm server:format:check` and `pnpm server:build`                                      |
-| Tauri Rust shell      | `cargo fmt --manifest-path platform/apps/companion/src-tauri/Cargo.toml` | `pnpm companion:check` (rustfmt, Clippy); `pnpm --filter @mosaic/companion tauri build` |
-| Firmware-owned source | `pnpm fw:format`                                                         | `pnpm fw:format:check` and `pnpm fw:build` (activated ESP-IDF shell)                    |
-
-`web:format` also covers root docs/config and excludes .NET, firmware, and Rust via `.prettierignore`. Firmware formatting covers owned source under `firmware/main/`, not vendor or generated files. For hardware, first run `python3 scripts/firmware.py set-target esp32p4` in an activated ESP-IDF shell; `pnpm fw:flash` and `pnpm fw:monitor` are separate, opt-in commands. Do not flash without a connected device and reviewed configuration.
+`pnpm fw:test` runs every firmware host test on your computer, without ESP-IDF or a board. Pass part of a path to run only some: `pnpm fw:test provisioning clock`.
 
 ## Generated files
 
-```sh
-pnpm generate-tokens              # token CSS, lint restrictions, firmware header
-pnpm --filter @mosaic/protocols lint  # check Protobuf schema
-pnpm generate-protos              # firmware C and server C# bindings; needs buf.build
-```
+Do not hand-edit generated files.
 
-Protocol bindings are committed; ordinary builds do not need `buf.build`. Token JSON and the offline generator are committed; generated token outputs are ignored and regenerated automatically by web commands and ESP-IDF configure. Firmware token generation needs Node.js, not pnpm. Do not hand-edit generated files.
-
-## Optional: test server publishing
-
-```sh
-pnpm build:admin-assets
-dotnet publish platform/apps/backend/Mosaic.Server.csproj -c Release -o publish/local
-python3 scripts/smoke-server.py publish/local/Mosaic.Server
-```
-
-Build admin assets **before** publishing: the server serves the copied SPA without Node at runtime. For a clean republish, remove stale files from `publish/local/` first. Linux x64 Native AOT publishing remains **unverified**; a local macOS publish does not prove that target.
-
-## Assets
-
-Finished fonts/icons, licenses and pinned generation tooling live in `platform/packages/assets`. Normal builds consume committed assets without converters. Regeneration is explicit maintenance; see the [asset guide](platform/packages/assets/README.md#regenerate).
+- **Design tokens** are generated automatically by web builds and firmware builds. To generate them by hand, run `pnpm generate-tokens`.
+- **Device protocol bindings** (C for the firmware, C# for the server) are committed, so builds don't need to generate them. After changing the schema, run `pnpm generate-protos` (needs access to `buf.build`) and commit the result. See [protocols](platform/packages/protocols/README.md).
+- **Fonts, icons and sounds** are committed. Regenerate them only when their sources change; see [assets](platform/packages/assets/README.md#regenerate).
