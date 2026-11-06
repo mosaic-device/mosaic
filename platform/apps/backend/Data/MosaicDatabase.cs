@@ -35,6 +35,14 @@ public sealed class MosaicDatabase
                 absolute_expires_at TEXT NOT NULL
             ) STRICT;
             """),
+        new(3, "devices", """
+            CREATE TABLE devices (
+                id INTEGER PRIMARY KEY,
+                secret_hash BLOB NOT NULL UNIQUE CHECK (length(secret_hash) = 32),
+                paired_at TEXT NOT NULL,
+                revoked_at TEXT
+            ) STRICT;
+            """),
     ];
 
     public MosaicDatabase(string path)
