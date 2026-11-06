@@ -25,6 +25,8 @@ async function collect(directory) {
 }
 
 await collect('firmware/main')
+// Only the protocol tests here are firmware-owned; generated/ is skipped above.
+await collect('firmware/components/device_protos')
 files.sort()
 if (files.length === 0) {
   console.error('No firmware-owned source files found in firmware/main')

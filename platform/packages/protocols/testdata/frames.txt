@@ -1,0 +1,38 @@
+# Golden device-protocol frames, checked by both the C# (server) and nanopb
+# (firmware) tests. Every value here is a test value, never a real credential.
+#
+# Format: <direction> <name> <kind> <hex>
+#   direction  d2s = DeviceToBackendEnvelope, b2d = BackendToDeviceEnvelope
+#   kind       valid      decodes to the expected fields and re-encodes to the same bytes
+#              ignored    decodes with no payload selected
+#              truncated  fails to decode on both sides
+#              bad_length nanopb fails to decode; C# decodes it, so the server must
+#                         reject it by checking the field length against its nanopb limit
+#
+# Each test keeps the expected field values for every name and fails if this file
+# and its table disagree. See the wiki's Device Connection Protocol.
+
+# connect: protocol_version 1, auth_secret = bytes 0x00..0x1F.
+d2s connect valid 0A2408011220000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F
+# An unknown payload field 15.
+d2s unknown_payload ignored 7A020801
+# connect with its last byte removed.
+d2s connect_truncated truncated 0A2408011220000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E
+# connect whose auth_secret is 33 bytes (exactly 32 required).
+d2s connect_secret_long bad_length 0A2508011221000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F20
+# connect whose auth_secret is 31 bytes (exactly 32 required).
+d2s connect_secret_short bad_length 0A230801121F000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E
+
+b2d paired valid 1200
+# pairing_pending K7QF2M9X with 600 s left.
+b2d pairing_pending valid 0A0D0A084B375146324D395810D804
+b2d rejected_malformed_request valid 1A020801
+b2d rejected_unsupported_version valid 1A020802
+b2d rejected_credential_revoked valid 1A020803
+b2d rejected_server_busy valid 1A020804
+# An unknown payload field 15.
+b2d unknown_payload ignored 7A020801
+# pairing_pending with its last byte removed.
+b2d pairing_pending_truncated truncated 0A0D0A084B375146324D395810D8
+# pairing_pending whose code is 9 characters (limit 8).
+b2d pairing_pending_code_long bad_length 0A0E0A094B375146324D39584110D804
