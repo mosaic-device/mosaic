@@ -3,10 +3,10 @@
 Vite/React device UI prototype shell. No device behavior or adapter is implemented;
 add a surface-local `PlatformPort` when a screen first needs device access.
 
-Run from the repository root after `pnpm install`:
+Run from the repository root after [setup](../../../docs/setup.md#node-and-pnpm):
 
 ```sh
-pnpm --filter @mosaic/surface dev
+pnpm surface:dev
 pnpm --filter @mosaic/surface lint
 pnpm --filter @mosaic/surface typecheck
 pnpm --filter @mosaic/surface build

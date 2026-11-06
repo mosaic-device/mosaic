@@ -9,66 +9,49 @@ unimplemented `/api` and `/ws` paths return 404.
 
 At startup the server opens its SQLite database and applies any pending schema
 migrations (see [Database](#database)). Claiming and managing devices from the admin
-app, notifications, and integrations are not implemented yet. The admin page is currently a placeholder. Keep the server
+app, notifications, and integrations are not implemented yet. Keep the server
 Native-AOT-compatible: [PR checks](../../../docs/ci.md) publish it for Linux x64 with
 AOT/trimming warnings as errors and run the smoke test against the result.
 
-Run all commands below from the **repository root**. Unless a block is labeled
-otherwise, commands work unchanged in PowerShell on Windows and in a macOS or Linux
-shell. This is a .NET project, not a pnpm workspace package.
+Run all commands below from the **repository root**. This is a .NET project, not a
+pnpm workspace package; the root `pnpm server:*` scripts are shortcuts for `dotnet`.
 
 ## Local development
 
-Install the .NET SDK selected by [`global.json`](../../../global.json) (currently
-10.0.401, with patch roll-forward allowed). For the admin app, install Node and
-pnpm as documented in the repository setup instructions; the Docker admin stage
-uses Node 24.19.0 and pnpm 12.8.1.
-
-Restore and start the backend. Windows (PowerShell):
-
-```powershell
-dotnet restore platform/Mosaic.slnx
-$backendRoot = (Resolve-Path ./platform/apps/backend).Path
-dotnet run --project platform/apps/backend/Mosaic.Server.csproj -- --contentRoot "$backendRoot" --urls http://localhost:5000 --environment Development
-```
-
-macOS/Linux:
+Install the .NET SDK and, for the admin app, Node and pnpm ([setup](../../../docs/setup.md)).
+Then start the server:
 
 ```sh
-dotnet restore platform/Mosaic.slnx
-dotnet run --project platform/apps/backend/Mosaic.Server.csproj -- --contentRoot "$PWD/platform/apps/backend" --urls http://localhost:5000 --environment Development
+pnpm server:dev
 ```
 
-Use an absolute content root: a relative `platform/apps/backend` can resolve under
-the executable's output directory and fail with `DirectoryNotFoundException`.
-`--environment Development` loads `appsettings.Development.json`, which sets the
-auth origins for `localhost`. Normal `dotnet run` and Visual Studio F5 use JIT compilation even though
-`PublishAot` is enabled. Stop an existing debugging session if it uses port 5000.
+This is `dotnet run` on the server project. It listens on `http://localhost:5000`;
+pass `--urls http://localhost:5050` to use another port. Stop it with Ctrl+C.
 
-In a second terminal, check health and start the admin development server:
+[`Properties/launchSettings.json`](Properties/launchSettings.json) runs it in the
+Development environment, which loads `appsettings.Development.json`: the auth
+origins and non-Secure cookie for `localhost`. Rider, Visual Studio and VS Code
+use the same profile. `RunWorkingDirectory` in the project file starts it in this
+directory, so the content root finds `appsettings*.json` and `wwwroot/` wherever
+you run it from. Started any other way, the server needs
+`--contentRoot <absolute path to platform/apps/backend> --environment Development`;
+without the Development environment it refuses to start, because
+`Auth:PublicOrigin` is unset.
+
+Check it from a second terminal (in Windows PowerShell 5.1, use `curl.exe`):
 
 ```sh
 curl --fail-with-body -i http://localhost:5000/healthz
-pnpm install --frozen-lockfile
-pnpm --filter @mosaic/admin dev
 ```
 
-In Windows PowerShell 5.1, `curl` is an alias for `Invoke-WebRequest`; use
-`curl.exe` there. PowerShell 7 and macOS/Linux shells run the real `curl`.
+Then start the admin app with `pnpm admin:dev` and open the URL Vite prints; Vite
+proxies `/api` and `/ws` to port 5000. To have the server serve a built admin app
+itself at `http://localhost:5000/`, run `pnpm build:admin-assets` first; it copies
+the build into `wwwroot/`. Without those assets, `/` returns 404 while `/healthz`
+still works.
 
-Open the Vite URL printed in that terminal. Vite proxies `/api` and `/ws` to the
-backend on port 5000. Stop each
-foreground server with Ctrl+C.
-
-To serve a built admin app directly from the local backend, run this before
-starting it, then open `http://localhost:5000/`:
-
-```sh
-pnpm build:admin-assets
-```
-
-This copies the admin build into `platform/apps/backend/wwwroot/`. Without those
-assets, `/` may return 404 while `/healthz` still works.
+Run the server tests with `pnpm server:test`. They cover migrations and
+persistence, the admin API, and the device WebSocket driven by a fake device.
 
 ## Database
 
@@ -312,12 +295,12 @@ docker scout cves local://mosaic-server:aot --only-severity critical,high
 A warning on the Node build image is distinct from findings in the final runtime
 image. Review findings in both; a scan is not proof that application code is secure.
 
-Build and formatting checks for the backend (or `pnpm server:build` and
-`pnpm server:format:check`):
+Build, format and test checks for the backend:
 
 ```sh
-dotnet build platform/Mosaic.slnx
-dotnet format platform/Mosaic.slnx --verify-no-changes
+pnpm server:build
+pnpm server:format:check
+pnpm server:test
 ```
 
 Review AOT/trimming warnings rather than suppressing them to obtain a passing

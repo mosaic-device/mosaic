@@ -4,7 +4,7 @@
 inline field-size options; keep it unmodified. Owned messages use `mosaic.device.v1`.
 Preserve field numbers and Nanopb limits for wire compatibility.
 
-After `pnpm install`, run from the repository root:
+Run from the repository root:
 
 ```sh
 pnpm --filter @mosaic/protocols lint

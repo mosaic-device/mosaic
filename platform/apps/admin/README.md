@@ -3,15 +3,16 @@
 Vite/React/Tailwind admin app. It has the signed-in shell (sidebar on wide screens,
 top bar and menu sheet on narrow ones) and Home, Devices, Settings and not-found pages
 in their empty states, the shared API client in `src/api/`, and the first-run setup
-and login pages. Session handling comes next (#67). Routes live in `src/router.ts`, pages in
+and login pages, and session handling. Routes live in `src/router.ts`, pages in
 `src/pages/`, the shell in `src/components/shell/`. `/dev/components` is development-only and excluded from
 production. `pnpm build:admin-assets` copies `dist/` into the backend's `wwwroot/`;
 local `/api` and `/ws` proxies target `http://localhost:5000`.
 
-Run from the repository root:
+Run from the repository root after [setup](../../../docs/setup.md). Start the
+server first (`pnpm server:dev`), then:
 
 ```sh
-pnpm --filter @mosaic/admin dev
+pnpm admin:dev
 pnpm --filter @mosaic/admin test
 pnpm web:check
 ```
@@ -53,9 +54,9 @@ error to show; `isAbortError` tells it apart.
   submit disabled while `pending` (the `Button` `pending` prop) instead of letting a
   second click replace the first. On-mount calls belong in a `loader`, not here.
 
-The backend must run with `--environment Development` for the dev proxy to work
-(non-Secure cookie, `http://localhost:5173` allowed by the Origin check). Vite is
-pinned to port 5173 (`strictPort`) for the same reason.
+The dev proxy needs the server in the Development environment, as `pnpm server:dev`
+runs it (non-Secure cookie, `http://localhost:5173` allowed by the Origin check).
+Vite is pinned to port 5173 (`strictPort`) for the same reason.
 
 ## Setup and login
 
