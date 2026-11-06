@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <NoDefaultLaunchSettingsFile>true</NoDefaultLaunchSettingsFile>
+    <!-- `dotnet run` starts in the project directory, so the default content root finds appsettings and wwwroot from anywhere. -->
+    <RunWorkingDirectory>$(MSBuildProjectDirectory)</RunWorkingDirectory>
     <IsAotCompatible>true</IsAotCompatible>
     <PublishAot>true</PublishAot>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>

@@ -176,36 +176,9 @@ jobs:
           clang-format --version
       - name: Firmware formatting
         run: node scripts/format-firmware.mjs --check
-      - name: Lock portability tests
-        run: python3 scripts/firmware_test.py
-      - name: Provisioning host tests
-        run: python3 firmware/main/features/provisioning/tests/run.py
-      - name: Setup portal tests
-        run: node --test firmware/main/features/provisioning/tests/setup_ui.test.mjs
-      - name: Support host tests
-        run: python3 firmware/main/support/tests/run.py
-      - name: UI host tests
-        run: python3 firmware/main/ui/tests/run.py
-      - name: Event bus host tests
-        run: python3 firmware/main/events/tests/run.py
-      - name: Driver host tests
-        run: python3 firmware/main/drivers/tests/run.py
-      - name: LED feedback host tests
-        run: python3 firmware/main/features/led_feedback/tests/run.py
-      - name: Audio cue host tests
-        run: python3 firmware/main/features/audio_cues/tests/run.py
-      - name: Brightness host tests
-        run: python3 firmware/main/features/brightness/tests/run.py
-      - name: Clock host tests
-        run: python3 firmware/main/features/clock/tests/run.py
-      - name: Settings host tests
-        run: python3 firmware/main/features/settings/tests/run.py
-      - name: Debug trigger host tests
-        run: python3 firmware/main/features/debug_triggers/tests/run.py
-      - name: Preview platform host tests
-        run: python3 firmware/preview/platform/tests/run.py
-      - name: Device protocol golden frames
-        run: python3 firmware/components/device_protos/tests/run.py
+      - name: Firmware host tests
+        # Runs every tracked firmware tests/run.py and tests/*.test.mjs, plus the IDF wrapper's lock tests.
+        run: python3 scripts/firmware_host_tests.py
 
   firmware-preview:
     name: Firmware preview (${{ matrix.os }})

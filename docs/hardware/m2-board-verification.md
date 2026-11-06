@@ -1,6 +1,6 @@
 # M2 board verification
 
-What M2 device behavior works on the physical board with every peripheral connected ([#89](https://github.com/mosaic-device/mosaic/issues/89)). Expected behavior comes from the [firmware README](../../firmware/README.md), which matches the [#56 spec](https://github.com/mosaic-device/mosaic/wiki/Device-Experience-Spec) since [#115](https://github.com/mosaic-device/mosaic/issues/115). Steps #115 changed are marked for a re-run on the board; the rest kept their results from the first run.
+What M2 device behavior works on the physical board with every peripheral connected ([#89](https://github.com/mosaic-device/mosaic/issues/89)). Expected behavior comes from the [#56 spec](https://github.com/mosaic-device/mosaic/wiki/Device-Experience-Spec), which the firmware matches since [#115](https://github.com/mosaic-device/mosaic/issues/115). Steps #115 changed are marked for a re-run on the board; the rest kept their results from the first run.
 
 Result values: **Pass**, **Fail** (link the `bug` issue), or **Not tested** (say why). In sections 1 and 2, a step that doesn't depend on the input shows the same result under both, and — means that input can't do the step.
 

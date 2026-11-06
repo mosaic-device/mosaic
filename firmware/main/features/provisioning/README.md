@@ -22,4 +22,4 @@ Shared `main/ui/runtime` and `main/drivers/display` have no provisioning depende
 - Save settings and clear the recovery flag in one storage commit. Recovery sets the flag without erasing saved settings; storage read errors must not erase NVS.
 - Restrict portal requests to the setup AP destination and peer subnet. Validate POST Host and Origin when present; retain bounded reads, input validation and throttling.
 
-Test commands are in the [firmware guide](../../../README.md#tests-and-tooling).
+Run its host tests with `pnpm fw:test provisioning`; see the [firmware guide](../../../README.md#tests-and-tooling).

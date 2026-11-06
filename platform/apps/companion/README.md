@@ -2,14 +2,15 @@
 
 Tauri v2 shell with a Vite/React/TypeScript webview. No installer or privileged
 system actions are implemented; bundling is disabled (`bundle.active: false`).
-Native builds require Rust and the platform-specific Tauri prerequisites.
+Native builds need Rust and the Tauri prerequisites ([setup](../../../docs/setup.md#rust-and-tauri)).
 
-Run from the repository root after `pnpm install`:
+Run from the repository root:
 
 ```sh
-pnpm --filter @mosaic/companion tauri dev
+pnpm companion:dev                          # desktop app with live reload
 pnpm --filter @mosaic/companion tauri build
-pnpm companion:check
+pnpm companion:format                       # rustfmt
+pnpm companion:check                        # rustfmt check and Clippy
 ```
 
 Web-only commands: `pnpm --filter @mosaic/companion dev`, `lint`, `typecheck`,
