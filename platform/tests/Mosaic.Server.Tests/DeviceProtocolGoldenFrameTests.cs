@@ -222,8 +222,9 @@ public sealed class DeviceProtocolGoldenFrameTests
     // A nanopb string max_size includes the terminating NUL.
     private static int UsableStringLength(FieldDescriptor field) => MaxSize(field) - 1;
 
-    // Mirrors the generated nanopb _size constants (events.pb.h) that bound each
-    // WebSocket frame. Changing a limit means regenerating and updating the wiki.
+    // Mirrors the generated nanopb _size constants (events.pb.h): the largest message
+    // in each direction. The fixed WebSocket frame limits sit above these (Device
+    // Connection Protocol, section 1); changing a size means regenerating.
     private static int MaxFrameBytes(bool fromDevice) => fromDevice ? 69 : 1270;
 
     private static IReadOnlyDictionary<string, Frame> LoadFrames()
