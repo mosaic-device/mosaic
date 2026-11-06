@@ -4,7 +4,7 @@ Install only what the pieces you work on need. Versions come from the files that
 
 | Tool                                                    | Needed for                                                           | Version pinned by                            |
 | ------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------- |
-| [Node and pnpm](#node-and-pnpm)                         | Admin, companion, surface, generated files, firmware formatting      | `.nvmrc`, `packageManager` in `package.json` |
+| [Node and pnpm](#node-and-pnpm)                         | Admin, companion, generated files, firmware formatting               | `.nvmrc`, `packageManager` in `package.json` |
 | [.NET SDK](#net-sdk)                                    | Server                                                               | `global.json`                                |
 | [Rust and Tauri](#rust-and-tauri)                       | Companion                                                            | `rust-toolchain.toml`                        |
 | [Python 3](#python-3)                                   | Firmware preview, firmware tests, firmware builds, server smoke test | Any Python 3; CI uses 3.12                   |

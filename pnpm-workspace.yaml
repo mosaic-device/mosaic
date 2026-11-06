@@ -1,6 +1,5 @@
 packages:
   - 'platform/apps/admin'
-  - 'platform/apps/surface'
   - 'platform/apps/companion'
   - 'platform/packages/*'
 allowBuilds:
