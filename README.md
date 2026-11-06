@@ -11,7 +11,6 @@ Run every command from the repository root. Install the tools for the pieces you
 | [Server](platform/apps/server/README.md)       | ASP.NET Core server: admin API, device WebSocket, serves the built admin app | .NET                | `pnpm server:dev`                             |
 | [Admin](platform/apps/admin/README.md)         | React web app for the device owner                                           | Node, server        | `pnpm admin:dev`                              |
 | [Companion](platform/apps/companion/README.md) | Tauri desktop app                                                            | Node, Rust/Tauri    | `pnpm companion:dev`                          |
-| [Surface](platform/apps/surface/README.md)     | Browser prototype of device UI, not the firmware screens                     | Node                | `pnpm surface:dev`                            |
 | [Device preview](firmware/README.md#preview)   | The real firmware running in a window on your computer                       | Python, CMake, SDL2 | `pnpm fw:preview`                             |
 | [Firmware](firmware/README.md#build-and-flash) | ESP32-P4 firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5               | ESP-IDF             | `pnpm fw:build`, then `pnpm fw:flash monitor` |
 

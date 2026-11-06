@@ -8,7 +8,6 @@
   },
   "scripts": {
     "admin:dev": "pnpm --filter @mosaic/admin dev",
-    "surface:dev": "pnpm --filter @mosaic/surface dev",
     "companion:dev": "pnpm --filter @mosaic/companion tauri dev",
     "web:format": "prettier --write .",
     "web:format:check": "prettier --check .",
