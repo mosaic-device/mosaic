@@ -70,7 +70,7 @@ jobs:
       - name: Build admin assets
         run: pnpm build:admin-assets
       - name: Publish Linux Native AOT server
-        run: dotnet publish platform/apps/backend/Mosaic.Server.csproj --configuration Release --runtime linux-x64 -p:PublishAot=true -p:ILLinkTreatWarningsAsErrors=true -p:IlcTreatWarningsAsErrors=true --output publish/ci
+        run: dotnet publish platform/apps/server/Mosaic.Server.csproj --configuration Release --runtime linux-x64 -p:PublishAot=true -p:ILLinkTreatWarningsAsErrors=true -p:IlcTreatWarningsAsErrors=true --output publish/ci
       - name: Published server smoke test
         run: python3 scripts/smoke-server.py publish/ci/Mosaic.Server
 
@@ -129,7 +129,7 @@ jobs:
           import shutil
           for path in [
               'firmware/components/device_protos/generated',
-              'platform/apps/backend/Generated/DeviceProtocol',
+              'platform/apps/server/Generated/DeviceProtocol',
           ]:
               shutil.rmtree(path)
           PY
@@ -141,7 +141,7 @@ jobs:
           paths = [
               'platform/packages/protocols',
               'firmware/components/device_protos/generated',
-              'platform/apps/backend/Generated/DeviceProtocol',
+              'platform/apps/server/Generated/DeviceProtocol',
           ]
           subprocess.run(['git', '--no-pager', 'diff', '--exit-code', '--', *paths], check=True)
           changes = subprocess.check_output([

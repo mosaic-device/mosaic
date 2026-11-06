@@ -8,7 +8,7 @@ Run every command from the repository root. Install the tools for the pieces you
 
 | Piece                                          | What it is                                                                   | Needs               | Run it                                        |
 | ---------------------------------------------- | ---------------------------------------------------------------------------- | ------------------- | --------------------------------------------- |
-| [Server](platform/apps/backend/README.md)      | ASP.NET Core server: admin API, device WebSocket, serves the built admin app | .NET                | `pnpm server:dev`                             |
+| [Server](platform/apps/server/README.md)       | ASP.NET Core server: admin API, device WebSocket, serves the built admin app | .NET                | `pnpm server:dev`                             |
 | [Admin](platform/apps/admin/README.md)         | React web app for the device owner                                           | Node, server        | `pnpm admin:dev`                              |
 | [Companion](platform/apps/companion/README.md) | Tauri desktop app                                                            | Node, Rust/Tauri    | `pnpm companion:dev`                          |
 | [Surface](platform/apps/surface/README.md)     | Browser prototype of device UI, not the firmware screens                     | Node                | `pnpm surface:dev`                            |

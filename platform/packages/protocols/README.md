@@ -18,8 +18,8 @@ without running Buf. Keep `Nanopb.cs`: `Events.cs` references its options descri
 Check regenerated outputs, including untracked files:
 
 ```sh
-git status --short -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/backend/Generated/DeviceProtocol
-git diff --exit-code -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/backend/Generated/DeviceProtocol
+git status --short -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/server/Generated/DeviceProtocol
+git diff --exit-code -- platform/packages/protocols firmware/components/device_protos/generated platform/apps/server/Generated/DeviceProtocol
 ```
 
 Review and commit schema, configuration, and generated bindings together.

@@ -10,7 +10,7 @@
 # Protocol bindings generated from the shared schemas.
 firmware/components/device_protos/generated/*.pb.c linguist-generated=true
 firmware/components/device_protos/generated/*.pb.h linguist-generated=true
-platform/apps/backend/Generated/DeviceProtocol/*.cs linguist-generated=true
+platform/apps/server/Generated/DeviceProtocol/*.cs linguist-generated=true
 
 # Prepared font/image data and declarations are generated, not handwritten code.
 firmware/main/ui/generated/assets/*.c linguist-generated=true

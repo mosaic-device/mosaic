@@ -10,5 +10,5 @@ publish
 **/.turbo
 **/*.tsbuildinfo
 platform/apps/*/dist
-platform/apps/backend/wwwroot
+platform/apps/server/wwwroot
 platform/apps/companion/src-tauri/target

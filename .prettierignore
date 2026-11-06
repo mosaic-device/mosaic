@@ -11,7 +11,7 @@ node_modules/
 pnpm-lock.yaml
 platform/Mosaic.slnx
 firmware/
-platform/apps/backend/
+platform/apps/server/
 # Generator-owned formatting; asset tests validate committed outputs.
 platform/packages/assets/metadata/coverage.json
 platform/packages/assets/web/fonts.css

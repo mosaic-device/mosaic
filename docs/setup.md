@@ -86,4 +86,4 @@ On Windows, run `export.ps1` or `export.bat` to activate it. Firmware builds als
 
 ## Docker
 
-The server's [Linux container](../platform/apps/backend/README.md#build-and-run-the-linux-native-aot-container) builds inside Docker, so it needs only [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine. Local development doesn't need it.
+The server's [Linux container](../platform/apps/server/README.md#build-and-run-the-linux-native-aot-container) builds inside Docker, so it needs only [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine. Local development doesn't need it.

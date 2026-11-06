@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../apps/backend/Mosaic.Server.csproj" />
+    <ProjectReference Include="../../apps/server/Mosaic.Server.csproj" />
   </ItemGroup>
 
   <ItemGroup>
