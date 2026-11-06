@@ -18,7 +18,9 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             // /devices doesn't mark a section current. Revisit with /devices/$id (M3).
             activeOptions={{ exact: true }}
             onClick={onNavigate}
-            className="min-h-control-md [@media(max-width:640px)]:min-h-control-touch hover:bg-secondary-hover aria-[current=page]:border-selected-border aria-[current=page]:bg-selected aria-[current=page]:text-selected-foreground flex items-center gap-3 rounded-md border border-transparent px-3 text-sm font-medium forced-colors:aria-[current=page]:outline-2 forced-colors:aria-[current=page]:outline-offset-[-3px] forced-colors:aria-[current=page]:outline-[Highlight]"
+            // The current page gets a dark shade of the primary purple, so it
+            // stands out without competing with primary buttons.
+            className="min-h-control-md [@media(max-width:640px)]:min-h-control-touch hover:bg-secondary-hover aria-[current=page]:text-foreground [&[aria-current=page]>svg]:text-selected-foreground flex items-center gap-3 rounded-md border border-transparent px-3 text-sm font-medium aria-[current=page]:bg-[color-mix(in_srgb,var(--color-primary)_34%,var(--color-surface))] forced-colors:aria-[current=page]:outline-2 forced-colors:aria-[current=page]:outline-offset-[-3px] forced-colors:aria-[current=page]:outline-[Highlight]"
           >
             <Icon aria-hidden="true" className="size-5" />
             {label}
