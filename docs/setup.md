@@ -12,6 +12,7 @@ Install only what the pieces you work on need. Versions come from the files that
 | [clang-format](#clang-format)                           | Firmware formatting                                                  | 23.1.2                                       |
 | [ESP-IDF](#esp-idf)                                     | Building and flashing firmware                                       | 5.5.4                                        |
 | [Docker](#docker)                                       | Building the server's Linux container (optional)                     | Any recent version                           |
+| [Tailscale](#tailscale)                                 | Letting a device reach the server on your laptop                     | Any recent version                           |
 
 For example, admin work needs Node, pnpm and .NET. The device preview needs Python, a compiler, CMake and SDL2, but not ESP-IDF.
 
@@ -87,3 +88,28 @@ On Windows, run `export.ps1` or `export.bat` to activate it. Firmware builds als
 ## Docker
 
 The server's [Linux container](../platform/apps/server/README.md#build-and-run-the-linux-native-aot-container) builds inside Docker, so it needs only [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine. Local development doesn't need it.
+
+## Tailscale
+
+A device reaches the server on your laptop through [Tailscale Funnel](https://tailscale.com/kb/1223/funnel), which gives the laptop a public HTTPS address. Only whoever runs the server for a device needs it. Set it up once.
+
+On macOS, use the Homebrew version. Tailscale's docs disagree on whether the Mac App Store and standalone apps support Funnel, but agree that this one does. Don't install it alongside either app.
+
+```sh
+brew install tailscale
+sudo brew services start tailscale     # runs the Tailscale service and starts it at login
+sudo tailscale set --operator=$USER    # lets you run tailscale funnel without sudo
+tailscale up                           # prints a sign-in link
+```
+
+On Windows, install [Tailscale](https://tailscale.com/download) and sign in; the installer puts `tailscale` on `PATH`. On Linux, follow Tailscale's install steps, then run `sudo tailscale set --operator=$USER` and `sudo tailscale up`.
+
+The first time you run `pnpm server:dev:funnel`, Tailscale asks you to approve Funnel in the browser, which also turns on HTTPS certificates for your tailnet. If it says the machine has no DNS name, turn on MagicDNS under **DNS** in the [admin console](https://login.tailscale.com/admin). To allow Funnel by hand instead, add this to the tailnet policy file under **Access controls** (merge it into `nodeAttrs` if that already exists), and turn on HTTPS certificates under **DNS**:
+
+```json
+"nodeAttrs": [
+  { "target": ["autogroup:member"], "attr": ["funnel"] }
+]
+```
+
+Your laptop's address is `https://<machine>.<tailnet>.ts.net` and stays the same while its Tailscale machine name does. Then follow [Reach the server from a device](../platform/apps/server/README.md#reach-the-server-from-a-device).
