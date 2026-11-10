@@ -148,6 +148,26 @@ public sealed class MosaicDatabaseTests : IDisposable
             MosaicDatabase.FromConfiguration(configured, _directory).Path);
     }
 
+    [Fact]
+    public async Task AWriteWaitsForAReaderInsteadOfFailing()
+    {
+        var database = new MosaicDatabase(DatabasePath);
+        database.Migrate();
+        var devices = new Mosaic.Server.Devices.DeviceStore(database, TimeProvider.System);
+        var id = devices.Pair(new byte[32])!.Id;
+
+        // A reader holds its lock while the removal commits, as another request's query would.
+        using var reader = database.OpenConnection();
+        using var transaction = reader.BeginTransaction(deferred: true);
+        Scalar(reader, "SELECT COUNT(*) FROM devices", transaction);
+        var revoke = Task.Run(() => devices.Revoke(id), TestContext.Current.CancellationToken);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        Assert.False(revoke.IsCompleted);
+        transaction.Commit();
+
+        Assert.Equal(new byte[32], await revoke);
+    }
+
     private static void Execute(SqliteConnection connection, string sql)
     {
         using var command = connection.CreateCommand();
@@ -155,10 +175,11 @@ public sealed class MosaicDatabaseTests : IDisposable
         command.ExecuteNonQuery();
     }
 
-    private static object? Scalar(SqliteConnection connection, string sql)
+    private static object? Scalar(SqliteConnection connection, string sql, SqliteTransaction? transaction = null)
     {
         using var command = connection.CreateCommand();
         command.CommandText = sql;
+        command.Transaction = transaction;
         return command.ExecuteScalar();
     }
 

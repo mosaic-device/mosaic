@@ -180,7 +180,7 @@ public sealed class DeviceClaimTests : IDisposable
         var token = await _factory.SignInAsync();
         var code = await ShowCodeAndLeaveAsync(TestDevice.Create());
         var (_, claimed) = await ClaimAsync(code, token);
-        Assert.True(_factory.Devices.Revoke(claimed.GetProperty("device").GetProperty("id").GetInt64()));
+        Assert.NotNull(_factory.Devices.Revoke(claimed.GetProperty("device").GetProperty("id").GetInt64()));
 
         var (status, body) = await ClaimAsync(code, token);
 

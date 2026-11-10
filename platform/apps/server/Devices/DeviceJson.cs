@@ -14,8 +14,12 @@ public sealed record DeviceSummary(long Id, DateTime PairedAt, bool Connected);
 
 public sealed record DeviceResponse(DeviceSummary Device);
 
+/// <summary><c>GET /api/devices</c>: paired devices, sorted by <see cref="DeviceSummary.Id"/>.</summary>
+public sealed record DeviceListResponse(IReadOnlyList<DeviceSummary> Devices);
+
 // Source-generated serialization keeps the API Native-AOT-compatible.
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
 [JsonSerializable(typeof(ClaimRequest))]
 [JsonSerializable(typeof(DeviceResponse))]
+[JsonSerializable(typeof(DeviceListResponse))]
 public sealed partial class DeviceJsonContext : JsonSerializerContext;
