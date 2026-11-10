@@ -12,6 +12,7 @@ Install only what the pieces you work on need. Versions come from the files that
 | [clang-format](#clang-format)                           | Firmware formatting                                                  | 23.1.2                                       |
 | [ESP-IDF](#esp-idf)                                     | Building and flashing firmware                                       | 5.5.4                                        |
 | [Docker](#docker)                                       | Building the server's Linux container (optional)                     | Any recent version                           |
+| [Tailscale](#tailscale)                                 | Letting a device reach the server on your laptop                     | Any recent version                           |
 
 For example, admin work needs Node, pnpm and .NET. The device preview needs Python, a compiler, CMake and SDL2, but not ESP-IDF.
 
@@ -87,3 +88,13 @@ On Windows, run `export.ps1` or `export.bat` to activate it. Firmware builds als
 ## Docker
 
 The server's [Linux container](../platform/apps/server/README.md#build-and-run-the-linux-native-aot-container) builds inside Docker, so it needs only [Docker Desktop](https://www.docker.com/products/docker-desktop/) or Docker Engine. Local development doesn't need it.
+
+## Tailscale
+
+A device reaches the server on your laptop through [Tailscale Funnel](https://tailscale.com/kb/1223/funnel), which gives the laptop a public HTTPS address. Only whoever runs the server for a device needs it. Set it up once:
+
+1. Install [Tailscale](https://tailscale.com/download) and sign in.
+2. Make sure `tailscale` runs in your terminal. On macOS, the standalone app installs it from **Settings → CLI integration**; the Mac App Store app works without that, because `pnpm server:dev:funnel` also looks for the command inside the app. On Windows and Linux, the installer adds it.
+3. In the [admin console](https://login.tailscale.com/admin), turn on MagicDNS and HTTPS certificates under **DNS**, and allow Funnel under **Access controls**. If you skip this, the first `pnpm server:dev:funnel` asks you to approve it.
+
+Your laptop's address is `https://<machine>.<tailnet>.ts.net` and stays the same while its Tailscale machine name does. Then follow [Reach the server from a device](../platform/apps/server/README.md#reach-the-server-from-a-device).

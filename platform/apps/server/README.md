@@ -56,6 +56,40 @@ still works.
 Run the server tests with `pnpm server:test`. They cover migrations and
 persistence, the admin API, and the device WebSocket driven by a fake device.
 
+## Reach the server from a device
+
+A device only connects to a `wss://` address with a publicly trusted certificate, so it
+reaches the server on your laptop through Tailscale Funnel. Set up Tailscale once
+([setup](../../../docs/setup.md#tailscale)), then run:
+
+```sh
+pnpm server:dev:funnel
+```
+
+This starts the server as `pnpm server:dev` does and runs `tailscale funnel` in front of
+it, then prints the address to enter in the device's setup page:
+
+```text
+Device server URL: wss://<machine>.<tailnet>.ts.net/ws/device
+```
+
+The device's Wi-Fi needs direct internet access; networks with a sign-in page or a
+username login, like most campus Wi-Fi, won't work, but a phone hotspot or home Wi-Fi
+does. The device and the laptop don't need to share a network. Check the address from
+another device with `https://<machine>.<tailnet>.ts.net/healthz`.
+
+Keep using the admin app at `localhost` as above; the Development settings reject
+admin requests that arrive through the Funnel address. The command also trusts
+`X-Forwarded-For` from `127.0.0.1` (see [Behind a proxy](#behind-a-proxy)), so login and
+claim attempts from the internet don't count against yours.
+
+The server is public while the command runs. Ctrl+C stops both the server and Funnel,
+and if either stops on its own, the other stops too. Keep the laptop awake while a
+device depends on it.
+
+On macOS, AirPlay Receiver also listens on port 5000. The server still gets requests
+to `localhost:5000`, but if you see `403` from `AirTunes`, the server isn't running yet.
+
 ## Database
 
 The server stores the single admin and its settings in SQLite. Set the file with
@@ -130,7 +164,7 @@ address, replacing any value the client sent, and connect from the machine
 
 | Server runs | Proxy address it sees | Setting |
 | --- | --- | --- |
-| On the same machine as `tailscaled` | `127.0.0.1` | `ForwardedHeaders__KnownProxies__0=127.0.0.1` |
+| On the same machine as `tailscaled` | `127.0.0.1` | `ForwardedHeaders__KnownProxies__0=127.0.0.1` (`pnpm server:dev:funnel` sets it) |
 | In Docker, published with `-p 127.0.0.1:5000:8080` | The bridge gateway, usually `172.17.0.1` | `ForwardedHeaders__KnownProxies__0=172.17.0.1` |
 
 `docker network inspect bridge` shows the gateway; a Compose network has its own.
