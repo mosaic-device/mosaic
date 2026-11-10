@@ -70,6 +70,10 @@ public sealed partial class DeviceConnectionHandler(
 
     private static readonly Task<DeviceSignal> NoSignal = new TaskCompletionSource<DeviceSignal>().Task;
 
+    // Completes when the server starts shutting down. One for every connection: a wait made per
+    // connection would stay registered on the shutdown token after its connection ended.
+    private readonly Task _stopping = Task.Delay(Timeout.Infinite, lifetime.ApplicationStopping);
+
     private enum FrameKind
     {
         Binary,
@@ -93,11 +97,10 @@ public sealed partial class DeviceConnectionHandler(
 
     public async Task RunAsync(WebSocket socket)
     {
-        var stopping = Task.Delay(Timeout.Infinite, lifetime.ApplicationStopping);
         var link = new Link(socket);
         try
         {
-            await RunAsync(link, stopping);
+            await RunAsync(link, _stopping);
         }
         catch (WebSocketException)
         {
