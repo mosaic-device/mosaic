@@ -21,16 +21,26 @@ function LoginPage() {
   const { setup, session, redirect: returnPath } = route.useSearch()
   const navigate = useNavigate()
   const { run, pending } = useApiAction(login)
-  const form = useCredentialForm(fields)
+  const {
+    clearField,
+    clearMessages,
+    fieldProps,
+    formRef,
+    notice,
+    readValues,
+    secondsLeft,
+    showError,
+    showFieldErrors,
+  } = useCredentialForm(fields)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const values = form.readValues()
+    const values = readValues()
     const input = { ...values, username: values.username.trim() }
-    form.clearMessages()
+    clearMessages()
     const problems = validateLogin(input)
     if (hasMessages(problems)) {
-      form.showFieldErrors(problems)
+      showFieldErrors(problems)
       return
     }
 
@@ -45,8 +55,8 @@ function LoginPage() {
       await navigate({ to: '/setup', replace: true })
       return
     }
-    if (error.code === 'invalid_credentials') form.clearField('password')
-    form.showError(error)
+    if (error.code === 'invalid_credentials') clearField('password')
+    showError(error)
   }
 
   return (
@@ -55,7 +65,7 @@ function LoginPage() {
       description="Use the admin account for this server."
     >
       <form
-        ref={form.formRef}
+        ref={formRef}
         noValidate
         className="grid gap-5"
         onSubmit={(event) => void handleSubmit(event)}
@@ -68,7 +78,7 @@ function LoginPage() {
         {session === 'ended' && (
           <LoginNote>Your session ended. Log in again to continue.</LoginNote>
         )}
-        <ApiErrorNotice error={form.notice} />
+        <ApiErrorNotice error={notice} />
         <TextField
           id="login-username"
           label="Username"
@@ -77,7 +87,7 @@ function LoginPage() {
           spellCheck={false}
           autoCorrect="off"
           required
-          {...form.fieldProps('username')}
+          {...fieldProps('username')}
         />
         <TextField
           id="login-password"
@@ -85,18 +95,18 @@ function LoginPage() {
           type="password"
           autoComplete="current-password"
           required
-          {...form.fieldProps('password')}
+          {...fieldProps('password')}
         />
         <Button
           type="submit"
           className="w-full"
           pending={pending}
-          disabled={form.secondsLeft > 0}
+          disabled={secondsLeft > 0}
         >
           {pending
             ? 'Logging in…'
-            : form.secondsLeft > 0
-              ? waitLabel(form.secondsLeft)
+            : secondsLeft > 0
+              ? waitLabel(secondsLeft)
               : 'Log in'}
         </Button>
       </form>
