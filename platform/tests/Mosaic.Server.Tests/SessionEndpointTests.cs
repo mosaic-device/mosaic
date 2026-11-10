@@ -116,6 +116,26 @@ public sealed class SessionEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task ANewSessionClearsAbandonedExpiredOnes()
+    {
+        // Setup and two logins; none of their tokens is ever presented again.
+        (await SendAsync(AuthApiFactory.Setup())).Dispose();
+        (await SendAsync(AuthApiFactory.Login())).Dispose();
+        _factory.Time.Advance(TimeSpan.FromDays(3));
+        (await SendAsync(AuthApiFactory.Login())).Dispose();
+        Assert.Equal(3L, SessionCount());
+
+        // The first two are past their idle expiry; the third has days left.
+        _factory.Time.Advance(TimeSpan.FromDays(5));
+        using var login = await SendAsync(AuthApiFactory.Login());
+
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        Assert.Equal(2L, SessionCount());
+        using var session = await SendAsync(AuthApiFactory.Session(AuthApiFactory.SessionCookie(login).Value));
+        Assert.Equal(HttpStatusCode.OK, session.StatusCode);
+    }
+
+    [Fact]
     public async Task AFailedLookupIsA500NotA401()
     {
         var token = await SetupAsync();
