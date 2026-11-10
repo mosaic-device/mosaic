@@ -167,7 +167,7 @@ public sealed class DeviceEndpointTests : IDisposable
     public async Task ARevokedCredentialIsRejectedAndNeverGetsACode()
     {
         var identity = TestDevice.Create();
-        Assert.True(_factory.Devices.Revoke(_factory.Pair(identity)));
+        Assert.NotNull(_factory.Devices.Revoke(_factory.Pair(identity)));
         await using var device = await _factory.ConnectAsync(identity);
 
         await device.SendAsync(identity.Connect());

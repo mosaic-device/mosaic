@@ -63,7 +63,9 @@ file and its directory if they are missing. To keep data when a container is
 replaced, mount a volume there, for example `-v mosaic-data:/app/data`.
 Migrations live in [`Data/MosaicDatabase.cs`](Data/MosaicDatabase.cs). Each one
 runs once inside a transaction and is recorded in `schema_migrations`. Append new
-migrations; never edit one that has shipped.
+migrations; never edit one that has shipped. Each connection waits up to 5 seconds for
+another connection's lock (`PRAGMA busy_timeout`) instead of failing with
+`database is locked`.
 
 ## Admin authentication
 
@@ -163,7 +165,11 @@ generated message fits.
 The `devices` table stores only the SHA-256 of each device's 32-byte secret.
 Secrets and pairing codes are never logged. Requests with an `Origin` header get 403,
 so a web page cannot open device connections. The server pings every 15 seconds and
-drops a connection that misses its pong for 15 seconds. These settings can be changed
+drops a connection that misses its pong for 15 seconds. An open connection handles a
+shutdown or a signal (paired, removed, replaced) before the device's own frames, so a
+device that keeps sending can't delay them. When the server closes, it keeps reading and
+dropping the device's frames until the device's close arrives, for up to a second, so a
+reply sent just before the close isn't lost to a reset connection. These settings can be changed
 under `Devices`:
 
 | Setting | Default | Meaning |
@@ -201,6 +207,23 @@ The code may be typed in any case, with a dash and surrounding spaces.
 [`DevicePairing`](Devices/DevicePairing.cs) claims codes and decides what a connecting
 device gets under one lock, so a device that reconnects while its code is being
 claimed is never handed a new code after it is paired.
+
+## Listing and removing devices
+
+`GET /api/devices` returns `{ "devices": [ ... ] }`: every paired device, in the same
+shape as a claim returns, sorted by `id`. Removed devices and devices still showing a
+code aren't listed. `connected` is read from the open connections on every request.
+
+`DELETE /api/devices/{id}` removes a device and returns `204`, even while it is
+offline. The row is marked revoked and kept, so its secret is recognized and rejected
+from then on, across restarts, and its `id` is never reused. A connected device is sent
+`CREDENTIAL_REVOKED` and closed. A device that reconnects during removal is still
+rejected: the handshake registers its connection before reading the credential, so it
+either reads the revocation or is registered in time to be told. An `id` that is
+missing or already removed gets `404 device_not_found`, so of two removals at once only
+one succeeds; an `id` that isn't a whole number gets the empty `404`. Both endpoints need
+a session; `DELETE` checks the Origin first. Neither is rate-limited, and logging out or a
+session expiring never affects a device.
 
 ## Build and run the Linux Native AOT container
 
@@ -275,8 +298,10 @@ device has gone, retries the claim, and reconnects the device to see it paired. 
 then stops the server, confirms the schema exists, the password is stored hashed and
 only the device's secret hash is stored, saves a settings row, restarts the server,
 and confirms the admin can still log in, the device is still authenticated as paired
-while its old code is forgotten, the rows remain, and no migration ran twice. An unexpected response, startup
-failure, or database mismatch fails the build.
+while its old code is forgotten, the rows remain, and no migration ran twice. It then
+lists the device, removes it through `DELETE /api/devices/1`, and checks the device is
+no longer listed and its reconnect is rejected with `CREDENTIAL_REVOKED`, also after a
+third start. An unexpected response, startup failure, or database mismatch fails the build.
 
 On each start the seven expected responses are:
 

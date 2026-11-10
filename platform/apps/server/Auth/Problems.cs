@@ -30,6 +30,9 @@ public static class Problems
     public static IResult SetupRequired(HttpContext context) =>
         Create(context, StatusCodes.Status409Conflict, "setup_required", "Create the admin account before logging in.");
 
+    public static IResult DeviceNotFound(HttpContext context) =>
+        Create(context, StatusCodes.Status404NotFound, "device_not_found", "That device isn't paired with this server.");
+
     public static IResult InvalidPairingCode(HttpContext context) =>
         Create(context, StatusCodes.Status404NotFound, "invalid_pairing_code", "No device is showing that code; check it and try again.");
 

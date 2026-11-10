@@ -38,7 +38,7 @@ dotnet publish platform/apps/server/Mosaic.Server.csproj --configuration Release
 python3 scripts/smoke-server.py publish/ci/Mosaic.Server
 ```
 
-The publish and smoke steps work as written only on Linux x64, with `clang` and `zlib1g-dev` installed; elsewhere, use the [verify container](../platform/apps/server/README.md#automated-publish-and-startup-verification). Publish into a fresh output directory. The smoke test checks static assets, SPA routing, missing API and WebSocket routes, first-run setup, login and sessions, an unpaired device handshake, claiming its code through the API, a paired handshake, and that the pairing and other data survive a restart without migrations running twice.
+The publish and smoke steps work as written only on Linux x64, with `clang` and `zlib1g-dev` installed; elsewhere, use the [verify container](../platform/apps/server/README.md#automated-publish-and-startup-verification). Publish into a fresh output directory. The smoke test checks static assets, SPA routing, missing API and WebSocket routes, first-run setup, login and sessions, an unpaired device handshake, claiming its code through the API, a paired handshake, that the pairing and other data survive a restart without migrations running twice, and listing and removing the device, whose reconnect is then rejected, also after another restart.
 
 ### Rust
 

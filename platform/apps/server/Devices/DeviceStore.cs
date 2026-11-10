@@ -21,6 +21,9 @@ public sealed record DeviceCredential(CredentialState State, long? DeviceId, Dat
 /// <summary>A paired device: its ID and when it was first paired.</summary>
 public sealed record PairedDevice(long Id, DateTimeOffset PairedAt);
 
+/// <summary>A paired device as stored, with the secret hash that finds its connection. The hash never leaves the server.</summary>
+public sealed record StoredDevice(long Id, DateTimeOffset PairedAt, byte[] SecretHash);
+
 /// <summary>
 /// Paired devices in SQLite, keyed by the SHA-256 of their secret (see <see cref="DeviceSecret"/>).
 /// No plain secret is ever stored. Revoked rows stay so a revoked secret is recognized as such.
@@ -63,14 +66,34 @@ public sealed class DeviceStore(MosaicDatabase database, TimeProvider time)
         return reader.Read() ? new PairedDevice(reader.GetInt64(0), Timestamps.Parse(reader.GetString(1))) : null;
     }
 
-    /// <summary>Revokes a paired device. Returns false when it is missing or already revoked.</summary>
-    public bool Revoke(long deviceId)
+    /// <summary>Every paired device, oldest pairing first. Revoked devices are left out.</summary>
+    public IReadOnlyList<StoredDevice> ListPaired()
     {
         using var connection = database.OpenConnection();
         using var command = connection.CreateCommand(
-            "UPDATE devices SET revoked_at = $revokedAt WHERE id = $id AND revoked_at IS NULL");
+            "SELECT id, paired_at, secret_hash FROM devices WHERE revoked_at IS NULL ORDER BY id");
+        using var reader = command.ExecuteReader();
+        var devices = new List<StoredDevice>();
+        while (reader.Read())
+        {
+            devices.Add(new StoredDevice(reader.GetInt64(0), Timestamps.Parse(reader.GetString(1)), (byte[])reader[2]));
+        }
+
+        return devices;
+    }
+
+    /// <summary>
+    /// Revokes a paired device and returns its secret hash, so its connection can be told. Returns
+    /// null when it is missing or already revoked, so of two removals at once only one succeeds.
+    /// The row and hash are kept, so the old secret is recognized and rejected from then on.
+    /// </summary>
+    public byte[]? Revoke(long deviceId)
+    {
+        using var connection = database.OpenConnection();
+        using var command = connection.CreateCommand(
+            "UPDATE devices SET revoked_at = $revokedAt WHERE id = $id AND revoked_at IS NULL RETURNING secret_hash");
         command.Parameters.AddWithValue("$revokedAt", Timestamps.Format(time.GetUtcNow()));
         command.Parameters.AddWithValue("$id", deviceId);
-        return command.ExecuteNonQuery() > 0;
+        return command.ExecuteScalar() as byte[];
     }
 }

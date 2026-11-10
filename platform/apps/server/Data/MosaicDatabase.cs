@@ -71,12 +71,24 @@ public sealed class MosaicDatabase
         return new MosaicDatabase(System.IO.Path.GetFullPath(path, contentRootPath));
     }
 
+    /// <summary>
+    /// Opens a connection that waits up to <see cref="BusyTimeout"/> for another connection's lock.
+    /// Microsoft.Data.Sqlite retries a busy statement itself, but not one whose commit is busy when
+    /// the statement is reset, which is where an <c>UPDATE ... RETURNING</c> read with
+    /// <c>ExecuteScalar</c> commits. SQLite's own busy handler covers every step.
+    /// </summary>
     public SqliteConnection OpenConnection()
     {
         var connection = new SqliteConnection(ConnectionString);
         connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA busy_timeout = {(int)BusyTimeout.TotalMilliseconds}";
+        command.ExecuteNonQuery();
         return connection;
     }
+
+    /// <summary>How long a statement waits for another connection's lock before failing.</summary>
+    public static readonly TimeSpan BusyTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Applies each pending migration once, in its own transaction.</summary>
     /// <returns>The versions applied by this call; empty when the schema is current.</returns>

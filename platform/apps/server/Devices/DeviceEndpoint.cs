@@ -215,16 +215,19 @@ public sealed partial class DeviceConnectionHandler(
             var expiry = code is null
                 ? NoSignal
                 : Task.Delay(Until(code), time, expiryCancel.Token);
-            var next = await Task.WhenAny(link.Receive, signal, expiry, stopping);
+            await Task.WhenAny(link.Receive, signal, expiry, stopping);
             await expiryCancel.CancelAsync();
 
-            if (next == stopping)
+            // WhenAny favours whichever ready task is listed first, which would let a steady
+            // stream of frames hold off a signal or shutdown. Choose by priority instead.
+            var next = WakeOrder.Next(stopping.IsCompleted, signal.IsCompleted, expiry.IsCompletedSuccessfully);
+            if (next == Wake.Stopping)
             {
                 await CloseAsync(link, WebSocketCloseStatus.EndpointUnavailable);
                 return;
             }
 
-            if (next == link.Receive)
+            if (next == Wake.Frame)
             {
                 var frame = await link.Receive;
                 if (!await AcceptsFrameKind(link, frame))
@@ -242,7 +245,7 @@ public sealed partial class DeviceConnectionHandler(
                 continue;
             }
 
-            if (next == signal)
+            if (next == Wake.Signal)
             {
                 switch (await signal)
                 {
@@ -363,8 +366,23 @@ public sealed partial class DeviceConnectionHandler(
         try
         {
             await link.Socket.CloseOutputAsync(status, null, CancellationToken.None);
-            // Give the device a moment to answer, so the close frame isn't lost to an abort.
-            await Task.WhenAny(link.Receive, Task.Delay(CloseGrace));
+
+            // Give the device a moment to answer, so the close frame isn't lost to an abort. Frames
+            // it sent before seeing the close are read and dropped until its close arrives: closing
+            // with unread data resets the connection, which can discard what was just sent to it.
+            // The deadline is checked before each frame, since WhenAny would favour a frame that is
+            // already waiting and a device that never stops sending would hold the socket open.
+            var grace = Task.Delay(CloseGrace);
+            while (true)
+            {
+                await Task.WhenAny(link.Receive, grace);
+                if (grace.IsCompleted || (await link.Receive).Kind == FrameKind.Closed)
+                {
+                    break;
+                }
+
+                link.ReceiveNext();
+            }
         }
         catch (WebSocketException)
         {

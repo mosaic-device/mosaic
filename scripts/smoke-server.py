@@ -174,9 +174,13 @@ def device_handshake(frame):
         return payload
 
 
-def check_device(database, secret, paired):
+def check_device(database, secret, paired, revoked=False):
     """Connects as the device and checks its reply. Returns the code an unpaired device is shown."""
     reply = device_handshake(device_frame(secret))
+    if revoked:
+        # rejected with reason CREDENTIAL_REVOKED (3).
+        expect(reply, field(3, b"\x08\x03"), "removed device handshake")
+        return None
     if paired:
         expect(reply, field(2, b""), "paired device handshake")
         return None
@@ -210,6 +214,24 @@ def check_claim(database, secret, code, cookie):
     expect(claim(code, None)[0], 401, "claim without a session")
     # The server stores only the SHA-256 of the secret.
     expect(query(database, "SELECT secret_hash FROM devices"), [(hashlib.sha256(secret).digest(),)], "device stored by the claim")
+
+
+def list_devices(cookie):
+    status, body, _ = api("GET", "/api/devices", cookie=cookie)
+    expect(status, 200, "GET /api/devices")
+    return body["devices"]
+
+
+def check_removal(database, cookie):
+    """Lists the paired device, removes it, and checks it is gone but its row is kept as revoked."""
+    devices = list_devices(cookie)
+    expect([(device["id"], sorted(device)) for device in devices], [(1, ["connected", "id", "pairedAt"])], "devices before removal")
+    expect(api("DELETE", "/api/devices/1", cookie=cookie)[:2], (204, None), "DELETE /api/devices/1")
+    status, body, _ = api("DELETE", "/api/devices/1", cookie=cookie)
+    expect((status, body["code"]), (404, "device_not_found"), "removing it again")
+    expect(api("DELETE", "/api/devices/1")[0], 401, "removal without a session")
+    expect(list_devices(cookie), [], "devices after removal")
+    expect(query(database, "SELECT id, revoked_at IS NOT NULL FROM devices"), [(1, 1)], "removed device kept as revoked")
 
 
 def query(database, sql):
@@ -259,6 +281,13 @@ with tempfile.TemporaryDirectory() as directory:
         # Codes live only in memory, so the old one is forgotten, but the pairing is kept.
         status, body = claim(code, admin)
         expect((status, body["code"]), (404, "invalid_pairing_code"), "claim of a code from before the restart")
+        check_removal(database, admin)
+        check_device(database, device_secret, paired=False, revoked=True)
     expect(query(database, "SELECT version FROM schema_migrations"), [(1,), (2,), (3,)], "migrations after restart")
     expect(query(database, "SELECT username, password_hash FROM admin"), [("Smoke-Admin", stored_hash)], "admin after restart")
     expect(query(database, "SELECT value FROM settings WHERE key = 'smoke'"), [("kept",)], "settings after restart")
+
+    # A removal is permanent: the old secret is still rejected after another restart.
+    with running_server(database):
+        check_device(database, device_secret, paired=False, revoked=True)
+        expect(list_devices(admin), [], "devices after the removal and a restart")

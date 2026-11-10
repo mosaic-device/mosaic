@@ -8,10 +8,13 @@ namespace Mosaic.Server.Devices;
 /// <summary>
 /// The admin app's device endpoints (Admin API Contract, section 5). Every one needs a session,
 /// and the Origin check runs before it, so a claim is checked in contract order: Origin, session,
-/// attempts per client, content type, body size, the code's format, then the code itself.
+/// attempts per client, content type, body size, the code's format, then the code itself. Listing
+/// and removal are not rate-limited.
 /// </summary>
-public static class DeviceApi
+public static partial class DeviceApi
 {
+    public const string ListPath = "/api/devices";
+
     public const string ClaimPath = "/api/devices/claim";
 
     public const string ClaimAttemptsPolicy = "device-claim-attempts";
@@ -41,8 +44,40 @@ public static class DeviceApi
 
     public static void MapDeviceApi(this IEndpointRouteBuilder app)
     {
+        app.MapGet(ListPath, List).RequireAdminSession();
         app.MapPost(ClaimPath, ClaimAsync).RequireAdminSession().RequireRateLimiting(ClaimAttemptsPolicy);
+        // An ID that isn't a whole number matches no route and gets the empty 404.
+        app.MapDelete(ListPath + "/{id:long}", Remove).RequireAdminSession();
     }
+
+    /// <summary><c>connected</c> is whether the credential has an open connection right now.</summary>
+    private static IResult List(DeviceStore devices, DeviceConnections connections) =>
+        Results.Json(
+            new DeviceListResponse(devices.ListPaired()
+                .Select(device => new DeviceSummary(
+                    device.Id, Timestamps.WholeSeconds(device.PairedAt), connections.IsConnected(device.SecretHash)))
+                .ToList()),
+            DeviceJsonContext.Default.DeviceListResponse);
+
+    /// <summary>
+    /// Revokes the device, then tells its connection, if any, which sends <c>CREDENTIAL_REVOKED</c>
+    /// and closes. The handshake registers a connection before reading its credential, so a device
+    /// reconnecting during removal either reads the revocation or is registered in time to be told.
+    /// </summary>
+    private static IResult Remove(HttpContext context, long id, DeviceStore devices, DeviceConnections connections, ILoggerFactory loggers)
+    {
+        if (devices.Revoke(id) is not { } secretHash)
+        {
+            return Problems.DeviceNotFound(context);
+        }
+
+        LogRemoved(loggers.CreateLogger(typeof(DeviceApi)), id);
+        connections.NotifyRevoked(secretHash);
+        return Results.NoContent();
+    }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Removed device {DeviceId}")]
+    private static partial void LogRemoved(ILogger logger, long deviceId);
 
     private static async Task<IResult> ClaimAsync(HttpContext context, DevicePairing pairing, AuthRateLimitOptions limits)
     {
