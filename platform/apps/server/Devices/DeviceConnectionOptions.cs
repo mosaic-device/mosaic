@@ -3,8 +3,9 @@ using System.Globalization;
 namespace Mosaic.Server.Devices;
 
 /// <summary>
-/// Device transport settings. The defaults follow the Device Connection Protocol: a 10-second
-/// handshake, and ping/pong every 15 seconds with a 15-second timeout (section 6).
+/// Device settings. The transport defaults follow the Device Connection Protocol: a 10-second
+/// handshake, and ping/pong every 15 seconds with a 15-second timeout (section 6). The claim
+/// limit follows the Admin API Contract, section 5.
 /// </summary>
 public sealed record DeviceConnectionOptions
 {
@@ -22,6 +23,9 @@ public sealed record DeviceConnectionOptions
     /// </summary>
     public int MaxPendingPairings { get; init; } = 32;
 
+    /// <summary>Signed-in claim attempts allowed per client per minute, counted apart from setup and login.</summary>
+    public int ClaimAttemptsPerMinute { get; init; } = 10;
+
     public static DeviceConnectionOptions FromConfiguration(IConfiguration configuration)
     {
         var section = configuration.GetSection(Section);
@@ -32,6 +36,7 @@ public sealed record DeviceConnectionOptions
             KeepAliveInterval = Duration(section, nameof(KeepAliveInterval), defaults.KeepAliveInterval),
             KeepAliveTimeout = Duration(section, nameof(KeepAliveTimeout), defaults.KeepAliveTimeout),
             MaxPendingPairings = Count(section, nameof(MaxPendingPairings), defaults.MaxPendingPairings),
+            ClaimAttemptsPerMinute = Count(section, nameof(ClaimAttemptsPerMinute), defaults.ClaimAttemptsPerMinute),
         };
     }
 

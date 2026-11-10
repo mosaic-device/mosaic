@@ -15,7 +15,11 @@ public enum CredentialState
     Revoked,
 }
 
-public sealed record DeviceCredential(CredentialState State, long? DeviceId);
+/// <summary>What is stored for a credential. <see cref="DeviceId"/> and <see cref="PairedAt"/> are set unless it is unknown.</summary>
+public sealed record DeviceCredential(CredentialState State, long? DeviceId, DateTimeOffset? PairedAt);
+
+/// <summary>A paired device: its ID and when it was first paired.</summary>
+public sealed record PairedDevice(long Id, DateTimeOffset PairedAt);
 
 /// <summary>
 /// Paired devices in SQLite, keyed by the SHA-256 of their secret (see <see cref="DeviceSecret"/>).
@@ -26,34 +30,37 @@ public sealed class DeviceStore(MosaicDatabase database, TimeProvider time)
     public DeviceCredential Find(byte[] secretHash)
     {
         using var connection = database.OpenConnection();
-        using var command = connection.CreateCommand("SELECT id, revoked_at FROM devices WHERE secret_hash = $secretHash");
+        using var command = connection.CreateCommand("SELECT id, paired_at, revoked_at FROM devices WHERE secret_hash = $secretHash");
         command.Parameters.AddWithValue("$secretHash", secretHash);
         using var reader = command.ExecuteReader();
         if (!reader.Read())
         {
-            return new DeviceCredential(CredentialState.Unknown, null);
+            return new DeviceCredential(CredentialState.Unknown, null, null);
         }
 
-        var id = reader.GetInt64(0);
-        return new DeviceCredential(reader.IsDBNull(1) ? CredentialState.Paired : CredentialState.Revoked, id);
+        return new DeviceCredential(
+            reader.IsDBNull(2) ? CredentialState.Paired : CredentialState.Revoked,
+            reader.GetInt64(0),
+            Timestamps.Parse(reader.GetString(1)));
     }
 
     /// <summary>
-    /// Records a claimed credential as paired and returns its device ID. A credential that is
-    /// already paired keeps its ID, so a retried claim resolves to the same device. Returns
-    /// null for a revoked credential, which can never be paired again.
+    /// Records a claimed credential as paired and returns the device. A credential that is
+    /// already paired keeps its ID and original pairing time, so a retried claim resolves to the
+    /// same device. Returns null for a revoked credential, which can never be paired again.
     /// </summary>
-    public long? Pair(byte[] secretHash)
+    public PairedDevice? Pair(byte[] secretHash)
     {
         using var connection = database.OpenConnection();
         using var command = connection.CreateCommand("""
             INSERT INTO devices (secret_hash, paired_at) VALUES ($secretHash, $pairedAt)
             ON CONFLICT (secret_hash) DO UPDATE SET secret_hash = excluded.secret_hash WHERE revoked_at IS NULL
-            RETURNING id
+            RETURNING id, paired_at
             """);
         command.Parameters.AddWithValue("$secretHash", secretHash);
         command.Parameters.AddWithValue("$pairedAt", Timestamps.Format(time.GetUtcNow()));
-        return command.ExecuteScalar() is long id ? id : null;
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? new PairedDevice(reader.GetInt64(0), Timestamps.Parse(reader.GetString(1))) : null;
     }
 
     /// <summary>Revokes a paired device. Returns false when it is missing or already revoked.</summary>

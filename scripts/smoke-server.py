@@ -98,14 +98,16 @@ def api(method, path, body=None, cookie=None):
 
 
 def check_auth(setup_required, password):
+    """Checks setup, login and logout. Returns the setup session, which stays signed in."""
+    setup_cookie = None
     status, body, _ = api("GET", "/api/setup")
     expect((status, body), (200, {"setupRequired": setup_required}), "GET /api/setup")
     if setup_required:
         expect_unauthenticated(None, "GET /api/auth/session before setup")
-        status, body, cookie = api("POST", "/api/setup", {"username": "Smoke-Admin", "password": password, "setupCode": setup_code})
+        status, body, setup_cookie = api("POST", "/api/setup", {"username": "Smoke-Admin", "password": password, "setupCode": setup_code})
         expect((status, body), (201, {"admin": {"username": "Smoke-Admin"}}), "POST /api/setup")
-        expect(cookie is not None, True, "setup issued a session cookie")
-        expect_session(cookie, "GET /api/auth/session after setup")
+        expect(setup_cookie is not None, True, "setup issued a session cookie")
+        expect_session(setup_cookie, "GET /api/auth/session after setup")
     status, body, _ = api("POST", "/api/auth/login", {"username": "smoke-admin", "password": "wrong-password-1"})
     expect((status, body["code"]), (401, "invalid_credentials"), "login with a wrong password")
     status, body, cookie = api("POST", "/api/auth/login", {"username": "smoke-admin", "password": password})
@@ -120,6 +122,7 @@ def check_auth(setup_required, password):
         cleared = [c for c in response.headers.get_all("Set-Cookie") or [] if c.startswith("mosaic_session=;")]
         expect((response.status, len(cleared)), (204, 1), "logout")
     expect_unauthenticated(cookie, "GET /api/auth/session after logout")
+    return setup_cookie
 
 
 def expect_session(cookie, what):
@@ -172,10 +175,11 @@ def device_handshake(frame):
 
 
 def check_device(database, secret, paired):
+    """Connects as the device and checks its reply. Returns the code an unpaired device is shown."""
     reply = device_handshake(device_frame(secret))
     if paired:
         expect(reply, field(2, b""), "paired device handshake")
-        return
+        return None
     # pairing_pending: an 8-character code, then its seconds left as a two-byte varint. The
     # server rounds down, so a fresh code reports 599 or 600 depending on when it is sent.
     expect((reply[0], reply[2], reply[-3]), (0x0A, 0x0A, 0x10), "unpaired device handshake")
@@ -185,6 +189,27 @@ def check_device(database, secret, paired):
     expect(re.fullmatch(r"[A-HJ-NP-Z2-9]{8}", code) is not None, True, "pairing code alphabet")
     # The code is in memory only; the device table is untouched until a claim.
     expect(query(database, "SELECT COUNT(*) FROM devices"), [(0,)], "no device stored before a claim")
+    return code
+
+
+def claim(code, cookie):
+    return api("POST", "/api/devices/claim", {"code": code}, cookie=cookie)[:2]
+
+
+def check_claim(database, secret, code, cookie):
+    """Claims the code the device showed, as the admin would type it, after the device went offline."""
+    status, body = claim(f"{code[:4]}-{code[4:]}".lower(), cookie)
+    expect(status, 200, "POST /api/devices/claim")
+    device = body["device"]
+    expect((sorted(device), device["id"]), (["connected", "id", "pairedAt"], 1), "claimed device")
+    expect(re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", device["pairedAt"]) is not None, True, "pairedAt format")
+    status, body = claim(code, cookie)
+    expect((status, body["device"]["id"], body["device"]["pairedAt"]), (200, device["id"], device["pairedAt"]), "retried claim")
+    status, body = claim("ABCD-EFGH", cookie)
+    expect((status, body["code"]), (404, "invalid_pairing_code"), "claim with an unknown code")
+    expect(claim(code, None)[0], 401, "claim without a session")
+    # The server stores only the SHA-256 of the secret.
+    expect(query(database, "SELECT secret_hash FROM devices"), [(hashlib.sha256(secret).digest(),)], "device stored by the claim")
 
 
 def query(database, sql):
@@ -205,9 +230,12 @@ with tempfile.TemporaryDirectory() as directory:
     password = "smoke-password-1"
     with running_server(database):
         check_routes()
-        check_auth(setup_required=True, password=password)
+        admin = check_auth(setup_required=True, password=password)
         device_secret = secrets.token_bytes(32)
-        check_device(database, device_secret, paired=False)
+        code = check_device(database, device_secret, paired=False)
+        check_claim(database, device_secret, code, admin)
+        # Offline when claimed, so it learns it is paired on reconnect.
+        check_device(database, device_secret, paired=True)
     expect(
         query(database, "SELECT name FROM sqlite_schema WHERE type = 'table' ORDER BY name"),
         [("admin",), ("devices",), ("schema_migrations",), ("sessions",), ("settings",)],
@@ -223,16 +251,14 @@ with tempfile.TemporaryDirectory() as directory:
         connection.execute(
             "INSERT INTO settings (key, value, updated_at) VALUES ('smoke', 'kept', '2026-01-01T00:00:00Z')"
         )
-        # Stands in for a claim: the server stores only the SHA-256 of the secret.
-        connection.execute(
-            "INSERT INTO devices (secret_hash, paired_at) VALUES (?, '2026-01-01T00:00:00Z')",
-            (hashlib.sha256(device_secret).digest(),),
-        )
 
     with running_server(database):
         check_routes()
         check_auth(setup_required=False, password=password)
         check_device(database, device_secret, paired=True)
+        # Codes live only in memory, so the old one is forgotten, but the pairing is kept.
+        status, body = claim(code, admin)
+        expect((status, body["code"]), (404, "invalid_pairing_code"), "claim of a code from before the restart")
     expect(query(database, "SELECT version FROM schema_migrations"), [(1,), (2,), (3,)], "migrations after restart")
     expect(query(database, "SELECT username, password_hash FROM admin"), [("Smoke-Admin", stored_hash)], "admin after restart")
     expect(query(database, "SELECT value FROM settings WHERE key = 'smoke'"), [("kept",)], "settings after restart")

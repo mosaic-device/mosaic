@@ -57,7 +57,7 @@ public static class DeviceEndpoint
 /// <summary>Runs one device connection from its first frame until it closes.</summary>
 public sealed partial class DeviceConnectionHandler(
     DeviceConnectionOptions options,
-    DeviceStore devices,
+    DevicePairing pairing,
     PairingCodes codes,
     DeviceConnections connections,
     TimeProvider time,
@@ -159,19 +159,21 @@ public sealed partial class DeviceConnectionHandler(
             return;
         }
 
-        // Version and fields are checked; now the credential (section 5).
-        var credential = devices.Find(connect.SecretHash);
-        if (credential.State == CredentialState.Revoked)
-        {
-            LogRevokedCredential(credential.DeviceId!.Value);
-            await RejectAsync(link, ConnectionRejectReason.CredentialRevoked);
-            return;
-        }
-
+        // Version and fields are checked; now the credential (section 5). The connection is
+        // registered first, so a claim that commits after the credential is read can reach it.
         var connection = connections.Register(connect.SecretHash);
         try
         {
-            PendingCode? code = null;
+            var admission = pairing.Admit(connect.SecretHash);
+            var credential = admission.Credential;
+            if (credential.State == CredentialState.Revoked)
+            {
+                LogRevokedCredential(credential.DeviceId!.Value);
+                await RejectAsync(link, ConnectionRejectReason.CredentialRevoked);
+                return;
+            }
+
+            var code = admission.Code;
             if (credential.State == CredentialState.Paired)
             {
                 LogPaired(credential.DeviceId!.Value);
@@ -179,7 +181,6 @@ public sealed partial class DeviceConnectionHandler(
             }
             else
             {
-                code = codes.Issue(connect.SecretHash);
                 if (code is null)
                 {
                     LogPendingLimit(options.MaxPendingPairings);
@@ -262,7 +263,8 @@ public sealed partial class DeviceConnectionHandler(
             }
 
             // The code expired while the device was connected. A claim may have just committed.
-            switch (devices.Find(connect.SecretHash).State)
+            var admission = pairing.Admit(connect.SecretHash);
+            switch (admission.Credential.State)
             {
                 case CredentialState.Paired:
                     code = null;
@@ -272,7 +274,7 @@ public sealed partial class DeviceConnectionHandler(
                     await RejectAsync(link, ConnectionRejectReason.CredentialRevoked);
                     return;
                 default:
-                    code = codes.Issue(connect.SecretHash);
+                    code = admission.Code;
                     if (code is null)
                     {
                         LogPendingLimit(options.MaxPendingPairings);

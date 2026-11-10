@@ -23,6 +23,8 @@ builder.Services.AddSingleton(services => DeviceConnectionOptions.FromConfigurat
 builder.Services.AddSingleton<DeviceStore>();
 builder.Services.AddSingleton<PairingCodes>();
 builder.Services.AddSingleton<DeviceConnections>();
+builder.Services.AddSingleton<DevicePairing>();
+builder.Services.AddDeviceApi();
 builder.Services.AddSingleton<DeviceConnectionHandler>();
 var app = builder.Build();
 
@@ -45,9 +47,10 @@ app.Logger.LogInformation(
     rateLimits.ConcurrentPasswordChecks,
     rateLimits.QueuedPasswordChecks);
 app.Logger.LogInformation(
-    "Devices connect at {Path}; at most {Limit} pairing codes live at once",
+    "Devices connect at {Path}; at most {Limit} pairing codes live at once; {Claims} claim attempts per client per minute",
     DeviceEndpoint.Path,
-    deviceOptions.MaxPendingPairings);
+    deviceOptions.MaxPendingPairings,
+    deviceOptions.ClaimAttemptsPerMinute);
 if (trustedProxies.Addresses.Count == 0)
 {
     app.Logger.LogInformation("Client addresses come from the connection; X-Forwarded-For is ignored");
@@ -95,9 +98,10 @@ if (Directory.Exists(webRoot))
 
 app.UseWebSockets();
 app.UseOriginCheck();
-app.UseRateLimiter();
-// After the Origin check, so a cross-site request gets 403 before any session lookup.
+// After the Origin check, so a cross-site request gets 403 before any session lookup, and before
+// the rate limiter, so a request without a session gets 401 and never uses up an admin's attempts.
 app.UseAdminSessions();
+app.UseRateLimiter();
 
 app.MapGet("/healthz", async context =>
 {
@@ -106,6 +110,7 @@ app.MapGet("/healthz", async context =>
 });
 
 app.MapAuthEndpoints();
+app.MapDeviceApi();
 app.MapDeviceEndpoint();
 
 // SPA routes are navigation requests; API, WebSocket, and asset misses must remain 404s.

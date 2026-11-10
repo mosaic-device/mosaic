@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 
 namespace Mosaic.Server.Devices;
@@ -5,18 +6,41 @@ namespace Mosaic.Server.Devices;
 /// <summary>A live pairing code for one credential, and when it stops being claimable.</summary>
 public sealed record PendingCode(string Code, DateTimeOffset ExpiresAt);
 
-/// <summary>What a claim of a live code hands over: the credential to pair.</summary>
-public sealed record PendingPairing(byte[] SecretHash);
+public enum CodeState
+{
+    /// <summary>Never issued, from before a restart, or forgotten after <see cref="PairingCodes.Retention"/>.</summary>
+    Unknown,
+
+    /// <summary>Issued and still claimable.</summary>
+    Live,
+
+    /// <summary>Claimed. Remembered so a retried claim resolves to the same device.</summary>
+    Used,
+
+    /// <summary>Ran out before it was claimed. Remembered so the admin is told it expired.</summary>
+    Expired,
+}
+
+/// <summary>What a code is now, and the credential it was issued to when it is remembered at all.</summary>
+public sealed record CodeLookup(CodeState State, byte[]? SecretHash);
 
 /// <summary>
 /// Pairing codes for unknown credentials (Device Connection and Pairing Flow, section 2). Codes
 /// live only in memory, so a restart drops them and a reconnecting device gets a new one. A
-/// credential keeps its code through brief reconnects until it expires. Codes are separate from
-/// the admin setup code and are never logged.
+/// credential keeps its code through brief reconnects until it expires. Used and expired codes
+/// are remembered for at least <see cref="Retention"/> so a claim can tell them apart (Admin API
+/// Contract, section 5). Codes are separate from the admin setup code and are never logged.
 /// </summary>
+/// <remarks>
+/// This only tracks codes. <see cref="DevicePairing"/> decides when to issue and claim them,
+/// together with the stored credential.
+/// </remarks>
 public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions options)
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(10);
+
+    /// <summary>How long a used or expired code is remembered after it stops being live.</summary>
+    public static readonly TimeSpan Retention = TimeSpan.FromHours(1);
 
     public const int CodeLength = 8;
 
@@ -24,8 +48,9 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
     private const string Alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     private readonly Lock _lock = new();
-    private readonly Dictionary<string, Entry> _byCode = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Entry> _byCredential = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Entry> _live = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Entry> _liveByCredential = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Remembered> _remembered = new(StringComparer.Ordinal);
 
     /// <summary>The number of codes that can still be claimed.</summary>
     public int LiveCount
@@ -34,15 +59,52 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
         {
             lock (_lock)
             {
-                RemoveExpired(time.GetUtcNow());
-                return _byCode.Count;
+                Tidy(time.GetUtcNow());
+                return _live.Count;
+            }
+        }
+    }
+
+    /// <summary>The number of used and expired codes still remembered.</summary>
+    public int RememberedCount
+    {
+        get
+        {
+            lock (_lock)
+            {
+                Tidy(time.GetUtcNow());
+                return _remembered.Count;
             }
         }
     }
 
     /// <summary>
-    /// Returns the credential's live code, or issues a new one. Returns null when the
-    /// <see cref="DeviceConnectionOptions.MaxPendingPairings"/> limit is reached.
+    /// Puts a code as an admin typed it into its stored form: spaces trimmed from both ends,
+    /// dashes removed and uppercased. False unless the result is <see cref="CodeLength"/>
+    /// characters from the code alphabet.
+    /// </summary>
+    public static bool TryNormalize(string? input, [NotNullWhen(true)] out string? code)
+    {
+        code = null;
+        if (input is null)
+        {
+            return false;
+        }
+
+        var normalized = input.Trim(' ').Replace("-", "", StringComparison.Ordinal).ToUpperInvariant();
+        if (normalized.Length != CodeLength || !normalized.All(Alphabet.Contains))
+        {
+            return false;
+        }
+
+        code = normalized;
+        return true;
+    }
+
+    /// <summary>
+    /// Returns the credential's live code, or issues a new one that matches no live or remembered
+    /// code. Returns null when <see cref="DeviceConnectionOptions.MaxPendingPairings"/> codes are
+    /// live; remembered codes don't count.
     /// </summary>
     /// <remarks>
     /// A code with under a second left counts as expired, so a device is never told it has
@@ -54,13 +116,13 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
         lock (_lock)
         {
             var now = time.GetUtcNow();
-            RemoveExpired(now);
-            if (_byCredential.TryGetValue(key, out var existing))
+            Tidy(now);
+            if (_liveByCredential.TryGetValue(key, out var existing))
             {
                 return existing.Pending;
             }
 
-            if (_byCode.Count >= options.MaxPendingPairings)
+            if (_live.Count >= options.MaxPendingPairings)
             {
                 return null;
             }
@@ -70,32 +132,47 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
             {
                 code = RandomNumberGenerator.GetString(Alphabet, CodeLength);
             }
-            while (_byCode.ContainsKey(code));
+            while (_live.ContainsKey(code) || _remembered.ContainsKey(code));
 
-            var entry = new Entry(new PendingCode(code, now + Lifetime), key, new PendingPairing(secretHash));
-            _byCode.Add(code, entry);
-            _byCredential.Add(key, entry);
+            var entry = new Entry(new PendingCode(code, now + Lifetime), key, secretHash);
+            _live.Add(code, entry);
+            _liveByCredential.Add(key, entry);
             return entry.Pending;
         }
     }
 
-    /// <summary>
-    /// Consumes a live code, case-insensitively and with an optional dash, so it can be claimed
-    /// only once. Returns null for an unknown or expired code.
-    /// </summary>
-    public PendingPairing? TryConsume(string code)
+    /// <summary>Looks up a code already put in stored form by <see cref="TryNormalize"/>.</summary>
+    public CodeLookup Find(string code)
     {
-        var normalized = code.Trim().Replace("-", "", StringComparison.Ordinal).ToUpperInvariant();
         lock (_lock)
         {
-            RemoveExpired(time.GetUtcNow());
-            if (!_byCode.Remove(normalized, out var entry))
+            Tidy(time.GetUtcNow());
+            if (_live.TryGetValue(code, out var live))
             {
-                return null;
+                return new CodeLookup(CodeState.Live, live.SecretHash);
             }
 
-            _byCredential.Remove(entry.CredentialKey);
-            return entry.Pairing;
+            return _remembered.TryGetValue(code, out var remembered)
+                ? new CodeLookup(remembered.State, remembered.Entry.SecretHash)
+                : new CodeLookup(CodeState.Unknown, null);
+        }
+    }
+
+    /// <summary>
+    /// Marks a live code as claimed, so it is no longer live and is remembered as used. Call
+    /// only once the pairing it hands over is committed. Does nothing if the code isn't live.
+    /// </summary>
+    public void MarkUsed(string code)
+    {
+        lock (_lock)
+        {
+            var now = time.GetUtcNow();
+            Tidy(now);
+            if (_live.Remove(code, out var entry))
+            {
+                _liveByCredential.Remove(entry.CredentialKey);
+                _remembered[code] = new Remembered(entry, CodeState.Used, now + Retention);
+            }
         }
     }
 
@@ -103,10 +180,11 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
     public int SecondsLeft(PendingCode code) =>
         Math.Max(1, (int)Math.Floor((code.ExpiresAt - time.GetUtcNow()).TotalSeconds));
 
-    private void RemoveExpired(DateTimeOffset now)
+    /// <summary>Moves expired live codes to the remembered ones, and forgets those past retention.</summary>
+    private void Tidy(DateTimeOffset now)
     {
         List<Entry>? expired = null;
-        foreach (var entry in _byCode.Values)
+        foreach (var entry in _live.Values)
         {
             if (entry.Pending.ExpiresAt - now < TimeSpan.FromSeconds(1))
             {
@@ -116,10 +194,28 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
 
         foreach (var entry in expired ?? [])
         {
-            _byCode.Remove(entry.Pending.Code);
-            _byCredential.Remove(entry.CredentialKey);
+            _live.Remove(entry.Pending.Code);
+            _liveByCredential.Remove(entry.CredentialKey);
+            // Counted from the expiry itself, not from when it was noticed.
+            _remembered[entry.Pending.Code] = new Remembered(entry, CodeState.Expired, entry.Pending.ExpiresAt + Retention);
+        }
+
+        List<string>? forgotten = null;
+        foreach (var (code, remembered) in _remembered)
+        {
+            if (remembered.ForgetAt <= now)
+            {
+                (forgotten ??= []).Add(code);
+            }
+        }
+
+        foreach (var code in forgotten ?? [])
+        {
+            _remembered.Remove(code);
         }
     }
 
-    private sealed record Entry(PendingCode Pending, string CredentialKey, PendingPairing Pairing);
+    private sealed record Entry(PendingCode Pending, string CredentialKey, byte[] SecretHash);
+
+    private sealed record Remembered(Entry Entry, CodeState State, DateTimeOffset ForgetAt);
 }
