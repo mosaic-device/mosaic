@@ -73,9 +73,10 @@ it, then prints the address to enter in the device's setup page:
 Device server URL: wss://<machine>.<tailnet>.ts.net/ws/device
 ```
 
-The device's Wi-Fi needs direct internet access; networks with a sign-in page or a
-username login, like most campus Wi-Fi, won't work, but a phone hotspot or home Wi-Fi
-does. The device and the laptop don't need to share a network. Check the address from
+The device's Wi-Fi needs direct internet access: an open network, or one with a
+password, works, such as campus Wi-Fi, a phone hotspot or home Wi-Fi. Networks with a
+sign-in page or a username login don't. The device and the laptop don't need to share
+a network. Check the address from
 another device with `https://<machine>.<tailnet>.ts.net/healthz`.
 
 Keep using the admin app at `localhost` as above; the Development settings reject
