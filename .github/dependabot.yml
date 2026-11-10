@@ -1,0 +1,73 @@
+# Monthly update PRs: one grouped PR per ecosystem for minor and patch updates,
+# with separate PRs for major versions. Firmware IDF components are left out on purpose;
+# they're tied to the board and get updated deliberately, with hardware testing.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [repo]
+    commit-message:
+      prefix: ci
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [repo]
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: nuget
+    directories:
+      - /platform/apps/server
+      - /platform/tests/Mosaic.Server.Tests
+    schedule:
+      interval: monthly
+    labels: [repo]
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # These follow the .NET runtime; moving to a new major is a deliberate .NET upgrade.
+      - dependency-name: Microsoft.AspNetCore.*
+        update-types: [version-update:semver-major]
+      - dependency-name: Microsoft.Data.Sqlite
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: dotnet-sdk
+    directory: /
+    schedule:
+      interval: monthly
+    labels: [repo]
+    commit-message:
+      prefix: build
+      include: scope
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: cargo
+    directory: /platform/apps/companion/src-tauri
+    schedule:
+      interval: monthly
+    labels: [repo]
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
