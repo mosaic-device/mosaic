@@ -81,7 +81,7 @@ public sealed class DeviceEndpointTests : IDisposable
 
         Assert.NotEqual(code, reply.PairingPending.Code);
         Assert.Equal(600u, reply.PairingPending.ExpiresInSeconds);
-        Assert.Null(_factory.Codes.TryConsume(code));
+        Assert.Equal(CodeState.Expired, _factory.Codes.Find(code).State);
     }
 
     [Fact]
@@ -96,8 +96,8 @@ public sealed class DeviceEndpointTests : IDisposable
         Assert.Equal(PayloadCase.PairingPending, replacement.PayloadCase);
         Assert.NotEqual(first.PairingPending.Code, replacement.PairingPending.Code);
         Assert.Equal(600u, replacement.PairingPending.ExpiresInSeconds);
-        Assert.Null(_factory.Codes.TryConsume(first.PairingPending.Code));
-        Assert.NotNull(_factory.Codes.TryConsume(replacement.PairingPending.Code));
+        Assert.Equal(CodeState.Expired, _factory.Codes.Find(first.PairingPending.Code).State);
+        Assert.Equal(CodeState.Live, _factory.Codes.Find(replacement.PairingPending.Code).State);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public sealed class DeviceEndpointTests : IDisposable
         }
 
         Assert.Equal(10, _factory.Codes.LiveCount);
-        Assert.Null(_factory.Codes.TryConsume(DeviceApiFactory.SetupCode));
+        Assert.Equal(ClaimOutcome.Unknown, _factory.Claim(DeviceApiFactory.SetupCode).Outcome);
         Assert.Equal(10, _factory.Codes.LiveCount);
     }
 
@@ -133,21 +133,19 @@ public sealed class DeviceEndpointTests : IDisposable
         await using var device = await _factory.ConnectAsync();
         var code = (await device.HandshakeAsync()).PairingPending.Code;
 
-        // What a claim does: consume the code (any case, optional dash), commit, then notify.
-        var displayed = $"{code[..4]}-{code[4..]}".ToLowerInvariant();
-        var pairing = Assert.IsType<PendingPairing>(_factory.Codes.TryConsume(displayed));
-        Assert.Equal(device.Device.SecretHash, pairing.SecretHash);
-        _factory.Devices.Pair(pairing.SecretHash);
-        Assert.True(_factory.Connections.NotifyPaired(pairing.SecretHash));
+        // Any case, with an optional dash.
+        var claim = _factory.Claim($"{code[..4]}-{code[4..]}".ToLowerInvariant());
+        Assert.Equal(ClaimOutcome.Paired, claim.Outcome);
+        Assert.True(claim.Connected);
 
         var reply = await device.ReceiveAsync();
         Assert.Equal(PayloadCase.Paired, reply.PayloadCase);
-        Assert.Null(_factory.Codes.TryConsume(code));
+        Assert.Equal(CodeState.Used, _factory.Codes.Find(code).State);
 
         // Once paired, the code no longer expires into a new one.
         _factory.Time.Advance(PairingCodes.Lifetime * 2);
         await device.SendRawAsync(UnknownPayload);
-        Assert.True(_factory.Connections.NotifyRevoked(pairing.SecretHash));
+        Assert.True(_factory.Connections.NotifyRevoked(device.Device.SecretHash));
         Assert.Equal(WebSocketCloseStatus.NormalClosure, await device.ExpectRejectedAsync(ConnectionRejectReason.CredentialRevoked));
     }
 
@@ -155,9 +153,8 @@ public sealed class DeviceEndpointTests : IDisposable
     public async Task AClaimCommittedAsTheCodeExpiresIsReportedAsPaired()
     {
         await using var device = await _factory.ConnectAsync();
-        var code = (await device.HandshakeAsync()).PairingPending.Code;
-        var pairing = _factory.Codes.TryConsume(code)!;
-        _factory.Devices.Pair(pairing.SecretHash);
+        await device.HandshakeAsync();
+        _factory.Devices.Pair(device.Device.SecretHash);
 
         // The claim committed but its notification hasn't arrived when the code would expire.
         _factory.Time.Advance(PairingCodes.Lifetime);
@@ -178,7 +175,7 @@ public sealed class DeviceEndpointTests : IDisposable
         Assert.Equal(WebSocketCloseStatus.NormalClosure, await device.ExpectRejectedAsync(ConnectionRejectReason.CredentialRevoked));
         Assert.Equal(0, _factory.Codes.LiveCount);
         Assert.Null(_factory.Devices.Pair(identity.SecretHash));
-        Assert.False(_factory.Connections.IsConnected(identity.SecretHash));
+        await WaitUntil(() => !_factory.Connections.IsConnected(identity.SecretHash));
     }
 
     [Fact]
@@ -402,9 +399,7 @@ public sealed class DeviceEndpointTests : IDisposable
     {
         await using var device = await _factory.ConnectAsync();
         var code = (await device.HandshakeAsync()).PairingPending.Code;
-        var pairing = _factory.Codes.TryConsume(code)!;
-        _factory.Devices.Pair(pairing.SecretHash);
-        _factory.Connections.NotifyPaired(pairing.SecretHash);
+        Assert.Equal(ClaimOutcome.Paired, _factory.Claim(code).Outcome);
         await device.ReceiveAsync();
 
         using var connection = new MosaicDatabase(Path.Combine(_factory.Directory, "mosaic.db")).OpenConnection();

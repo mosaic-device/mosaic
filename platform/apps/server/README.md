@@ -95,13 +95,13 @@ marks every response from a protected endpoint `Cache-Control: no-store`. Any un
 | `Auth:RateLimits:AttemptsPerMinute` | `Auth__RateLimits__AttemptsPerMinute` | Setup and login attempts per client per minute, combined. Default `10`. |
 | `Auth:RateLimits:ConcurrentPasswordChecks` | `Auth__RateLimits__ConcurrentPasswordChecks` | Password hashes running at once across all clients. Default half the CPU count, at least `1`. |
 | `Auth:RateLimits:QueuedPasswordChecks` | `Auth__RateLimits__QueuedPasswordChecks` | Attempts that may wait for a hashing slot. Default `16`. |
-| `Auth:RateLimits:BodyReadTimeoutSeconds` | `Auth__RateLimits__BodyReadTimeoutSeconds` | Seconds a setup or login body may take to arrive before the connection is closed. Default `10`. |
+| `Auth:RateLimits:BodyReadTimeoutSeconds` | `Auth__RateLimits__BodyReadTimeoutSeconds` | Seconds a setup, login or device claim body may take to arrive before the connection is closed. Default `10`. |
 | `ForwardedHeaders:KnownProxies` | `ForwardedHeaders__KnownProxies__0`, ... | IP addresses of reverse proxies allowed to report the client address in `X-Forwarded-For`. Default none. See [Behind a proxy](#behind-a-proxy). |
 
 Each setup or login attempt runs a deliberately slow password hash, so both limits
 reply `429 too_many_requests` with a `Retry-After` header when exceeded. A hashing
 slot is taken only once the body has been read, so slow uploads cannot hold one.
-Setup and login bodies over 4 KB get an empty `413`. The
+Setup, login and device claim bodies over 4 KB get an empty `413`. The
 attempt limit is per client address.
 
 ### Behind a proxy
@@ -172,9 +172,35 @@ under `Devices`:
 | `Devices:KeepAliveInterval` | `00:00:15` | Ping interval |
 | `Devices:KeepAliveTimeout` | `00:00:15` | Pong timeout before the connection is dropped |
 | `Devices:MaxPendingPairings` | `32` | Live pairing codes at once; more unpaired devices get `SERVER_BUSY` |
+| `Devices:ClaimAttemptsPerMinute` | `10` | Signed-in claim attempts per client per minute |
 
-Claiming a code, listing and removing devices come with the admin API (#104, #105);
-`PairingCodes`, `DeviceStore` and `DeviceConnections` are what they call.
+## Claiming a device
+
+`POST /api/devices/claim` with `{ "code": "K7QF-2M9X" }` pairs the device showing
+that code with the admin, as section 5 of the
+[Admin API Contract](https://github.com/mosaic-device/mosaic/wiki/Admin-API-Contract#5-devices)
+describes. It needs a session and returns
+`{ "device": { "id": 3, "pairedAt": "2026-11-06T18:30:00Z", "connected": true } }`.
+The code may be typed in any case, with a dash and surrounding spaces.
+
+- The pairing is saved before the response, and the code is marked used only once it
+  is saved, so a failed write leaves the code claimable. A connected device is sent
+  `paired` straight away; an offline one gets it when it reconnects.
+- Used and expired codes are remembered for an hour, in memory only. Claiming a used
+  code again returns the same device, so a retry or two claims at once end with one
+  device. An expired code gets `410 pairing_code_expired`, a used code whose device was
+  removed `409 pairing_code_used`, and anything else `404 invalid_pairing_code`.
+  New codes never match a live or remembered one, and only live codes count towards
+  `Devices:MaxPendingPairings`.
+- Requests are checked in the contract's order: Origin, session, attempts, content
+  type, size, the code's format (`400 validation_failed` under `code`), then the code.
+  The session check runs before the rate limiter, so requests without a session get
+  `401` and never use up the admin's attempts. Claims are counted separately from
+  setup and login, per client address in the same way.
+
+[`DevicePairing`](Devices/DevicePairing.cs) claims codes and decides what a connecting
+device gets under one lock, so a device that reconnects while its code is being
+claimed is never handed a new code after it is paired.
 
 ## Build and run the Linux Native AOT container
 
@@ -244,10 +270,12 @@ This builds the assets and native server, then executes
 new temporary database, checks it, runs first-run setup, a rejected login, a login,
 and a logout through the API, checks `GET /api/auth/session` with a valid, missing,
 malformed, and logged-out session cookie, connects an unpaired device over `/ws/device`
-and expects a pairing code, and stops it. It then confirms the schema exists and
-the password is stored hashed, saves a settings row and that device's secret hash,
-restarts the server, and confirms the admin can still log in, the device is now
-authenticated as paired, the rows remain, and no migration ran twice. An unexpected response, startup
+and expects a pairing code, claims that code through `POST /api/devices/claim` once the
+device has gone, retries the claim, and reconnects the device to see it paired. It
+then stops the server, confirms the schema exists, the password is stored hashed and
+only the device's secret hash is stored, saves a settings row, restarts the server,
+and confirms the admin can still log in, the device is still authenticated as paired
+while its old code is forgotten, the rows remain, and no migration ran twice. An unexpected response, startup
 failure, or database mismatch fails the build.
 
 On each start the seven expected responses are:

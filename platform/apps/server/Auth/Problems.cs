@@ -30,6 +30,15 @@ public static class Problems
     public static IResult SetupRequired(HttpContext context) =>
         Create(context, StatusCodes.Status409Conflict, "setup_required", "Create the admin account before logging in.");
 
+    public static IResult InvalidPairingCode(HttpContext context) =>
+        Create(context, StatusCodes.Status404NotFound, "invalid_pairing_code", "No device is showing that code; check it and try again.");
+
+    public static IResult PairingCodeUsed(HttpContext context) =>
+        Create(context, StatusCodes.Status409Conflict, "pairing_code_used", "That code was already used; enter the new code the device shows.");
+
+    public static IResult PairingCodeExpired(HttpContext context) =>
+        Create(context, StatusCodes.Status410Gone, "pairing_code_expired", "That code has expired; enter the one the device shows now.");
+
     /// <summary>429 with <c>Retry-After</c> in whole seconds.</summary>
     public static IResult TooManyRequests(HttpContext context, int retryAfterSeconds)
     {

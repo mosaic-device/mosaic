@@ -1,5 +1,8 @@
 using System.Collections.Concurrent;
+using System.Net;
 using System.Net.WebSockets;
+using System.Text;
+using System.Text.Json;
 using System.Security.Cryptography;
 using Google.Protobuf;
 using Microsoft.AspNetCore.Hosting;
@@ -23,6 +26,8 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
 {
     public const string SetupCode = "K7QF-2M9X";
 
+    public const string Origin = "https://mosaic.test";
+
     private readonly string _directory;
     private readonly bool _ownsDirectory;
     private readonly Dictionary<string, string?> _settings;
@@ -34,7 +39,7 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
         _settings = new()
         {
             [MosaicDatabase.PathKey] = Path.Combine(_directory, "mosaic.db"),
-            ["Auth:PublicOrigin"] = "https://mosaic.test",
+            ["Auth:PublicOrigin"] = Origin,
             ["MOSAIC_SETUP_CODE"] = SetupCode,
         };
         configure?.Invoke(_settings);
@@ -52,6 +57,8 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
     public PairingCodes Codes => Services.GetRequiredService<PairingCodes>();
 
     public DeviceConnections Connections => Services.GetRequiredService<DeviceConnections>();
+
+    public DevicePairing Pairing => Services.GetRequiredService<DevicePairing>();
 
     public Uri BaseAddress
     {
@@ -73,7 +80,51 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>Records <paramref name="device"/> as paired, as a completed claim would.</summary>
-    public long Pair(TestDevice device) => Devices.Pair(device.SecretHash)!.Value;
+    public long Pair(TestDevice device) => Devices.Pair(device.SecretHash)!.Id;
+
+    /// <summary>Claims <paramref name="code"/> as the admin app does, with the claimed code's normalized form.</summary>
+    public ClaimResult Claim(string code) =>
+        Pairing.Claim(PairingCodes.TryNormalize(code, out var normalized) ? normalized : throw new ArgumentException(code));
+
+    /// <summary>Completes first-run setup over HTTP and returns the admin's session token.</summary>
+    public async Task<string> SignInAsync()
+    {
+        using var client = CreateClient();
+        using var request = Json(HttpMethod.Post, "/api/setup", $$"""{"username":"Bridger","password":"mosaic-desk-2026","setupCode":"{{SetupCode}}"}""");
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var cookie = Assert.Single(response.Headers.GetValues("Set-Cookie"), value => value.StartsWith("mosaic_session=", StringComparison.Ordinal));
+        return cookie["mosaic_session=".Length..cookie.IndexOf(';', StringComparison.Ordinal)];
+    }
+
+    /// <summary>A JSON request from the admin app's origin, signed in with <paramref name="token"/> unless it is null.</summary>
+    public static HttpRequestMessage Json(HttpMethod method, string path, string json, string? token = null, string? origin = Origin)
+    {
+        var request = new HttpRequestMessage(method, path) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
+        if (origin is not null)
+        {
+            request.Headers.Add("Origin", origin);
+        }
+
+        if (token is not null)
+        {
+            request.Headers.Add("Cookie", $"mosaic_session={token}");
+        }
+
+        return request;
+    }
+
+    /// <summary><c>POST /api/devices/claim</c> with <paramref name="code"/> as a JSON string.</summary>
+    public static HttpRequestMessage ClaimRequest(string code, string? token, string? peer = null)
+    {
+        var request = Json(HttpMethod.Post, DeviceApi.ClaimPath, JsonSerializer.Serialize(new { code }), token);
+        if (peer is not null)
+        {
+            request.Headers.Add(AuthApiFactory.PeerHeader, peer);
+        }
+
+        return request;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -86,6 +137,7 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             services.AddSingleton<TimeProvider>(Time);
+            services.AddSingleton<IStartupFilter, PeerAddressFilter>();
             services.AddLogging(logging => logging.AddProvider(new CaptureLoggerProvider(Logs)));
         });
     }
