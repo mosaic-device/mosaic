@@ -26,13 +26,27 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { SetupPage } from '@/pages/SetupPage'
 
-type RouterContext = {
-  /**
-   * Whether this tab has been signed in, so login can say the session ended
-   * instead of looking like a first visit. Logout clears it.
-   */
-  auth: { wasSignedIn: boolean }
+/**
+ * Whether this tab has been signed in, so login can say the session ended
+ * instead of looking like a first visit. Logout clears it.
+ */
+class SignInMemory {
+  #wasSignedIn = false
+
+  get wasSignedIn() {
+    return this.#wasSignedIn
+  }
+
+  signedIn() {
+    this.#wasSignedIn = true
+  }
+
+  signedOut() {
+    this.#wasSignedIn = false
+  }
 }
+
+type RouterContext = { auth: SignInMemory }
 
 /**
  * - `setup: 'complete'`: setup was tried after it was already done.
@@ -103,7 +117,7 @@ const appRoute = createRoute({
   beforeLoad: async ({ context, location, abortController }) => {
     try {
       const session = await getSession(abortController.signal)
-      context.auth.wasSignedIn = true
+      context.auth.signedIn()
       return { session }
     } catch (error) {
       if (!isUnauthenticated(error)) throw error
@@ -111,7 +125,7 @@ const appRoute = createRoute({
       const returnPath = returnPathFor(location.href)
       if (returnPath) search.redirect = returnPath
       if (context.auth.wasSignedIn) search.session = 'ended'
-      context.auth.wasSignedIn = false
+      context.auth.signedOut()
       throw redirect({ to: '/login', search })
     }
   },
@@ -160,7 +174,7 @@ function createAppRouter(options: { history?: RouterHistory } = {}) {
   return createRouter({
     routeTree,
     history: options.history,
-    context: { auth: { wasSignedIn: false } },
+    context: { auth: new SignInMemory() },
     defaultPendingComponent: PageLoading,
     defaultErrorComponent: PageError,
   })

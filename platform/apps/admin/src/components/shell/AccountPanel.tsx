@@ -21,13 +21,13 @@ function AccountPanel() {
     setPending(true)
     setError(null)
     // Cleared first, so a page change during logout doesn't say the session ended.
-    auth.wasSignedIn = false
+    auth.signedOut()
     try {
       await logout()
     } catch (caught) {
       // The server never heard it, so the owner is still signed in. Say so
       // rather than sending them to login.
-      auth.wasSignedIn = true
+      auth.signedIn()
       setPending(false)
       setError(caught)
       return
