@@ -62,8 +62,7 @@ public static class DeviceApi
             return Problems.ValidationFailed(context, errors: null, "The request body must be a JSON object.");
         }
 
-        var typed = body.Value.Code.ValueKind == JsonValueKind.String ? body.Value.Code.GetString() : null;
-        if (!PairingCodes.TryNormalize(typed, out var code))
+        if (!PairingCodes.TryNormalize(ReadString(body.Value.Code), out var code))
         {
             return Problems.ValidationFailed(context, new Dictionary<string, string[]> { ["code"] = [CodeMessage] });
         }
@@ -79,5 +78,26 @@ public static class DeviceApi
             ClaimOutcome.Expired => Problems.PairingCodeExpired(context),
             _ => Problems.InvalidPairingCode(context),
         };
+    }
+
+    /// <summary>
+    /// The field as a string, or null when it isn't one. A JSON string can escape a lone UTF-16
+    /// surrogate, which parses but can't be decoded; that is a badly formed code, not a failure.
+    /// </summary>
+    private static string? ReadString(JsonElement field)
+    {
+        if (field.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        try
+        {
+            return field.GetString();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
     }
 }

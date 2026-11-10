@@ -215,6 +215,9 @@ public sealed class DeviceClaimTests : IDisposable
         """{"code":"K7QF-2M9I"}""",
         """{"code":"K7QF 2M9X"}""",
         """{"code":"\tK7QF2M9X"}""",
+        // Lone surrogates parse as JSON strings but can't be decoded.
+        """{"code":"\uD800K7QF2M9"}""",
+        """{"code":"K7QF2M9\uDC00"}""",
     };
 
     [Theory]

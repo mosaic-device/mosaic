@@ -159,20 +159,34 @@ public sealed class PairingCodes(TimeProvider time, DeviceConnectionOptions opti
     }
 
     /// <summary>
-    /// Marks a live code as claimed, so it is no longer live and is remembered as used. Call
-    /// only once the pairing it hands over is committed. Does nothing if the code isn't live.
+    /// Marks a code that <see cref="Find"/> just reported live as claimed, so it is remembered as
+    /// used. Call only once the pairing it hands over is committed. The claim was accepted while
+    /// the code was live, so a code that expired during the commit is still marked used, and a
+    /// retry gets the same device rather than <c>410</c>. Does nothing for any other code.
     /// </summary>
     public void MarkUsed(string code)
     {
         lock (_lock)
         {
             var now = time.GetUtcNow();
-            Tidy(now);
-            if (_live.Remove(code, out var entry))
+            Entry entry;
+            if (_live.Remove(code, out var live))
             {
-                _liveByCredential.Remove(entry.CredentialKey);
-                _remembered[code] = new Remembered(entry, CodeState.Used, now + Retention);
+                _liveByCredential.Remove(live.CredentialKey);
+                entry = live;
             }
+            else if (_remembered.TryGetValue(code, out var remembered) && remembered.State == CodeState.Expired)
+            {
+                entry = remembered.Entry;
+            }
+            else
+            {
+                Tidy(now);
+                return;
+            }
+
+            _remembered[code] = new Remembered(entry, CodeState.Used, now + Retention);
+            Tidy(now);
         }
     }
 
