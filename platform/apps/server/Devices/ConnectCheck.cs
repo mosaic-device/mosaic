@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Mosaic.Device.V1;
 
 namespace Mosaic.Server.Devices;
@@ -16,7 +17,8 @@ public sealed record ConnectCheckResult(ValidConnect? Connect, ConnectionRejectR
 /// </summary>
 public static class ConnectCheck
 {
-    public static readonly IReadOnlySet<uint> SupportedVersions = new HashSet<uint> { 1 };
+    /// <summary>Protocol versions the server accepts. Frozen, so nothing can change them at run time.</summary>
+    public static readonly FrozenSet<uint> SupportedVersions = FrozenSet.Create<uint>(1);
 
     public static ConnectCheckResult Check(DeviceToBackendEnvelope frame)
     {

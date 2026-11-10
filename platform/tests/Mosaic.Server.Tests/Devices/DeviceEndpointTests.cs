@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.WebSockets;
 using Google.Protobuf;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Mosaic.Device.V1;
 using Mosaic.Server.Data;
 using Mosaic.Server.Devices;
@@ -414,6 +416,33 @@ public sealed class DeviceEndpointTests : IDisposable
         Assert.DoesNotContain(_factory.Logs, line => line.Contains(Convert.ToHexString(device.Device.Secret), StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(_factory.Logs, line => line.Contains(Convert.ToBase64String(device.Device.Secret), StringComparison.Ordinal));
         Assert.DoesNotContain(_factory.Logs, line => line.Contains(code, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ShutdownClosesEveryOpenConnection()
+    {
+        using var factory = new DeviceApiFactory();
+        var paired = TestDevice.Create();
+        factory.Pair(paired);
+        await using var pairedDevice = await factory.ConnectAsync(paired);
+        await using var pendingDevice = await factory.ConnectAsync();
+        Assert.Equal(PayloadCase.Paired, (await pairedDevice.HandshakeAsync()).PayloadCase);
+        Assert.Equal(PayloadCase.PairingPending, (await pendingDevice.HandshakeAsync()).PayloadCase);
+
+        // Connections that came and went before share the same shutdown signal.
+        var other = TestDevice.Create();
+        factory.Pair(other);
+        for (var i = 0; i < 3; i++)
+        {
+            await using var brief = await factory.ConnectAsync(other);
+            await brief.HandshakeAsync();
+        }
+
+        var lifetime = factory.Services.GetRequiredService<IHostApplicationLifetime>();
+        var closes = new[] { pairedDevice.ReceiveCloseAsync(), pendingDevice.ReceiveCloseAsync() };
+        lifetime.StopApplication();
+
+        Assert.All(await Task.WhenAll(closes), status => Assert.Equal(WebSocketCloseStatus.EndpointUnavailable, status));
     }
 
     [Fact]

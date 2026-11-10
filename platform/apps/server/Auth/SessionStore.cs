@@ -46,6 +46,15 @@ public sealed class SessionStore(TimeProvider time)
         var now = time.GetUtcNow();
         var session = new IssuedSession(token, now, now + IdleLifetime, now + AbsoluteLifetime);
 
+        // An expired session is otherwise deleted only if its token is presented again, which an
+        // abandoned cookie never is. Each new session clears them. Stored times compare as text.
+        using (var expired = connection.CreateCommand(
+            "DELETE FROM sessions WHERE idle_expires_at <= $now OR absolute_expires_at <= $now", transaction))
+        {
+            expired.Parameters.AddWithValue("$now", Timestamps.Format(now));
+            expired.ExecuteNonQuery();
+        }
+
         using var command = connection.CreateCommand("""
             INSERT INTO sessions (token_hash, admin_id, created_at, idle_expires_at, absolute_expires_at)
             VALUES ($tokenHash, $adminId, $createdAt, $idleExpiresAt, $absoluteExpiresAt)

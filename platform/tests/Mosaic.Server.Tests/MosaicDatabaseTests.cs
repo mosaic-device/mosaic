@@ -168,6 +168,40 @@ public sealed class MosaicDatabaseTests : IDisposable
         Assert.Equal(new byte[32], await revoke);
     }
 
+    [Fact]
+    public void AWriteBlockedByAnotherWriterFailsWithinTheBusyTimeout()
+    {
+        var database = new MosaicDatabase(DatabasePath, TimeSpan.FromSeconds(1));
+        database.Migrate();
+        var devices = new Mosaic.Server.Devices.DeviceStore(database, TimeProvider.System);
+
+        // Another connection holds the write lock, as a backup or a long transaction would.
+        using var holder = database.OpenConnection();
+        var transaction = holder.BeginTransaction(deferred: false);
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+
+        var busy = Assert.Throws<SqliteException>(() => devices.Pair(new byte[32]));
+
+        // Without the provider's own timeout set, this took over 30 seconds.
+        Assert.Equal(5, busy.SqliteErrorCode);
+        Assert.InRange(elapsed.Elapsed, TimeSpan.FromSeconds(0.8), TimeSpan.FromSeconds(4));
+        transaction.Rollback();
+        transaction.Dispose();
+
+        using var connection = database.OpenConnection();
+        Assert.Equal(0L, Scalar(connection, "SELECT COUNT(*) FROM devices"));
+        Assert.NotNull(devices.Pair(new byte[32]));
+        Assert.Equal(1L, Scalar(connection, "SELECT COUNT(*) FROM devices"));
+    }
+
+    [Fact]
+    public void TheBusyTimeoutIsWholeSecondsOfAtLeastOne()
+    {
+        Assert.Equal(TimeSpan.FromSeconds(5), new MosaicDatabase(DatabasePath).BusyTimeout);
+        Assert.Equal(TimeSpan.FromSeconds(2), new MosaicDatabase(DatabasePath, TimeSpan.FromMilliseconds(1500)).BusyTimeout);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new MosaicDatabase(DatabasePath, TimeSpan.Zero));
+    }
+
     private static void Execute(SqliteConnection connection, string sql)
     {
         using var command = connection.CreateCommand();

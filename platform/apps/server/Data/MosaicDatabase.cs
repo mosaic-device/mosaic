@@ -45,19 +45,40 @@ public sealed class MosaicDatabase
             """),
     ];
 
-    public MosaicDatabase(string path)
+    /// <summary>How long a statement waits for another connection's lock unless told otherwise.</summary>
+    public static readonly TimeSpan DefaultBusyTimeout = TimeSpan.FromSeconds(5);
+
+    /// <param name="path">The database file.</param>
+    /// <param name="busyTimeout">
+    /// How long a statement waits for another connection's lock before failing. Whole seconds,
+    /// at least one; <see cref="DefaultBusyTimeout"/> when null.
+    /// </param>
+    public MosaicDatabase(string path, TimeSpan? busyTimeout = null)
     {
         Path = System.IO.Path.GetFullPath(path);
+        var seconds = (int)Math.Ceiling((busyTimeout ?? DefaultBusyTimeout).TotalSeconds);
+        if (seconds < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(busyTimeout), "The busy timeout must be at least one second.");
+        }
+
+        BusyTimeout = TimeSpan.FromSeconds(seconds);
         ConnectionString = new SqliteConnectionStringBuilder
         {
             DataSource = Path,
             Mode = SqliteOpenMode.ReadWriteCreate,
             ForeignKeys = true,
             Pooling = false,
+            // The provider retries a busy statement for this long, on top of SQLite's own wait
+            // below. Without it the provider's 30-second default applies, whatever SQLite waits.
+            DefaultTimeout = seconds,
         }.ToString();
     }
 
     public string Path { get; }
+
+    /// <summary>How long a statement waits for another connection's lock before failing.</summary>
+    public TimeSpan BusyTimeout { get; }
 
     public string ConnectionString { get; }
 
@@ -72,10 +93,12 @@ public sealed class MosaicDatabase
     }
 
     /// <summary>
-    /// Opens a connection that waits up to <see cref="BusyTimeout"/> for another connection's lock.
-    /// Microsoft.Data.Sqlite retries a busy statement itself, but not one whose commit is busy when
-    /// the statement is reset, which is where an <c>UPDATE ... RETURNING</c> read with
-    /// <c>ExecuteScalar</c> commits. SQLite's own busy handler covers every step.
+    /// Opens a connection that waits about <see cref="BusyTimeout"/> for another connection's lock,
+    /// then fails with <c>SQLITE_BUSY</c>. Two waits are set to the same budget. Microsoft.Data.Sqlite
+    /// retries a busy statement until its command timeout, but not one whose commit is busy when the
+    /// statement is reset, which is where an <c>UPDATE ... RETURNING</c> read with
+    /// <c>ExecuteScalar</c> commits; SQLite's own busy handler covers that step. Once SQLite has
+    /// waited the whole budget, the provider's has passed too, so it fails instead of retrying.
     /// </summary>
     public SqliteConnection OpenConnection()
     {
@@ -86,9 +109,6 @@ public sealed class MosaicDatabase
         command.ExecuteNonQuery();
         return connection;
     }
-
-    /// <summary>How long a statement waits for another connection's lock before failing.</summary>
-    public static readonly TimeSpan BusyTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Applies each pending migration once, in its own transaction.</summary>
     /// <returns>The versions applied by this call; empty when the schema is current.</returns>
