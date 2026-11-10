@@ -17,7 +17,7 @@
     "server:format": "dotnet format platform/Mosaic.slnx",
     "server:format:check": "dotnet format platform/Mosaic.slnx --verify-no-changes",
     "server:build": "dotnet build platform/Mosaic.slnx",
-    "server:test": "dotnet test platform/Mosaic.slnx",
+    "server:test": "dotnet test --solution platform/Mosaic.slnx",
     "fw:format": "node scripts/format-firmware.mjs --write",
     "fw:format:check": "node scripts/format-firmware.mjs --check",
     "fw:build": "python3 scripts/firmware.py build",

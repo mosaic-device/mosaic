@@ -32,7 +32,7 @@ CI builds and tests in Release, then publishes the server as a native Linux x64 
 dotnet restore platform/Mosaic.slnx
 dotnet format platform/Mosaic.slnx --verify-no-changes --no-restore
 dotnet build platform/Mosaic.slnx --configuration Release --no-restore
-dotnet test platform/Mosaic.slnx --configuration Release --no-build --no-restore
+dotnet test --solution platform/Mosaic.slnx --configuration Release --no-build --no-restore
 pnpm build:admin-assets
 dotnet publish platform/apps/server/Mosaic.Server.csproj --configuration Release --runtime linux-x64 -p:PublishAot=true -p:ILLinkTreatWarningsAsErrors=true -p:IlcTreatWarningsAsErrors=true --output publish/ci
 python3 scripts/smoke-server.py publish/ci/Mosaic.Server

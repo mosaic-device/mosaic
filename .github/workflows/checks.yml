@@ -66,7 +66,7 @@ jobs:
       - name: Formatting
         run: dotnet format platform/Mosaic.slnx --verify-no-changes --no-restore
       - run: dotnet build platform/Mosaic.slnx --configuration Release --no-restore
-      - run: dotnet test platform/Mosaic.slnx --configuration Release --no-build --no-restore
+      - run: dotnet test --solution platform/Mosaic.slnx --configuration Release --no-build --no-restore
       - name: Build admin assets
         run: pnpm build:admin-assets
       - name: Publish Linux Native AOT server
