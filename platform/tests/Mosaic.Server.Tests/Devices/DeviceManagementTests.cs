@@ -172,6 +172,39 @@ public sealed class DeviceManagementTests : IDisposable
     }
 
     [Fact]
+    public async Task ADeviceThatKeepsSendingIsStillToldItWasRemoved()
+    {
+        var token = await _factory.SignInAsync();
+        await using var device = await ClaimConnectedAsync(token);
+
+        // Frames a paired device may send keep arriving, so one is always waiting to be read.
+        using var stop = new CancellationTokenSource();
+        var flood = Task.Run(async () =>
+        {
+            try
+            {
+                while (!stop.IsCancellationRequested)
+                {
+                    await device.Socket.SendAsync(UnknownPayload, WebSocketMessageType.Binary, endOfMessage: true, stop.Token);
+                }
+            }
+            catch (Exception exception) when (exception is OperationCanceledException or WebSocketException or ObjectDisposedException)
+            {
+                // Stopped, or the server closed the connection.
+            }
+        }, TestContext.Current.CancellationToken);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await DeleteAsync(1, token)).Status);
+
+        var reply = await device.ReceiveAsync();
+        await stop.CancelAsync();
+        await flood;
+        Assert.Equal(PayloadCase.Rejected, reply.PayloadCase);
+        Assert.Equal(ConnectionRejectReason.CredentialRevoked, reply.Rejected.Reason);
+    }
+
+    [Fact]
     public async Task OfConcurrentRemovalsOnlyOneSucceeds()
     {
         var token = await _factory.SignInAsync();

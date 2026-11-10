@@ -165,7 +165,11 @@ generated message fits.
 The `devices` table stores only the SHA-256 of each device's 32-byte secret.
 Secrets and pairing codes are never logged. Requests with an `Origin` header get 403,
 so a web page cannot open device connections. The server pings every 15 seconds and
-drops a connection that misses its pong for 15 seconds. These settings can be changed
+drops a connection that misses its pong for 15 seconds. An open connection handles a
+shutdown or a signal (paired, removed, replaced) before the device's own frames, so a
+device that keeps sending can't delay them. When the server closes, it keeps reading and
+dropping the device's frames until the device's close arrives, for up to a second, so a
+reply sent just before the close isn't lost to a reset connection. These settings can be changed
 under `Devices`:
 
 | Setting | Default | Meaning |
