@@ -7,6 +7,6 @@
     "lint": "buf lint"
   },
   "devDependencies": {
-    "@bufbuild/buf": "1.71.0"
+    "@bufbuild/buf": "1.75.0"
   }
 }

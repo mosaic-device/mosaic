@@ -10,8 +10,8 @@
     "@mosaic/tokens": "workspace:*",
     "@eslint/js": "^9.0.0",
     "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "typescript-eslint": "^8.0.0"
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "typescript-eslint": "^8.72.1"
   },
   "peerDependencies": {
     "eslint": "^9.0.0"
