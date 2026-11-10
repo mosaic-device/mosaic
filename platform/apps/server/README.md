@@ -3,13 +3,16 @@
 ASP.NET Core on .NET 10, with Native AOT publishing enabled. The server exposes
 `GET /healthz` (HTTP 200, plain text `OK`), the first-run setup, login, and session API
 (see [Admin authentication](#admin-authentication)), the device WebSocket at `/ws/device`
-(see [Device connections](#device-connections)), and serves the built React admin app
+(see [Device connections](#device-connections)), the API to claim, list and remove
+devices (see [Claiming a device](#claiming-a-device)), and serves the built React admin app
 from `wwwroot/`. Browser navigation falls back to `index.html`; missing assets and
 unimplemented `/api` and `/ws` paths return 404.
 
 At startup the server opens its SQLite database and applies any pending schema
-migrations (see [Database](#database)). Claiming and managing devices from the admin
-app, notifications, and integrations are not implemented yet. Keep the server
+migrations (see [Database](#database)). Notifications and integrations are not
+implemented yet. Run one server per database: pairing codes, open device connections
+and the locks that coordinate them live in this process's memory, so a second
+instance sharing the database would not see them. Keep the server
 Native-AOT-compatible: [PR checks](../../../docs/ci.md) publish it for Linux x64 with
 AOT/trimming warnings as errors and run the smoke test against the result.
 
@@ -63,9 +66,12 @@ file and its directory if they are missing. To keep data when a container is
 replaced, mount a volume there, for example `-v mosaic-data:/app/data`.
 Migrations live in [`Data/MosaicDatabase.cs`](Data/MosaicDatabase.cs). Each one
 runs once inside a transaction and is recorded in `schema_migrations`. Append new
-migrations; never edit one that has shipped. Each connection waits up to 5 seconds for
-another connection's lock (`PRAGMA busy_timeout`) instead of failing with
-`database is locked`.
+migrations; never edit one that has shipped. A statement that finds the database
+locked by another connection waits about 5 seconds, then fails with
+`database is locked`. Both SQLite's `busy_timeout` and the provider's own retry
+timeout are set to that budget; the provider's default alone would wait 30 seconds.
+Logging in also deletes expired sessions, since an abandoned cookie is never presented
+again to have its session removed.
 
 ## Admin authentication
 
@@ -328,8 +334,9 @@ The normal runtime build skips this independent stage. Do not deploy or run the
 
 The smoke test deliberately sets `ASPNETCORE_URLS` for its private test port. A log
 warning that it overrides inherited `HTTP_PORTS=8080` is expected in this stage.
-Successful verification does not establish pairing or device behavior, or support
-for ARM64 and other deployment targets.
+It pairs and removes a device through a simulated device client, so a successful
+run doesn't establish behavior with real firmware or hardware, or support for ARM64
+and other deployment targets.
 
 ## Maintenance and contributor checks
 
