@@ -18,8 +18,10 @@ public sealed record DeviceConnectionOptions
     public TimeSpan KeepAliveTimeout { get; init; } = TimeSpan.FromSeconds(15);
 
     /// <summary>
-    /// The most live pairing codes at once. Each unpaired connection holds one, and a code
-    /// outlives a brief disconnect, so this bounds pending connections and pairing state.
+    /// The most live pairing codes at once. Each unpaired credential holds one, and a code
+    /// outlives a brief disconnect, so this bounds pairing state and the unpaired connections
+    /// that get past their first frame. It doesn't limit connections still waiting to send one;
+    /// the handshake timeout drops those.
     /// </summary>
     public int MaxPendingPairings { get; init; } = 32;
 
