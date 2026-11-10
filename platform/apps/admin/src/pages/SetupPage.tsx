@@ -18,17 +18,26 @@ const fields = ['username', 'password', 'setupCode'] as const
 function SetupPage() {
   const navigate = useNavigate()
   const { run, pending } = useApiAction(completeSetup)
-  const form = useCredentialForm(fields)
+  const {
+    clearMessages,
+    fieldProps,
+    formRef,
+    notice,
+    readValues,
+    secondsLeft,
+    showError,
+    showFieldErrors,
+  } = useCredentialForm(fields)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     // Usernames never contain spaces, so a stray one is only a typo.
-    const values = form.readValues()
+    const values = readValues()
     const input = { ...values, username: values.username.trim() }
-    form.clearMessages()
+    clearMessages()
     const problems = validateSetup(input)
     if (hasMessages(problems)) {
-      form.showFieldErrors(problems)
+      showFieldErrors(problems)
       return
     }
 
@@ -46,9 +55,9 @@ function SetupPage() {
         replace: true,
       })
     } else if (error.code === 'invalid_setup_code') {
-      form.showFieldErrors({ setupCode: error.message })
+      showFieldErrors({ setupCode: error.message })
     } else {
-      form.showError(error)
+      showError(error)
     }
   }
 
@@ -59,12 +68,12 @@ function SetupPage() {
       documentTitle="Set up"
     >
       <form
-        ref={form.formRef}
+        ref={formRef}
         noValidate
         className="grid gap-5"
         onSubmit={(event) => void handleSubmit(event)}
       >
-        <ApiErrorNotice error={form.notice} />
+        <ApiErrorNotice error={notice} />
         <TextField
           id="setup-username"
           label="Username"
@@ -74,7 +83,7 @@ function SetupPage() {
           spellCheck={false}
           autoCorrect="off"
           required
-          {...form.fieldProps('username')}
+          {...fieldProps('username')}
         />
         <TextField
           id="setup-password"
@@ -83,7 +92,7 @@ function SetupPage() {
           hint="At least 12 characters."
           autoComplete="new-password"
           required
-          {...form.fieldProps('password')}
+          {...fieldProps('password')}
         />
         <TextField
           id="setup-code"
@@ -94,18 +103,18 @@ function SetupPage() {
           spellCheck={false}
           autoCorrect="off"
           required
-          {...form.fieldProps('setupCode')}
+          {...fieldProps('setupCode')}
         />
         <Button
           type="submit"
           className="w-full"
           pending={pending}
-          disabled={form.secondsLeft > 0}
+          disabled={secondsLeft > 0}
         >
           {pending
             ? 'Creating account…'
-            : form.secondsLeft > 0
-              ? waitLabel(form.secondsLeft)
+            : secondsLeft > 0
+              ? waitLabel(secondsLeft)
               : 'Create account'}
         </Button>
       </form>

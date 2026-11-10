@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@12.8.1",
   "engines": {
-    "node": ">=24.11.0 <25",
+    "node": ">=26.13.0 <27",
     "pnpm": ">=12.8.1 <13"
   },
   "scripts": {
@@ -34,8 +34,8 @@
     "generate-assets": "pnpm --filter @mosaic/assets generate"
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
-    "prettier-plugin-tailwindcss": "^0.7.1",
-    "turbo": "^2.5.0"
+    "prettier": "^3.9.10",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "turbo": "^2.11.10"
   }
 }
