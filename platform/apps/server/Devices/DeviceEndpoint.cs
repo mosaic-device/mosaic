@@ -370,9 +370,17 @@ public sealed partial class DeviceConnectionHandler(
             // Give the device a moment to answer, so the close frame isn't lost to an abort. Frames
             // it sent before seeing the close are read and dropped until its close arrives: closing
             // with unread data resets the connection, which can discard what was just sent to it.
+            // The deadline is checked before each frame, since WhenAny would favour a frame that is
+            // already waiting and a device that never stops sending would hold the socket open.
             var grace = Task.Delay(CloseGrace);
-            while (await Task.WhenAny(link.Receive, grace) != grace && (await link.Receive).Kind != FrameKind.Closed)
+            while (true)
             {
+                await Task.WhenAny(link.Receive, grace);
+                if (grace.IsCompleted || (await link.Receive).Kind == FrameKind.Closed)
+                {
+                    break;
+                }
+
                 link.ReceiveNext();
             }
         }
