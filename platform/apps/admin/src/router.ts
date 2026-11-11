@@ -23,6 +23,7 @@ import { DevicesPage } from '@/pages/DevicesPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { PairDevicePage } from '@/pages/PairDevicePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { SetupPage } from '@/pages/SetupPage'
 
@@ -143,6 +144,11 @@ const devicesRoute = createRoute({
   path: 'devices',
   component: DevicesPage,
 })
+const pairDeviceRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'devices/pair',
+  component: PairDevicePage,
+})
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'settings',
@@ -166,7 +172,13 @@ const previewRoutes = import.meta.env.DEV
 
 const routeTree = rootRoute.addChildren([
   publicRoute.addChildren([setupRoute, loginRoute]),
-  appRoute.addChildren([homeRoute, devicesRoute, settingsRoute, notFoundRoute]),
+  appRoute.addChildren([
+    homeRoute,
+    devicesRoute,
+    pairDeviceRoute,
+    settingsRoute,
+    notFoundRoute,
+  ]),
   ...previewRoutes,
 ])
 

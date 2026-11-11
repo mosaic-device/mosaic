@@ -27,7 +27,8 @@ forced colors, and reduced motion at `/dev/components`.
 ## Calling the API
 
 Screens call the functions in `src/api/auth.ts` (`getSetupStatus`, `completeSetup`,
-`login`, `logout`, `getSession`), never `fetch` directly. URLs are relative
+`login`, `logout`, `getSession`) and `src/api/devices.ts` (`claimDevice`), never
+`fetch` directly. URLs are relative
 (`/api/...`): in development the Vite proxy forwards them to the server, and in
 production the server serves the app itself, so it is always same-origin. The
 contract is the wiki's "Admin API Contract".
@@ -83,6 +84,19 @@ skips the form for someone already signed in. The shell checks again when the
 tab comes back into view, acting only on a `401`. Logout sits at the bottom of
 the sidebar and the phone menu; if the server never hears it, the owner stays
 signed in and sees the error.
+
+## Pairing a device
+
+`/devices/pair` (the "Pair a device" button on Devices) claims the device showing
+a code with `POST /api/devices/claim`. The code can be typed in any case, with or
+without the dash; the form checks its shape with the server's rule first
+(`validateClaim`). An unknown, expired or already used code shows the server's
+`title` under the field, which says what to enter instead. A failure where the
+claim may have gone through anyway (server out of reach, an unexpected answer,
+`internal_error`) never looks like success: it asks the owner to try the same code
+again, which the server answers with the same device. A `401` re-runs the route
+guard, so login opens with a way back. Success shows the device as paired, and
+as online or offline.
 
 ## UI constraints
 
