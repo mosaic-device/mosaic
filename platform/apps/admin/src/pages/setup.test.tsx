@@ -202,7 +202,10 @@ describe('setup page', () => {
 
     await screen.findByText('Use only letters, digits.')
     expect(descriptionOf('Username')).toContain('Use only letters, digits.')
-    expect(screen.queryByRole('alert')).toBeNull()
+    // Only the field message speaks up; no notice above the form.
+    expect(
+      screen.getAllByRole('alert').map((alert) => alert.textContent),
+    ).toEqual(['Use only letters, digits.'])
   })
 
   it('puts a wrong setup code under its field', async () => {

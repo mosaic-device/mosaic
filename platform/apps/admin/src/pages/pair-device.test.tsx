@@ -188,7 +188,24 @@ describe('pair page', () => {
     expect(field.getAttribute('aria-describedby')).toContain(message.id)
     expect(field.value).toBe('K7QF-2M9X')
     expect(document.activeElement).toBe(field)
+    expect([field.selectionStart, field.selectionEnd]).toEqual([0, 9])
     expect(screen.queryByRole('heading', { name: 'Mosaic paired' })).toBeNull()
+  })
+
+  it('announces a code problem after Enter in the field', async () => {
+    const title = 'That code has expired; enter the one the device shows now.'
+    await openPairPage(
+      problemResponse({ status: 410, code: 'pairing_code_expired', title }),
+    )
+    const field = codeField()
+    field.focus()
+    fireEvent.change(field, { target: { value: 'K7QF-2M9X' } })
+
+    fireEvent.submit(field.form!)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toBe(title)
+    expect(document.activeElement).toBe(field)
   })
 
   it('waits out too many attempts', async () => {
@@ -210,6 +227,44 @@ describe('pair page', () => {
       name: 'Try again in 7 seconds',
     })
     expect((button as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.queryByText(NOT_CONFIRMED)).toBeNull()
+  })
+
+  it('sends nothing while the wait runs', async () => {
+    const { calls } = await openPairPage(
+      problemResponse(
+        {
+          status: 429,
+          code: 'too_many_requests',
+          title: 'Too many attempts. Wait a moment and try again.',
+        },
+        { 'Retry-After': '7' },
+      ),
+    )
+    enterCode('K7QF-2M9X')
+    await screen.findByRole('button', { name: 'Try again in 7 seconds' })
+
+    fireEvent.submit(codeField().form!)
+
+    expect(calls).toHaveLength(2)
+  })
+
+  it('does not suggest a refused claim went through', async () => {
+    await openPairPage(
+      problemResponse({
+        status: 403,
+        code: 'forbidden_origin',
+        title: 'This request did not come from the admin app.',
+      }),
+    )
+
+    enterCode('K7QF-2M9X')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(
+      'This request did not come from the admin app.',
+    )
+    expect(screen.queryByText(NOT_CONFIRMED)).toBeNull()
   })
 
   it.each([
@@ -272,5 +327,15 @@ describe('pair page', () => {
         session: 'ended',
       }),
     )
+  })
+
+  it('still says something when the session check then passes', async () => {
+    await openPairPage(unauthenticatedResponse(), sessionResponse())
+
+    enterCode('K7QF-2M9X')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('Log in to continue.')
+    expect(screen.queryByRole('heading', { name: 'Mosaic paired' })).toBeNull()
   })
 })

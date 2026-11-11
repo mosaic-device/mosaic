@@ -104,8 +104,10 @@ function PairForm({
     }
     const { error } = result
     if (error.code === 'unauthenticated') {
-      // The route guard asks again and opens login with a way back here.
+      // The route guard asks again and opens login with a way back here. If
+      // the session turns out fine after all, the page stays and says so.
       await router.invalidate()
+      showError(error)
       return
     }
     if (error.code && CODE_PROBLEMS.includes(error.code)) {
@@ -186,6 +188,7 @@ function PairedDevice({
   return (
     <div className="grid gap-5">
       <div className="grid gap-3">
+        {/* Focused so screen readers announce the result. */}
         <h2 ref={headingRef} tabIndex={-1} className="text-heading">
           Mosaic paired
         </h2>
