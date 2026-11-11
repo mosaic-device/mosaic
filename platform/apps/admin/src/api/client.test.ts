@@ -180,6 +180,39 @@ describe('problem responses', () => {
     }
   })
 
+  it('knows the device error codes', async () => {
+    const deviceProblems = [
+      {
+        status: 404,
+        code: 'invalid_pairing_code',
+        title: 'No device is showing that code; check it and try again.',
+      },
+      {
+        status: 404,
+        code: 'device_not_found',
+        title: "That device isn't paired with this server.",
+      },
+      {
+        status: 409,
+        code: 'pairing_code_used',
+        title:
+          'That code was already used; enter the new code the device shows.',
+      },
+      {
+        status: 410,
+        code: 'pairing_code_expired',
+        title: 'That code has expired; enter the one the device shows now.',
+      },
+    ]
+    stubFetch(...deviceProblems.map((problem) => problemResponse(problem)))
+    for (const { code, title } of deviceProblems) {
+      const error = await apiFailure(requestJson('/api/x', { check: isOk }))
+      expect(error.kind).toBe('problem')
+      expect(error.code).toBe(code)
+      expect(error.title).toBe(title)
+    }
+  })
+
   it('reads Problem Details sent with a charset', async () => {
     stubFetch(
       textResponse(
