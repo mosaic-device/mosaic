@@ -248,7 +248,7 @@ public sealed partial class DeviceConnectionHandler(
 
                 if (received.PayloadCase == DeviceToBackendEnvelope.PayloadOneofCase.NotificationReceipt)
                 {
-                    connection.Resolve(received.NotificationReceipt);
+                    connection.Resolve(received.NotificationReceipt, time.GetUtcNow());
                 }
 
                 continue;
@@ -262,7 +262,7 @@ public sealed partial class DeviceConnectionHandler(
                         code = null;
                         await SendPairedAsync(link, connection);
                         break;
-                    case DeviceSignal.Deliver when connection.Awaiting is { Outcome.IsCompleted: false } delivery:
+                    case DeviceSignal.Deliver when connection.TakeToSend() is { } delivery:
                         await SendAsync(link, new BackendToDeviceEnvelope { Notification = delivery.Notification });
                         break;
                     case DeviceSignal.Revoked:

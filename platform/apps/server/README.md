@@ -289,13 +289,16 @@ second notification through early. A missing or removed `id` gets `404 device_no
 the Origin and session are checked first.
 
 [`NotificationDelivery`](Devices/NotificationDelivery.cs) is the delivery path M4's
-notifications will use too. It checks every field rule before sending
-([`NotificationRules`](Devices/NotificationRules.cs)), since the C# bindings don't enforce
-the nanopb limits; shortening text to fit is the producer's job. It never queues or
-resends. The device's connection does the sending, so it stays the only writer to the
-socket and still handles shutdown, removal and replacement first. A notification waiting
-on a connection that is replaced or ends gets `no_answer` and is never moved to the new
-connection.
+notifications will use too. It copies a notification when it starts, then checks every
+field rule on that copy before sending ([`NotificationRules`](Devices/NotificationRules.cs)),
+since the C# bindings don't enforce the nanopb limits. That includes refusing NUL characters,
+where the device's strings would end early. Shortening text to fit is the producer's job.
+It never queues or resends. The device's connection does the sending, so it stays the only
+writer to the socket and still handles shutdown, removal and replacement first; each
+notification is sent at most once. A receipt counts only before the same deadline
+`Retry-After` counts down to. A notification waiting on a connection that is replaced,
+removed or ends gets `no_answer`, is never sent after a removal, and is never moved to a
+new connection.
 
 ## Build and run the Linux Native AOT container
 

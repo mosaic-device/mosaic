@@ -22,6 +22,7 @@ public enum NotificationOutcome
 public sealed class Delivery
 {
     private readonly TaskCompletionSource<NotificationOutcome> _outcome = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _taken;
 
     internal Delivery(long deviceId, Notification notification, DateTimeOffset deadline)
     {
@@ -40,6 +41,12 @@ public sealed class Delivery
     internal Task<NotificationOutcome> Outcome => _outcome.Task;
 
     internal bool TryComplete(NotificationOutcome outcome) => _outcome.TrySetResult(outcome);
+
+    /// <summary>
+    /// True for the first caller only. A connection can hold more than one send signal when an
+    /// earlier attempt timed out before its signal was handled; only one of them may send this.
+    /// </summary>
+    internal bool TryTakeForSending() => Interlocked.Exchange(ref _taken, 1) == 0;
 }
 
 public enum DeliveryStartKind
@@ -87,6 +94,9 @@ public sealed partial class NotificationDelivery(DeviceConnections connections, 
     /// <exception cref="ArgumentException">The notification breaks a field rule (<see cref="NotificationRules"/>).</exception>
     public DeliveryStart Start(long deviceId, byte[] secretHash, Notification notification)
     {
+        // Checked, sent and matched as it is now: a caller changing its object later can't
+        // slip past the rules or break the receipt match.
+        notification = notification.Clone();
         if (NotificationRules.Check(notification) is { } problem)
         {
             throw new ArgumentException(problem, nameof(notification));
@@ -124,7 +134,9 @@ public sealed partial class NotificationDelivery(DeviceConnections connections, 
     {
         using (var deadline = new CancellationTokenSource())
         {
-            await Task.WhenAny(delivery.Outcome, Task.Delay(ReceiptTimeout, time, deadline.Token));
+            // Times out at the same deadline Retry-After counts down to and receipts are checked against.
+            var left = delivery.Deadline - time.GetUtcNow();
+            await Task.WhenAny(delivery.Outcome, Task.Delay(left > TimeSpan.Zero ? left : TimeSpan.Zero, time, deadline.Token));
             delivery.TryComplete(NotificationOutcome.NoAnswer);
             await deadline.CancelAsync();
         }

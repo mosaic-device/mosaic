@@ -33,6 +33,12 @@ public static class NotificationRules
             return "The priority must be NORMAL or HIGH.";
         }
 
+        // Nanopb strings end at the first NUL, so the device would read a shorter, or empty, value.
+        if (HasNul(notification.Source) || HasNul(notification.Title) || HasNul(notification.Text))
+        {
+            return "The source, title and text can't contain a NUL character.";
+        }
+
         if (Bytes(notification.Source) is 0 or > MaxSourceBytes)
         {
             return $"The source must be 1 to {MaxSourceBytes} bytes of UTF-8.";
@@ -52,4 +58,6 @@ public static class NotificationRules
     }
 
     private static int Bytes(string value) => Encoding.UTF8.GetByteCount(value);
+
+    private static bool HasNul(string value) => value.Contains('\0', StringComparison.Ordinal);
 }

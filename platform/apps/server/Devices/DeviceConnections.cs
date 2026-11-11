@@ -54,6 +54,19 @@ public sealed class DeviceConnection
 
     internal void Signal(DeviceSignal signal) => _signals.Writer.TryWrite(signal);
 
+    /// <summary>
+    /// For a <see cref="DeviceSignal.Deliver"/> signal: the waiting notification to send, or null
+    /// when there is nothing to send. Each notification is handed out once, so a signal left over
+    /// from an attempt that already ended never sends the next one a second time.
+    /// </summary>
+    internal Delivery? TakeToSend()
+    {
+        lock (_lock)
+        {
+            return _awaiting is { Outcome.IsCompleted: false } delivery && delivery.TryTakeForSending() ? delivery : null;
+        }
+    }
+
     /// <summary>The server has sent this connection <c>paired</c>, so it may now get notifications.</summary>
     internal void MarkReady()
     {
@@ -84,16 +97,19 @@ public sealed class DeviceConnection
     }
 
     /// <summary>
-    /// Settles the waiting notification if <paramref name="receipt"/> is for it. A receipt for
-    /// anything else, such as one that arrives after its timeout, is ignored.
+    /// Settles the waiting notification if <paramref name="receipt"/> is for it and arrived
+    /// before its deadline, as of <paramref name="now"/>. A receipt for anything else, or one at
+    /// or after the deadline, is ignored: that attempt gets no answer, as its timeout reports.
     /// </summary>
-    internal void Resolve(NotificationReceipt receipt)
+    internal void Resolve(NotificationReceipt receipt, DateTimeOffset now)
     {
         Delivery? delivery;
         lock (_lock)
         {
             delivery = _awaiting;
-            if (delivery is null || !string.Equals(delivery.Notification.Id, receipt.NotificationId, StringComparison.Ordinal))
+            if (delivery is null
+                || now >= delivery.Deadline
+                || !string.Equals(delivery.Notification.Id, receipt.NotificationId, StringComparison.Ordinal))
             {
                 return;
             }
@@ -167,8 +183,22 @@ public sealed class DeviceConnections
     /// <summary>Tells a connected device with this credential that it is now paired.</summary>
     public bool NotifyPaired(byte[] secretHash) => Signal(secretHash, DeviceSignal.Paired);
 
-    /// <summary>Tells a connected device with this credential that it was removed.</summary>
-    public bool NotifyRevoked(byte[] secretHash) => Signal(secretHash, DeviceSignal.Revoked);
+    /// <summary>
+    /// Tells a connected device with this credential that it was removed. The connection takes no
+    /// more notifications from now on, and one it was about to send or waiting on gets no answer,
+    /// so nothing reaches the device after the removal, even if it was queued before it.
+    /// </summary>
+    public bool NotifyRevoked(byte[] secretHash)
+    {
+        if (Find(secretHash) is not { } connection)
+        {
+            return false;
+        }
+
+        connection.Close();
+        connection.Signal(DeviceSignal.Revoked);
+        return true;
+    }
 
     internal DeviceConnection Register(byte[] secretHash)
     {

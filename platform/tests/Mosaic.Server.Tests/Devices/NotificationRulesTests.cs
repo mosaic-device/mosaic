@@ -39,6 +39,10 @@ public sealed class NotificationRulesTests
         // 128 bytes in 43 characters: under the limit counted in characters, over it in bytes.
         { "title too long in bytes", notification => notification.Title = new string('€', 42) + "tt" },
         { "text too long", notification => notification.Text = new string('x', NotificationRules.MaxTextBytes + 1) },
+        // The device's strings end at the first NUL: these would show as empty or cut short.
+        { "source starting with NUL", notification => notification.Source = "\0Mosaic" },
+        { "title that is only NUL", notification => notification.Title = "\0" },
+        { "text with a NUL inside", notification => notification.Text = "Sent from\0 the admin app." },
         { "no time", notification => notification.OccurredAt = 0 },
         { "time before 1970", notification => notification.OccurredAt = -1 },
     };
