@@ -180,7 +180,7 @@ public sealed partial class DeviceConnectionHandler(
             if (credential.State == CredentialState.Paired)
             {
                 LogPaired(credential.DeviceId!.Value);
-                await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
+                await SendPairedAsync(link, connection);
             }
             else
             {
@@ -205,7 +205,8 @@ public sealed partial class DeviceConnectionHandler(
 
     /// <summary>
     /// After the handshake reply. While <paramref name="code"/> is set the device is pending:
-    /// any frame from it is a protocol error, and its code is replaced at expiry. Once paired,
+    /// any frame from it is a protocol error, and its code is replaced at expiry. Once paired, it
+    /// is sent notifications handed to its connection, and their receipts are matched; other
     /// frames this server doesn't handle yet are ignored (section 7).
     /// </summary>
     private async Task ConnectedAsync(
@@ -239,10 +240,15 @@ public sealed partial class DeviceConnectionHandler(
                 }
 
                 link.ReceiveNext();
-                if (code is not null || !IsIgnorableAfterPairing(frame))
+                if (code is not null || ReadAfterPairing(frame) is not { } received)
                 {
                     await RejectAsync(link, ConnectionRejectReason.MalformedRequest);
                     return;
+                }
+
+                if (received.PayloadCase == DeviceToBackendEnvelope.PayloadOneofCase.NotificationReceipt)
+                {
+                    connection.Resolve(received.NotificationReceipt);
                 }
 
                 continue;
@@ -254,7 +260,10 @@ public sealed partial class DeviceConnectionHandler(
                 {
                     case DeviceSignal.Paired when code is not null:
                         code = null;
-                        await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
+                        await SendPairedAsync(link, connection);
+                        break;
+                    case DeviceSignal.Deliver when connection.Awaiting is { Outcome.IsCompleted: false } delivery:
+                        await SendAsync(link, new BackendToDeviceEnvelope { Notification = delivery.Notification });
                         break;
                     case DeviceSignal.Revoked:
                         await RejectAsync(link, ConnectionRejectReason.CredentialRevoked);
@@ -274,7 +283,7 @@ public sealed partial class DeviceConnectionHandler(
             {
                 case CredentialState.Paired:
                     code = null;
-                    await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
+                    await SendPairedAsync(link, connection);
                     break;
                 case CredentialState.Revoked:
                     await RejectAsync(link, ConnectionRejectReason.CredentialRevoked);
@@ -313,18 +322,29 @@ public sealed partial class DeviceConnectionHandler(
         }
     }
 
-    /// <summary>After <c>paired</c>, a decodable frame other than a second <c>connect</c> is tolerated.</summary>
-    private static bool IsIgnorableAfterPairing(Frame frame)
+    /// <summary>
+    /// After <c>paired</c>, any decodable frame other than a second <c>connect</c> is accepted:
+    /// a receipt is matched to its notification and anything this server doesn't handle yet is
+    /// ignored (section 7). Null means the frame is a protocol error.
+    /// </summary>
+    private static DeviceToBackendEnvelope? ReadAfterPairing(Frame frame)
     {
         try
         {
-            return DeviceToBackendEnvelope.Parser.ParseFrom(frame.Bytes).PayloadCase
-                != DeviceToBackendEnvelope.PayloadOneofCase.Connect;
+            var envelope = DeviceToBackendEnvelope.Parser.ParseFrom(frame.Bytes);
+            return envelope.PayloadCase == DeviceToBackendEnvelope.PayloadOneofCase.Connect ? null : envelope;
         }
         catch (InvalidProtocolBufferException)
         {
-            return false;
+            return null;
         }
+    }
+
+    /// <summary>Sends <c>paired</c>; from then on the connection may be sent notifications.</summary>
+    private static async Task SendPairedAsync(Link link, DeviceConnection connection)
+    {
+        await SendAsync(link, new BackendToDeviceEnvelope { Paired = new DevicePaired() });
+        connection.MarkReady();
     }
 
     private TimeSpan Until(PendingCode code)

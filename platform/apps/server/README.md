@@ -3,7 +3,7 @@
 ASP.NET Core on .NET 10, with Native AOT publishing enabled. The server exposes
 `GET /healthz` (HTTP 200, plain text `OK`), the first-run setup, login, and session API
 (see [Admin authentication](#admin-authentication)), the device WebSocket at `/ws/device`
-(see [Device connections](#device-connections)), the API to claim, list and remove
+(see [Device connections](#device-connections)), the API to claim, list, remove and send a test notification to
 devices (see [Claiming a device](#claiming-a-device)), and serves the built React admin app
 from `wwwroot/`. Browser navigation falls back to `index.html`; missing assets and
 unimplemented `/api` and `/ws` paths return 404.
@@ -266,6 +266,37 @@ one succeeds; an `id` that isn't a whole number gets the empty `404`. Both endpo
 a session; `DELETE` checks the Origin first. Neither is rate-limited, and logging out or a
 session expiring never affects a device.
 
+## Test notifications
+
+`POST /api/devices/{id}/test-notification` sends the device the fixed test notification
+from the contract and waits up to 10 seconds for its receipt, as the
+[Notification Delivery Protocol](https://github.com/mosaic-device/mosaic/wiki/Notification-Delivery-Protocol)
+describes. It returns `200` with `{ "outcome": ... }`:
+
+- `delivered`: the device stored it (receipt `STORED` or `DUPLICATE`; an unspecified or
+  unknown status counts too, since it evidently arrived).
+- `offline`: the device isn't connected, or its connection hasn't been sent `paired`
+  yet, so nothing was sent.
+- `no_answer`: no receipt within 10 seconds, or the connection ended first. A missing
+  receipt never closes the connection.
+- `rejected`: the device answered `INVALID`. That points to a server bug, so the server
+  logs the notification's ID.
+
+A device takes one notification at a time. While one is waiting for its receipt, another
+send gets `429 too_many_requests` with `Retry-After` set to the whole seconds left (1 to
+10). The wait doesn't end when the caller gives up, so a cancelled request can't let a
+second notification through early. A missing or removed `id` gets `404 device_not_found`;
+the Origin and session are checked first.
+
+[`NotificationDelivery`](Devices/NotificationDelivery.cs) is the delivery path M4's
+notifications will use too. It checks every field rule before sending
+([`NotificationRules`](Devices/NotificationRules.cs)), since the C# bindings don't enforce
+the nanopb limits; shortening text to fit is the producer's job. It never queues or
+resends. The device's connection does the sending, so it stays the only writer to the
+socket and still handles shutdown, removal and replacement first. A notification waiting
+on a connection that is replaced or ends gets `no_answer` and is never moved to the new
+connection.
+
 ## Build and run the Linux Native AOT container
 
 Prerequisite: Docker Desktop running Linux containers, or Docker Engine on Linux.
@@ -339,7 +370,10 @@ device has gone, retries the claim, and reconnects the device to see it paired. 
 then stops the server, confirms the schema exists, the password is stored hashed and
 only the device's secret hash is stored, saves a settings row, restarts the server,
 and confirms the admin can still log in, the device is still authenticated as paired
-while its old code is forgotten, the rows remain, and no migration ran twice. It then
+while its old code is forgotten, the rows remain, and no migration ran twice. It sends a
+test notification while the device is offline and expects `offline`, then keeps the
+device connected, answers the notification with a `STORED` receipt and expects
+`delivered`. It then
 lists the device, removes it through `DELETE /api/devices/1`, and checks the device is
 no longer listed and its reconnect is rejected with `CREDENTIAL_REVOKED`, also after a
 third start. An unexpected response, startup failure, or database mismatch fails the build.

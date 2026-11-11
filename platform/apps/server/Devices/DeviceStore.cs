@@ -66,6 +66,16 @@ public sealed class DeviceStore(MosaicDatabase database, TimeProvider time)
         return reader.Read() ? new PairedDevice(reader.GetInt64(0), Timestamps.Parse(reader.GetString(1))) : null;
     }
 
+    /// <summary>The secret hash of the paired device with this ID, or null when there is none or it was removed.</summary>
+    public byte[]? FindPaired(long deviceId)
+    {
+        using var connection = database.OpenConnection();
+        using var command = connection.CreateCommand(
+            "SELECT secret_hash FROM devices WHERE id = $id AND revoked_at IS NULL");
+        command.Parameters.AddWithValue("$id", deviceId);
+        return command.ExecuteScalar() as byte[];
+    }
+
     /// <summary>Every paired device, oldest pairing first. Revoked devices are left out.</summary>
     public IReadOnlyList<StoredDevice> ListPaired()
     {

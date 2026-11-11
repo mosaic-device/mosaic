@@ -14,6 +14,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -149,10 +150,11 @@ def device_frame(secret):
     return field(1, connect)
 
 
-def device_handshake(frame):
-    """Opens /ws/device like the firmware (no Origin), sends one binary frame and returns the reply."""
+@contextlib.contextmanager
+def open_device():
+    """Opens /ws/device like the firmware (no Origin) and yields the upgraded socket."""
     host, port = url.removeprefix("http://").split(":")
-    with socket.create_connection((host, int(port)), timeout=5) as connection:
+    with socket.create_connection((host, int(port)), timeout=15) as connection:
         key = base64.b64encode(secrets.token_bytes(16)).decode()
         connection.sendall(
             f"GET /ws/device HTTP/1.1\r\nHost: {host}:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -162,16 +164,66 @@ def device_handshake(frame):
         while b"\r\n\r\n" not in response:
             response += connection.recv(1)
         expect(response.split(b"\r\n")[0], b"HTTP/1.1 101 Switching Protocols", "device WebSocket upgrade")
-        mask = secrets.token_bytes(4)
-        connection.sendall(bytes([0x82, 0x80 | len(frame)]) + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(frame)))
+        yield connection
+
+
+def send_frame(connection, frame):
+    """Sends one masked binary frame, as a client must."""
+    mask = secrets.token_bytes(4)
+    connection.sendall(bytes([0x82, 0x80 | len(frame)]) + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(frame)))
+
+
+def read_exactly(connection, count):
+    data = b""
+    while len(data) < count:
+        chunk = connection.recv(count - len(data))
+        if not chunk:
+            raise AssertionError("The server closed the device connection")
+        data += chunk
+    return data
+
+
+def read_frame(connection):
+    """Reads the next binary frame's payload, skipping the server's pings."""
+    while True:
         opcode, length = connection.recv(1)[0] & 0x0F, connection.recv(1)[0]
         if length == 126:
-            length = struct.unpack(">H", connection.recv(2))[0]
-        payload = b""
-        while len(payload) < length:
-            payload += connection.recv(length - len(payload))
-        expect(opcode, 2, "device reply is a binary frame")
-        return payload
+            length = struct.unpack(">H", read_exactly(connection, 2))[0]
+        payload = read_exactly(connection, length)
+        if opcode not in (0x9, 0xA):
+            expect(opcode, 2, "device reply is a binary frame")
+            return payload
+
+
+def device_handshake(frame):
+    """Sends one binary frame on a new device connection and returns the reply."""
+    with open_device() as connection:
+        send_frame(connection, frame)
+        return read_frame(connection)
+
+
+def send_test_notification(cookie, device_id=1):
+    return api("POST", f"/api/devices/{device_id}/test-notification", cookie=cookie)[:2]
+
+
+def check_test_notification(cookie, secret):
+    """Keeps the paired device connected, sends it the test notification and confirms it."""
+    with open_device() as connection:
+        send_frame(connection, device_frame(secret))
+        expect(read_frame(connection), field(2, b""), "paired device handshake before the test notification")
+        result = {}
+        request = threading.Thread(target=lambda: result.update(response=send_test_notification(cookie)))
+        request.start()
+        # notification (field 4) holding its ID (field 1) first; short enough for one-byte lengths.
+        frame = read_frame(connection)
+        expect((frame[0], frame[2]), (0x22, 0x0A), "test notification frame")
+        notification_id = frame[4 : 4 + frame[3]].decode()
+        expect(re.fullmatch(r"test-[0-9a-f]{16}", notification_id) is not None, True, f"test notification ID ({notification_id})")
+        expect(all(text in frame for text in (b"Mosaic", b"Test notification", b"Sent from the admin app.")), True, "test notification text")
+        # notification_receipt (field 2) with the same ID and STORED (1).
+        send_frame(connection, field(2, field(1, notification_id.encode()) + b"\x10\x01"))
+        request.join(15)
+        expect(result.get("response"), (200, {"outcome": "delivered"}), "POST /api/devices/1/test-notification")
 
 
 def check_device(database, secret, paired, revoked=False):
@@ -277,11 +329,16 @@ with tempfile.TemporaryDirectory() as directory:
     with running_server(database):
         check_routes()
         check_auth(setup_required=False, password=password)
+        # Nothing has connected since the restart.
+        expect(send_test_notification(admin), (200, {"outcome": "offline"}), "test notification to an offline device")
         check_device(database, device_secret, paired=True)
+        check_test_notification(admin, device_secret)
         # Codes live only in memory, so the old one is forgotten, but the pairing is kept.
         status, body = claim(code, admin)
         expect((status, body["code"]), (404, "invalid_pairing_code"), "claim of a code from before the restart")
         check_removal(database, admin)
+        status, body = send_test_notification(admin)
+        expect((status, body["code"]), (404, "device_not_found"), "test notification to a removed device")
         check_device(database, device_secret, paired=False, revoked=True)
     expect(query(database, "SELECT version FROM schema_migrations"), [(1,), (2,), (3,)], "migrations after restart")
     expect(query(database, "SELECT username, password_hash FROM admin"), [("Smoke-Admin", stored_hash)], "admin after restart")
