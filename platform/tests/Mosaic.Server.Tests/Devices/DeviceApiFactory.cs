@@ -43,7 +43,9 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
             ["MOSAIC_SETUP_CODE"] = SetupCode,
         };
         configure?.Invoke(_settings);
-        UseKestrel(0);
+        // Bind through Kestrel's options rather than UseKestrel(port): with a port, the factory
+        // rewrites the server's addresses after the host is built, racing Program.cs's app.Run().
+        UseKestrel(options => options.Listen(IPAddress.Loopback, 0));
     }
 
     public string Directory => _directory;
