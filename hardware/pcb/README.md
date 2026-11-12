@@ -54,7 +54,7 @@ CI's **PCB** job runs the same export and uploads these files as an artifact.
 
 ## Ordering
 
-1. Upload the gerber zip with the default options: 2 layers, 1.6 mm, any color.
+1. Upload the gerber zip with the default options (2 layers, 1.6 mm) and choose a **black** solder mask with white silkscreen.
 2. Turn on assembly for the top side and upload `jlc-bom.csv` and `jlc-cpl.csv`. Every part has an LCSC number.
 3. In the placement preview, check each part's rotation, especially U1/U2 (pin 1 dot) and the JST connectors (opening toward the board edge). Rotate any that JLCPCB shows wrongly.
 4. J1 is left out of the assembly files: solder the header yourself on the underside.
