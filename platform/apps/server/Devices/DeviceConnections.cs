@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Mosaic.Device.V1;
 
 namespace Mosaic.Server.Devices;
 
@@ -13,22 +14,159 @@ public enum DeviceSignal
 
     /// <summary>A newer connection with the same credential took over; close this one.</summary>
     Replaced,
+
+    /// <summary>Send the connection's <see cref="DeviceConnection.Awaiting"/> notification.</summary>
+    Deliver,
 }
 
-/// <summary>One open device connection that has sent a valid <c>connect</c>.</summary>
+/// <summary>
+/// One open device connection that has sent a valid <c>connect</c>. It can take a notification
+/// once the server has sent it <c>paired</c>, and holds at most one waiting for its receipt.
+/// </summary>
 public sealed class DeviceConnection
 {
     private readonly Channel<DeviceSignal> _signals = Channel.CreateUnbounded<DeviceSignal>(
         new UnboundedChannelOptions { SingleReader = true });
 
+    private readonly Lock _lock = new();
+    private bool _ready;
+    private bool _closed;
+    private Delivery? _awaiting;
+
     internal DeviceConnection(string key) => Key = key;
 
     internal string Key { get; }
+
+    /// <summary>The notification sent, or about to be, whose receipt this connection is waiting for.</summary>
+    internal Delivery? Awaiting
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _awaiting;
+            }
+        }
+    }
 
     internal ValueTask<DeviceSignal> NextSignalAsync(CancellationToken cancellationToken) =>
         _signals.Reader.ReadAsync(cancellationToken);
 
     internal void Signal(DeviceSignal signal) => _signals.Writer.TryWrite(signal);
+
+    /// <summary>
+    /// For a <see cref="DeviceSignal.Deliver"/> signal: the waiting notification to send, or null
+    /// when there is nothing to send. Each notification is handed out once, so a signal left over
+    /// from an attempt that already ended never sends the next one a second time. One whose
+    /// deadline has passed isn't sent either, even if its timeout hasn't been handled yet, since
+    /// its caller is told it got no answer.
+    /// </summary>
+    /// <remarks>
+    /// Taking it under this lock is the point at which it counts as sent: removal or replacement
+    /// after this lets the frame already chosen go out first, and nothing starts after them.
+    /// </remarks>
+    internal Delivery? TakeToSend()
+    {
+        lock (_lock)
+        {
+            return _awaiting is { Outcome.IsCompleted: false } delivery
+                && delivery.TimeLeft > TimeSpan.Zero
+                && delivery.TryTakeForSending()
+                ? delivery
+                : null;
+        }
+    }
+
+    /// <summary>The server has sent this connection <c>paired</c>, so it may now get notifications.</summary>
+    internal void MarkReady()
+    {
+        lock (_lock)
+        {
+            _ready = true;
+        }
+    }
+
+    /// <summary>
+    /// Hands <paramref name="delivery"/> to the connection's loop, which sends it. False when the
+    /// connection isn't paired yet, has ended, or is already waiting for another receipt.
+    /// </summary>
+    internal bool TryDeliver(Delivery delivery)
+    {
+        lock (_lock)
+        {
+            if (_closed || !_ready || _awaiting is not null)
+            {
+                return false;
+            }
+
+            _awaiting = delivery;
+        }
+
+        Signal(DeviceSignal.Deliver);
+        return true;
+    }
+
+    /// <summary>
+    /// Settles the waiting notification if <paramref name="receipt"/> carries its ID, it has been
+    /// taken for sending, and its deadline hasn't passed. Anything else is ignored: a receipt
+    /// before the send leaves it to be sent, and one at or after the deadline leaves the timeout
+    /// to report no answer.
+    /// </summary>
+    /// <remarks>
+    /// A receipt carries only the notification ID, the protocol's identity for a notification,
+    /// so it can't say which attempt it answers. <c>STORED</c> or <c>DUPLICATE</c> confirms that
+    /// the device holds the notification with that ID. A producer resends with the same ID only
+    /// after the device's next <c>paired</c>, on a new connection (Notification Delivery
+    /// Protocol, section 4), where a receipt from the old one can't arrive.
+    /// </remarks>
+    internal void Resolve(NotificationReceipt receipt)
+    {
+        Delivery? delivery;
+        lock (_lock)
+        {
+            delivery = _awaiting;
+            if (delivery is null
+                || !delivery.IsTaken
+                || delivery.TimeLeft <= TimeSpan.Zero
+                || !string.Equals(delivery.Notification.Id, receipt.NotificationId, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _awaiting = null;
+        }
+
+        // UNSPECIFIED or an unknown status still means it arrived (section 3).
+        delivery.TryComplete(receipt.Status == NotificationReceiptStatus.Invalid
+            ? NotificationOutcome.Rejected
+            : NotificationOutcome.Delivered);
+    }
+
+    /// <summary>The connection has ended. A notification still waiting for its receipt gets no answer.</summary>
+    internal void Close()
+    {
+        Delivery? delivery;
+        lock (_lock)
+        {
+            _closed = true;
+            delivery = _awaiting;
+            _awaiting = null;
+        }
+
+        delivery?.TryComplete(NotificationOutcome.NoAnswer);
+    }
+
+    /// <summary>Stops waiting for <paramref name="delivery"/>'s receipt, such as after its deadline.</summary>
+    internal void Release(Delivery delivery)
+    {
+        lock (_lock)
+        {
+            if (ReferenceEquals(_awaiting, delivery))
+            {
+                _awaiting = null;
+            }
+        }
+    }
 }
 
 /// <summary>
@@ -64,8 +202,22 @@ public sealed class DeviceConnections
     /// <summary>Tells a connected device with this credential that it is now paired.</summary>
     public bool NotifyPaired(byte[] secretHash) => Signal(secretHash, DeviceSignal.Paired);
 
-    /// <summary>Tells a connected device with this credential that it was removed.</summary>
-    public bool NotifyRevoked(byte[] secretHash) => Signal(secretHash, DeviceSignal.Revoked);
+    /// <summary>
+    /// Tells a connected device with this credential that it was removed. The connection takes no
+    /// more notifications from now on, and one it was about to send or waiting on gets no answer,
+    /// so nothing reaches the device after the removal, even if it was queued before it.
+    /// </summary>
+    public bool NotifyRevoked(byte[] secretHash)
+    {
+        if (Find(secretHash) is not { } connection)
+        {
+            return false;
+        }
+
+        connection.Close();
+        connection.Signal(DeviceSignal.Revoked);
+        return true;
+    }
 
     internal DeviceConnection Register(byte[] secretHash)
     {
@@ -77,10 +229,22 @@ public sealed class DeviceConnections
             _connections.Add(connection.Key, connection);
         }
 
+        // The old connection's waiting notification ends now; it is never moved to the new one.
+        previous?.Close();
         previous?.Signal(DeviceSignal.Replaced);
         return connection;
     }
 
+    /// <summary>The open connection for this credential, if any.</summary>
+    internal DeviceConnection? Find(byte[] secretHash)
+    {
+        lock (_lock)
+        {
+            return _connections.GetValueOrDefault(Key(secretHash));
+        }
+    }
+
+    /// <summary>Removes the connection when it is still the current one, and ends any notification it was waiting on.</summary>
     internal void Unregister(DeviceConnection connection)
     {
         lock (_lock)
@@ -90,6 +254,8 @@ public sealed class DeviceConnections
                 _connections.Remove(connection.Key);
             }
         }
+
+        connection.Close();
     }
 
     private bool Signal(byte[] secretHash, DeviceSignal signal)
