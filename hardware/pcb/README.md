@@ -30,7 +30,7 @@ Crimp tools are optional: pre-crimped JST-XH leads with housings (3-, 4- and 5-p
 - **LED data** goes through a 74AHCT1G125 buffer powered from the LED 5V, so the LEDs get a full 5V signal. Solder jumpers JP1 (ring) and JP2 (strip) choose the path: **1–2 (default, bridged) = through the buffer; cut 1–2 and bridge 2–3 = straight from the GPIO**, as on the prototype.
 - **330 Ω** in each data line, at the board. It limits current into the first LED if its supply is missing and damps ringing on the cable; at 800 kHz it costs nothing in signal timing.
 - **10 kΩ pull-downs** (R1, R2) hold the data lines low while the P4 boots, so the LEDs don't latch random colors.
-- **F1**, a 1.1 A resettable fuse, protects the header's 5V from a shorted LED cable. Firmware caps LED brightness at 30%, about 0.36 A for 8 + 12 LEDs.
+- **F1**, a 1.1 A resettable fuse (1206, 0.8 mm tall), protects the header's 5V from a shorted LED cable. Firmware caps LED brightness at 30%, about 0.36 A for 8 + 12 LEDs. If it trips, the LEDs and their buffers go dark while the rest of the device keeps running; unplug, fix the short, and it reconnects on its own after about 30 seconds.
 - **C1 and C5**, two 22 µF ceramics, sit across the LED supply. They are about 1.25 mm tall, so they fit where the board's edge is tight, and each LED has its own 100 nF beside it. A large electrolytic would only add height and a bigger surge from USB at plug-in.
 - **R5, R6** are I2C pull-up footprints left empty: the GY-302 has its own. Fit 4.7 kΩ if a sensor without pull-ups is used.
 - The encoder needs no pull-ups on the board: the KY-040 has 10 kΩ on CLK, DT and SW.

@@ -3498,7 +3498,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Fuse:Fuse_1812_4532Metric"
+		(property "Footprint" "Fuse:Fuse_1206_3216Metric"
 			(at 127 43.18 0)
 			(hide yes)
 			(effects
@@ -3525,7 +3525,7 @@
 				)
 			)
 		)
-		(property "LCSC" "C70119"
+		(property "LCSC" "C20801"
 			(at 127 43.18 0)
 			(hide yes)
 			(effects
