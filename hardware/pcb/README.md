@@ -31,7 +31,7 @@ Crimp tools are optional: pre-crimped JST-XH leads with housings (3-, 4- and 5-p
 - **330 Ω** in each data line, at the board. It limits current into the first LED if its supply is missing and damps ringing on the cable; at 800 kHz it costs nothing in signal timing.
 - **10 kΩ pull-downs** (R1, R2) hold the data lines low while the P4 boots, so the LEDs don't latch random colors.
 - **F1**, a 1.1 A resettable fuse, protects the header's 5V from a shorted LED cable. Firmware caps LED brightness at 30%, about 0.36 A for 8 + 12 LEDs.
-- **C1**, 220 µF, sits across the LED supply. A larger capacitor would only draw a bigger surge from USB at plug-in.
+- **C1 and C5**, two 22 µF ceramics, sit across the LED supply. They are about 1.25 mm tall, so they fit where the board's edge is tight, and each LED has its own 100 nF beside it. A large electrolytic would only add height and a bigger surge from USB at plug-in.
 - **R5, R6** are I2C pull-up footprints left empty: the GY-302 has its own. Fit 4.7 kΩ if a sensor without pull-ups is used.
 - The encoder needs no pull-ups on the board: the KY-040 has 10 kΩ on CLK, DT and SW.
 
@@ -56,5 +56,5 @@ CI's **PCB** job runs the same export and uploads these files as an artifact.
 
 1. Upload the gerber zip with the default options: 2 layers, 1.6 mm, any color.
 2. Turn on assembly for the top side and upload `jlc-bom.csv` and `jlc-cpl.csv`. Every part has an LCSC number.
-3. In the placement preview, check each part's rotation, especially U1/U2 (pin 1 dot), C1 (polarity) and the JST connectors (opening toward the board edge). Rotate any that JLCPCB shows wrongly.
+3. In the placement preview, check each part's rotation, especially U1/U2 (pin 1 dot) and the JST connectors (opening toward the board edge). Rotate any that JLCPCB shows wrongly.
 4. J1 is left out of the assembly files: solder the header yourself on the underside.
