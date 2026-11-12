@@ -240,3 +240,28 @@ jobs:
           fi
       - name: Check dependency lock stayed pinned and portable
         run: git --no-pager diff --exit-code -- firmware/dependencies.lock
+
+  pcb:
+    name: PCB
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: kicad/kicad:10.0.8@sha256:3f4a01786dfbe803a65f345c3342b765db9add913f5e9448f8356793714ddc34
+      options: --user root
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install KiCad's default library tables
+        # A fresh KiCad config has no tables until the GUI first runs.
+        run: |
+          mkdir -p "$HOME/.config/kicad/10.0"
+          cp /usr/share/kicad/template/sym-lib-table /usr/share/kicad/template/fp-lib-table "$HOME/.config/kicad/10.0/"
+      - name: ERC, DRC and fabrication files
+        run: python3 scripts/pcb.py export
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mosaic-carrier-fab
+          path: |
+            hardware/pcb/build/mosaic-carrier-gerbers.zip
+            hardware/pcb/build/jlc-bom.csv
+            hardware/pcb/build/jlc-cpl.csv
+            hardware/pcb/build/mosaic-carrier-schematic.pdf
