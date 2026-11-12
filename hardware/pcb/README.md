@@ -7,7 +7,7 @@ The KiCad 10 project is in [`mosaic-carrier/`](mosaic-carrier/). Open `mosaic-ca
 ## Fitting it
 
 - **J1** is a male 2 × 10 header soldered on the **underside**, plastic against the board. It plugs into the Waveshare's female socket at pins 1–20.
-- Pin 1 (square pad, marked `PIN 1` on the underside) goes at the end of the Waveshare header nearest the corner mounting hole, with the 5V row nearest the board edge. The carrier then lies over the Waveshare board, running from the corner end toward its middle.
+- Pin 1 (the square pad, marked `1` on the top) goes at the end of the Waveshare header nearest the corner mounting hole, with the 5V row nearest the board edge. The carrier then lies over the Waveshare board, running from the corner end toward its middle.
 - Nothing else is on the underside, so it clears the parts beneath it.
 
 ## Connectors
@@ -27,7 +27,7 @@ Crimp tools are optional: pre-crimped JST-XH leads with housings (3-, 4- and 5-p
 
 ## Circuit
 
-- **LED data** goes through a 74AHCT1G125 buffer powered from the LED 5V, so the LEDs get a full 5V signal. Solder jumpers JP1 (ring) and JP2 (strip) choose the path: **1–2 (default, bridged) = through the buffer; cut 1–2 and bridge 2–3 = straight from the GPIO**, as on the prototype.
+- **LED data** goes through a 74AHCT1G125 buffer powered from the LED 5V, so the LEDs get a full 5V signal. Three-pad solder jumpers JP1 (ring) and JP2 (strip) choose the path. The middle pad feeds the LED; it comes joined to the **BUF** pad by a thin copper link, so data goes through the buffer. To drive the LEDs straight from the GPIO, as on the prototype, cut that link with a knife and bridge the middle pad to the **GPIO** pad with solder. To go back, remove that solder and bridge the middle pad to **BUF** instead.
 - **330 Ω** in each data line, at the board. It limits current into the first LED if its supply is missing and damps ringing on the cable; at 800 kHz it costs nothing in signal timing.
 - **10 kΩ pull-downs** (R1, R2) hold the data lines low while the P4 boots, so the LEDs don't latch random colors.
 - **F1**, a 1.1 A resettable fuse (1206, 0.8 mm tall), protects the header's 5V from a shorted LED cable. Firmware caps LED brightness at 30%, about 0.36 A for 8 + 12 LEDs. If it trips, the LEDs and their buffers go dark while the rest of the device keeps running; unplug, fix the short, and it reconnects on its own after about 30 seconds.
