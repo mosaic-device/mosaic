@@ -5,7 +5,7 @@ namespace Mosaic.Server.Devices;
 /// <summary>What happened to one notification (Notification Delivery Protocol, section 4).</summary>
 public enum NotificationOutcome
 {
-    /// <summary>The device stored it: receipt <c>STORED</c> or <c>DUPLICATE</c>.</summary>
+    /// <summary>The device holds the notification with this ID: receipt <c>STORED</c> or <c>DUPLICATE</c>.</summary>
     Delivered,
 
     /// <summary>The device isn't connected or hasn't been sent <c>paired</c> yet, so nothing was sent.</summary>

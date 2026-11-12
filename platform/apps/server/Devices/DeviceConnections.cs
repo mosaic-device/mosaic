@@ -107,11 +107,18 @@ public sealed class DeviceConnection
     }
 
     /// <summary>
-    /// Settles the waiting notification if <paramref name="receipt"/> is for it, it has been
-    /// taken for sending, and its deadline hasn't passed. Anything else is ignored: a receipt that
-    /// comes before the send (such as a late one for an earlier attempt with the same ID) leaves
-    /// it to be sent, and one at or after the deadline leaves the timeout to report no answer.
+    /// Settles the waiting notification if <paramref name="receipt"/> carries its ID, it has been
+    /// taken for sending, and its deadline hasn't passed. Anything else is ignored: a receipt
+    /// before the send leaves it to be sent, and one at or after the deadline leaves the timeout
+    /// to report no answer.
     /// </summary>
+    /// <remarks>
+    /// A receipt carries only the notification ID, the protocol's identity for a notification,
+    /// so it can't say which attempt it answers. <c>STORED</c> or <c>DUPLICATE</c> confirms that
+    /// the device holds the notification with that ID. A producer resends with the same ID only
+    /// after the device's next <c>paired</c>, on a new connection (Notification Delivery
+    /// Protocol, section 4), where a receipt from the old one can't arrive.
+    /// </remarks>
     internal void Resolve(NotificationReceipt receipt)
     {
         Delivery? delivery;

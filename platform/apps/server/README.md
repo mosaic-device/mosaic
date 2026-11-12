@@ -273,8 +273,8 @@ from the contract and waits up to 10 seconds for its receipt, as the
 [Notification Delivery Protocol](https://github.com/mosaic-device/mosaic/wiki/Notification-Delivery-Protocol)
 describes. It returns `200` with `{ "outcome": ... }`:
 
-- `delivered`: the device stored it (receipt `STORED` or `DUPLICATE`; an unspecified or
-  unknown status counts too, since it evidently arrived).
+- `delivered`: the device holds the notification with that ID (receipt `STORED` or
+  `DUPLICATE`; an unspecified or unknown status counts too, since it evidently arrived).
 - `offline`: the device isn't connected, or its connection hasn't been sent `paired`
   yet, so nothing was sent.
 - `no_answer`: no receipt within 10 seconds, or the connection ended first. A missing
@@ -298,7 +298,11 @@ writer to the socket and still handles shutdown, removal and replacement first; 
 notification is sent at most once, and not at all once its deadline has passed. The
 deadline runs on elapsed time, so changing the system clock doesn't move it; the timeout,
 `Retry-After` and the receipt cutoff all use it. A receipt counts only after its
-notification has been taken for sending and before that deadline. A notification waiting
+notification has been taken for sending and before that deadline. Receipts are matched by
+notification ID, the protocol's identity for a notification, so they can't tell attempts
+apart: `STORED` or `DUPLICATE` confirms that the device holds the notification with that
+ID. Producers resend with the same ID only after the device's next `paired`, on a new
+connection, where a receipt from the old one can't arrive. A notification waiting
 on a connection that is replaced, removed or ends gets `no_answer` and is never moved to a
 new connection. One already taken for sending when the removal arrives still goes out,
 ahead of `CREDENTIAL_REVOKED`; none starts after it.
