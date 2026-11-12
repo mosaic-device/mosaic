@@ -17,9 +17,16 @@ public sealed record DeviceResponse(DeviceSummary Device);
 /// <summary><c>GET /api/devices</c>: paired devices, sorted by <see cref="DeviceSummary.Id"/>.</summary>
 public sealed record DeviceListResponse(IReadOnlyList<DeviceSummary> Devices);
 
+/// <summary>
+/// <c>POST /api/devices/{id}/test-notification</c>: <c>delivered</c>, <c>offline</c>,
+/// <c>no_answer</c> or <c>rejected</c>.
+/// </summary>
+public sealed record TestNotificationResponse(string Outcome);
+
 // Source-generated serialization keeps the API Native-AOT-compatible.
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]
 [JsonSerializable(typeof(ClaimRequest))]
 [JsonSerializable(typeof(DeviceResponse))]
 [JsonSerializable(typeof(DeviceListResponse))]
+[JsonSerializable(typeof(TestNotificationResponse))]
 public sealed partial class DeviceJsonContext : JsonSerializerContext;
