@@ -26,3 +26,11 @@ publish/
 *.db
 *.sqlite
 *.sqlite3
+
+# KiCad
+hardware/pcb/build/
+*.kicad_prl
+*-backups/
+fp-info-cache
+_autosave-*
+~*.lck
