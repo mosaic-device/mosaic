@@ -248,7 +248,7 @@ public sealed partial class DeviceConnectionHandler(
 
                 if (received.PayloadCase == DeviceToBackendEnvelope.PayloadOneofCase.NotificationReceipt)
                 {
-                    connection.Resolve(received.NotificationReceipt, time.GetUtcNow());
+                    connection.Resolve(received.NotificationReceipt);
                 }
 
                 continue;

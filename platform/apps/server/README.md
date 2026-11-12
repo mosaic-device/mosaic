@@ -295,10 +295,13 @@ since the C# bindings don't enforce the nanopb limits. That includes refusing NU
 where the device's strings would end early. Shortening text to fit is the producer's job.
 It never queues or resends. The device's connection does the sending, so it stays the only
 writer to the socket and still handles shutdown, removal and replacement first; each
-notification is sent at most once. A receipt counts only before the same deadline
-`Retry-After` counts down to. A notification waiting on a connection that is replaced,
-removed or ends gets `no_answer`, is never sent after a removal, and is never moved to a
-new connection.
+notification is sent at most once, and not at all once its deadline has passed. The
+deadline runs on elapsed time, so changing the system clock doesn't move it; the timeout,
+`Retry-After` and the receipt cutoff all use it. A receipt counts only after its
+notification has been taken for sending and before that deadline. A notification waiting
+on a connection that is replaced, removed or ends gets `no_answer` and is never moved to a
+new connection. One already taken for sending when the removal arrives still goes out,
+ahead of `CREDENTIAL_REVOKED`; none starts after it.
 
 ## Build and run the Linux Native AOT container
 

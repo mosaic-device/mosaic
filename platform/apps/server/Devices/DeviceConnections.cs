@@ -57,13 +57,23 @@ public sealed class DeviceConnection
     /// <summary>
     /// For a <see cref="DeviceSignal.Deliver"/> signal: the waiting notification to send, or null
     /// when there is nothing to send. Each notification is handed out once, so a signal left over
-    /// from an attempt that already ended never sends the next one a second time.
+    /// from an attempt that already ended never sends the next one a second time. One whose
+    /// deadline has passed isn't sent either, even if its timeout hasn't been handled yet, since
+    /// its caller is told it got no answer.
     /// </summary>
+    /// <remarks>
+    /// Taking it under this lock is the point at which it counts as sent: removal or replacement
+    /// after this lets the frame already chosen go out first, and nothing starts after them.
+    /// </remarks>
     internal Delivery? TakeToSend()
     {
         lock (_lock)
         {
-            return _awaiting is { Outcome.IsCompleted: false } delivery && delivery.TryTakeForSending() ? delivery : null;
+            return _awaiting is { Outcome.IsCompleted: false } delivery
+                && delivery.TimeLeft > TimeSpan.Zero
+                && delivery.TryTakeForSending()
+                ? delivery
+                : null;
         }
     }
 
@@ -97,18 +107,20 @@ public sealed class DeviceConnection
     }
 
     /// <summary>
-    /// Settles the waiting notification if <paramref name="receipt"/> is for it and arrived
-    /// before its deadline, as of <paramref name="now"/>. A receipt for anything else, or one at
-    /// or after the deadline, is ignored: that attempt gets no answer, as its timeout reports.
+    /// Settles the waiting notification if <paramref name="receipt"/> is for it, it has been
+    /// taken for sending, and its deadline hasn't passed. Anything else is ignored: a receipt that
+    /// comes before the send (such as a late one for an earlier attempt with the same ID) leaves
+    /// it to be sent, and one at or after the deadline leaves the timeout to report no answer.
     /// </summary>
-    internal void Resolve(NotificationReceipt receipt, DateTimeOffset now)
+    internal void Resolve(NotificationReceipt receipt)
     {
         Delivery? delivery;
         lock (_lock)
         {
             delivery = _awaiting;
             if (delivery is null
-                || now >= delivery.Deadline
+                || !delivery.IsTaken
+                || delivery.TimeLeft <= TimeSpan.Zero
                 || !string.Equals(delivery.Notification.Id, receipt.NotificationId, StringComparison.Ordinal))
             {
                 return;

@@ -19,26 +19,39 @@ public enum NotificationOutcome
 }
 
 /// <summary>One notification sent to one device. Its outcome is set exactly once.</summary>
+/// <remarks>
+/// Its deadline is kept on <see cref="TimeProvider.GetTimestamp"/>, which a wall-clock change
+/// doesn't move, so the timeout, the receipt cutoff and <c>Retry-After</c> all agree on it.
+/// </remarks>
 public sealed class Delivery
 {
     private readonly TaskCompletionSource<NotificationOutcome> _outcome = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TimeProvider _time;
+    private readonly long _started;
     private int _taken;
 
-    internal Delivery(long deviceId, Notification notification, DateTimeOffset deadline)
+    internal Delivery(long deviceId, Notification notification, TimeProvider time)
     {
         DeviceId = deviceId;
         Notification = notification;
-        Deadline = deadline;
+        _time = time;
+        _started = time.GetTimestamp();
     }
 
     public long DeviceId { get; }
 
     public Notification Notification { get; }
 
-    /// <summary>When it gets <see cref="NotificationOutcome.NoAnswer"/> if no receipt has come.</summary>
-    public DateTimeOffset Deadline { get; }
+    /// <summary>
+    /// How long until it gets <see cref="NotificationOutcome.NoAnswer"/> if no receipt has come;
+    /// zero or less once the deadline has passed.
+    /// </summary>
+    internal TimeSpan TimeLeft => NotificationDelivery.ReceiptTimeout - _time.GetElapsedTime(_started);
 
     internal Task<NotificationOutcome> Outcome => _outcome.Task;
+
+    /// <summary>Whether the connection's loop has taken it for sending.</summary>
+    internal bool IsTaken => Volatile.Read(ref _taken) != 0;
 
     internal bool TryComplete(NotificationOutcome outcome) => _outcome.TrySetResult(outcome);
 
@@ -106,14 +119,13 @@ public sealed partial class NotificationDelivery(DeviceConnections connections, 
         DeviceConnection? connection;
         lock (_lock)
         {
-            var now = time.GetUtcNow();
             if (_inFlight.TryGetValue(deviceId, out var waiting))
             {
-                var left = (int)Math.Ceiling((waiting.Deadline - now).TotalSeconds);
+                var left = (int)Math.Ceiling(waiting.TimeLeft.TotalSeconds);
                 return new DeliveryStart(DeliveryStartKind.Busy, RetryAfterSeconds: Math.Clamp(left, 1, (int)ReceiptTimeout.TotalSeconds));
             }
 
-            delivery = new Delivery(deviceId, notification, now + ReceiptTimeout);
+            delivery = new Delivery(deviceId, notification, time);
             connection = connections.Find(secretHash);
             if (connection is null || !connection.TryDeliver(delivery))
             {
@@ -135,7 +147,7 @@ public sealed partial class NotificationDelivery(DeviceConnections connections, 
         using (var deadline = new CancellationTokenSource())
         {
             // Times out at the same deadline Retry-After counts down to and receipts are checked against.
-            var left = delivery.Deadline - time.GetUtcNow();
+            var left = delivery.TimeLeft;
             await Task.WhenAny(delivery.Outcome, Task.Delay(left > TimeSpan.Zero ? left : TimeSpan.Zero, time, deadline.Token));
             delivery.TryComplete(NotificationOutcome.NoAnswer);
             await deadline.CancelAsync();
