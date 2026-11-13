@@ -130,20 +130,13 @@ def write_assembly_sheet():
                    board, flags=re.S)
     # Label each part at the middle of its pads, except the JST connectors, whose fab labels sit on their bodies.
     labels = ""
-    for m in re.finditer(r'\(footprint "[^"]*"\s*\(layer "[^"]+"\)\s*\(uuid "[^"]*"\)\s*\(at ([-\d.]+) ([-\d.]+) ?([-\d.]*)\)'
-                         r'(.*?)\n\t\)\n', source, flags=re.S):
-        x, y, angle, body = float(m.group(1)), float(m.group(2)), math.radians(float(m.group(3) or 0)), m.group(4)
-        ref = re.search(r'\(property "Reference" "([^"]+)"', body).group(1)
-        value = re.search(r'\(property "Value" "([^"]*)"', body).group(1)
+    for ref, value, _, (px, py) in footprints():
         if re.fullmatch(r"J[2-9]", ref):
             continue
-        pads = [(float(px), float(py)) for px, py in re.findall(r'\(pad "[^"]*" \w+ \w+\s*\(at ([-\d.]+) ([-\d.]+)', body)]
-        cx = sum(px for px, _ in pads) / len(pads)
-        cy = sum(py for _, py in pads) / len(pads)
-        lx = x + cx * math.cos(angle) + cy * math.sin(angle) - 100   # board coordinates sit at (100, 100) on the page
-        ly = y - cx * math.sin(angle) + cy * math.cos(angle) - 100
         name = f"{ref} (underside)" if ref == "J1" else ref
-        labels += f'<text x="{lx:.2f}" y="{ly + 0.45:.2f}"><title>{html.escape(value)}</title>{html.escape(name)}</text>'
+        # Board coordinates sit at (100, 100) on the page; the plot's viewBox starts at the board corner.
+        labels += (f'<text x="{px - 100:.2f}" y="{py - 100 + 0.45:.2f}"><title>{html.escape(value)}</title>'
+                   f"{html.escape(name)}</text>")
     shutil.copy(PROJECT / "mosaic-carrier.kicad_pro", work / "mosaic-carrier.kicad_pro")
     (work / "mosaic-carrier.kicad_pcb").write_text(board)
     svg_path = work / "drawing.svg"
@@ -193,20 +186,52 @@ from the factory; cut it and bridge GPIO to drive the LEDs straight from the P4.
     (BUILD / "mosaic-carrier-assembly.html").write_text(page)
 
 
+def footprints():
+    """Each footprint's reference, value, origin and the middle of its pads, in page millimetres (y down)."""
+    for m in re.finditer(r'\(footprint "[^"]*"\s*\(layer "[^"]+"\)\s*\(uuid "[^"]*"\)\s*\(at ([-\d.]+) ([-\d.]+) ?([-\d.]*)\)'
+                         r'(.*?)\n\t\)\n', PCB.read_text(), flags=re.S):
+        x, y, angle, body = float(m.group(1)), float(m.group(2)), math.radians(float(m.group(3) or 0)), m.group(4)
+        pads = [(float(px), float(py)) for px, py in re.findall(r'\(pad "[^"]*" \w+ \w+\s*\(at ([-\d.]+) ([-\d.]+)', body)]
+        cx = sum(px for px, _ in pads) / len(pads)
+        cy = sum(py for _, py in pads) / len(pads)
+        yield (re.search(r'\(property "Reference" "([^"]+)"', body).group(1),
+               re.search(r'\(property "Value" "([^"]*)"', body).group(1),
+               (x, y), (x + cx * math.cos(angle) + cy * math.sin(angle), y - cx * math.sin(angle) + cy * math.cos(angle)))
+
+
 def write_jlc_bom():
-    rows = list(csv.DictReader((BUILD / "bom-full.csv").open(newline="")))
+    # One line per JLCPCB part: KiCad groups by value, so the same connector used twice under different names
+    # (LED ring, LED strip) would otherwise appear twice and trigger JLCPCB's duplicate-part warning.
+    lines = {}
+    for row in csv.DictReader((BUILD / "bom-full.csv").open(newline="")):
+        refs = [r.strip() for r in row["Reference"].split(",") if not r.strip().startswith("JP")]  # jumpers are copper
+        if not refs or not row["LCSC"]:
+            continue
+        line = lines.setdefault(row["LCSC"], {"values": [], "refs": [], "footprint": row["Footprint"].split(":")[-1]})
+        line["values"].append(row["Value"])
+        line["refs"] += refs
     with (BUILD / "jlc-bom.csv").open("w", newline="") as f:
         out = csv.writer(f)
         out.writerow(["Comment", "Designator", "Footprint", "JLCPCB Part #"])
-        for row in rows:
-            refs = [r.strip() for r in row["Reference"].split(",")]
-            refs = [r for r in refs if not r.startswith("JP")]  # solder jumpers are copper, not parts
-            if refs and row["LCSC"]:
-                out.writerow([row["Value"], ",".join(refs), row["Footprint"].split(":")[-1], row["LCSC"]])
+        for lcsc, line in lines.items():
+            refs = sorted(line["refs"], key=natural)
+            out.writerow([" / ".join(dict.fromkeys(line["values"])), ",".join(refs), line["footprint"], lcsc])
+
+
+# JLCPCB's part models don't share KiCad's origin or zero rotation for these footprints. Without a correction
+# their placement preview shows them turned around or shifted; values found against the preview.
+#   (footprint name pattern, extra rotation in degrees, place at the middle of the pads instead of the origin)
+JLC_CORRECTIONS = [
+    (r"SOT-23-5", 180, False),                          # buffers: pin 1 at the opposite corner
+    (r"JST_XH_S[35]B-XH-A-1_.*_Horizontal", 180, True),  # JST-XH 3- and 5-pin: body faced into the board
+    (r"JST_XH_S4B-XH-A-1_.*_Horizontal", 0, True),       # JST-XH 4-pin: JLCPCB's model already faces the other way
+    (r"PinHeader_2x\d+_P2\.54mm_Vertical", -90, True),   # 2-row header: drawn on end, centred on pin 1
+]
 
 
 def write_jlc_cpl():
     rows = list(csv.DictReader((BUILD / "positions.csv").open(newline="")))
+    shift = {ref: (centre[0] - origin[0], centre[1] - origin[1]) for ref, _, origin, centre in footprints()}
     with (BUILD / "jlc-cpl.csv").open("w", newline="") as f:
         out = csv.writer(f)
         out.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
@@ -214,7 +239,16 @@ def write_jlc_cpl():
             ref = row["Ref"]
             if ref.startswith("JP"):
                 continue
-            out.writerow([ref, f"{row['PosX']}mm", f"{row['PosY']}mm", row["Side"].capitalize(), row["Rot"]])
+            x, y, rotation = float(row["PosX"]), float(row["PosY"]), float(row["Rot"])
+            for pattern, extra, centre in JLC_CORRECTIONS:
+                if re.fullmatch(pattern, row["Package"]):
+                    rotation += extra
+                    if centre:
+                        dx, dy = shift[ref]
+                        x, y = x + dx, y - dy   # placement Y points up, page Y points down
+            rotation %= 360
+            rotation -= 360 if rotation > 180 else 0   # keep it in (-180, 180]
+            out.writerow([ref, f"{x:.4f}mm", f"{y:.4f}mm", row["Side"].capitalize(), f"{rotation:g}"])
 
 
 if __name__ == "__main__":
