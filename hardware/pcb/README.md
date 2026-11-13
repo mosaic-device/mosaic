@@ -44,14 +44,15 @@ pnpm pcb:export
 
 `pcb:check` runs ERC and DRC (including schematic parity) and fails on any violation. `pcb:export` then writes `hardware/pcb/build/`, which is not committed:
 
-| File                           | Use                                                       |
-| ------------------------------ | --------------------------------------------------------- |
-| `mosaic-carrier-gerbers.zip`   | Gerbers and drill files to upload to JLCPCB               |
-| `jlc-bom.csv`, `jlc-cpl.csv`   | BOM and placement for JLCPCB assembly                     |
-| `mosaic-carrier-schematic.pdf` | The schematic                                             |
-| `mosaic-carrier-assembly.html` | Where each part is and what it is, for probing and rework |
+| File                           | Use                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `mosaic-carrier-gerbers.zip`   | Gerbers and drill files to upload to JLCPCB                            |
+| `jlc-bom.csv`, `jlc-cpl.csv`   | BOM and placement for JLCPCB assembly                                  |
+| `mosaic-carrier-schematic.pdf` | The schematic                                                          |
+| `mosaic-carrier-assembly.html` | Where each part is and what it is, for probing and rework              |
+| `mosaic-carrier.step`          | 3D model of the assembled board, for enclosure CAD; built locally only |
 
-CI's **PCB** job runs the same export and uploads these files as an artifact.
+CI's **PCB** job runs the same export and uploads these files as an artifact, except the STEP model: CI's KiCad image has no component 3D models, so it skips it.
 
 ## Ordering
 

@@ -94,6 +94,19 @@ def export():
     write_assembly_sheet()
     print(f"Wrote {archive.relative_to(ROOT)}, jlc-bom.csv, jlc-cpl.csv and mosaic-carrier-assembly.html "
           f"in {BUILD.relative_to(ROOT)}")
+    write_step()
+
+
+def write_step():
+    """A STEP model of the assembled board, for enclosure CAD."""
+    # CI's KiCad image has no component 3D models, so a model built there would be a bare board.
+    if os.environ.get("CI"):
+        print("Skipped the STEP model: CI's KiCad image has no component 3D models")
+        return
+    step = BUILD / "mosaic-carrier.step"
+    if run("pcb", "export", "step", "--force", "--subst-models", "--drill-origin", "-o", str(step), str(PCB)) != 0:
+        sys.exit("kicad-cli pcb export step failed")
+    print(f"Wrote {step.relative_to(ROOT)}")
 
 
 def natural(ref):
