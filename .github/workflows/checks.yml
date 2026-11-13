@@ -265,3 +265,4 @@ jobs:
             hardware/pcb/build/jlc-bom.csv
             hardware/pcb/build/jlc-cpl.csv
             hardware/pcb/build/mosaic-carrier-schematic.pdf
+            hardware/pcb/build/mosaic-carrier-assembly.html
