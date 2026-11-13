@@ -6,7 +6,7 @@ The KiCad 10 project is in [`mosaic-carrier/`](mosaic-carrier/). Open `mosaic-ca
 
 ## Fitting it
 
-- **J1** is a male 2 × 10 header soldered on the **underside**, plastic against the board. It plugs into the Waveshare's female socket at pins 1–20.
+- **J1** is a male 2 × 10 header soldered on the **underside**, plastic against the board. JLCPCB doesn't fit it (see [Ordering](#ordering)); solder it yourself with the short pin ends through the board and the long ends pointing down. It plugs into the Waveshare's female socket at pins 1–20.
 - Pin 1 (the square pad, marked `1` on the top) goes at the end of the Waveshare header nearest the corner mounting hole, with the 5V row nearest the board edge. The carrier then lies over the Waveshare board, running from the corner end toward its middle.
 - Nothing else is on the underside, so it clears the parts beneath it.
 
@@ -57,6 +57,6 @@ CI's **PCB** job runs the same export and uploads these files as an artifact, ex
 ## Ordering
 
 1. Upload the gerber zip with the default options (2 layers, 1.6 mm) and choose a **black** solder mask with white silkscreen.
-2. Turn on assembly and upload `jlc-bom.csv` and `jlc-cpl.csv`. Every part has an LCSC number. The SMD parts and JST connectors are on the top; J1 is a through-hole part on the bottom, so pick the option that assembles both sides if JLCPCB asks.
-3. In the placement preview, check each part's rotation, especially U1/U2 (pin 1 dot) and the JST connectors (opening toward the board edge). `jlc-cpl.csv` already corrects the buffers, connectors and header for JLCPCB's part models (`JLC_CORRECTIONS` in `scripts/pcb.py`), so they should need no adjustment; if a part still looks wrong, fix it in the preview and add or adjust its correction there.
-4. Check J1 sits on the bottom, lined up with the 20 holes.
+2. Turn on assembly, choose **Economic PCBA** on the top side, and upload `jlc-bom.csv` and `jlc-cpl.csv`. Every part has an LCSC number. Both files leave out J1, the underside header: placing it would need Standard PCBA, which cost about four times as much for 5 boards.
+3. In the placement preview, check each part's rotation, especially U1/U2 (pin 1 dot) and the JST connectors (opening toward the board edge). `jlc-cpl.csv` already corrects the buffers and JST connectors for JLCPCB's part models (`JLC_CORRECTIONS` in `scripts/pcb.py`), so they should need no adjustment; if a part still looks wrong, fix it in the preview and add or adjust its correction there.
+4. Order J1 separately: any 2.54 mm 2 × 10 male header, such as LCSC C124359. Get a couple of spares.

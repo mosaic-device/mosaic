@@ -21,6 +21,10 @@ SCH = PROJECT / "mosaic-carrier.kicad_sch"
 PCB = PROJECT / "mosaic-carrier.kicad_pcb"
 BUILD = ROOT / "hardware" / "pcb" / "build"
 
+# Soldered by hand rather than by JLCPCB. Leaving the underside header out keeps the order to top-side
+# assembly, which Economic PCBA covers: about a quarter of the Standard PCBA price for 5 boards.
+HAND_SOLDERED = {"J1"}
+
 GERBER_LAYERS = "F.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts"
 
 
@@ -152,7 +156,10 @@ def write_assembly_sheet():
     parts = []
     for row in csv.DictReader((BUILD / "bom-full.csv").open(newline="")):
         for ref in (r.strip() for r in row["Reference"].split(",")):
-            parts.append((ref, row["Value"], row["Footprint"].split(":")[-1], row["LCSC"], sides.get(ref, "")))
+            side = sides.get(ref, "")
+            if ref in HAND_SOLDERED:
+                side += ", solder by hand"
+            parts.append((ref, row["Value"], row["Footprint"].split(":")[-1], row["LCSC"], side))
     parts.sort(key=lambda p: natural(p[0]))
     rows = "\n".join(
         f"<tr><td>{html.escape(ref)}</td><td>{html.escape(value)}</td><td>{html.escape(fp)}</td>"
@@ -204,7 +211,8 @@ def write_jlc_bom():
     # (LED ring, LED strip) would otherwise appear twice and trigger JLCPCB's duplicate-part warning.
     lines = {}
     for row in csv.DictReader((BUILD / "bom-full.csv").open(newline="")):
-        refs = [r.strip() for r in row["Reference"].split(",") if not r.strip().startswith("JP")]  # jumpers are copper
+        refs = [r.strip() for r in row["Reference"].split(",")]
+        refs = [r for r in refs if not r.startswith("JP") and r not in HAND_SOLDERED]  # jumpers are copper
         if not refs or not row["LCSC"]:
             continue
         line = lines.setdefault(row["LCSC"], {"values": [], "refs": [], "footprint": row["Footprint"].split(":")[-1]})
@@ -237,7 +245,7 @@ def write_jlc_cpl():
         out.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
         for row in rows:
             ref = row["Ref"]
-            if ref.startswith("JP"):
+            if ref.startswith("JP") or ref in HAND_SOLDERED:
                 continue
             x, y, rotation = float(row["PosX"]), float(row["PosY"]), float(row["Rot"])
             for pattern, extra, centre in JLC_CORRECTIONS:
