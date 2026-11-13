@@ -55,6 +55,6 @@ CI's **PCB** job runs the same export and uploads these files as an artifact.
 ## Ordering
 
 1. Upload the gerber zip with the default options (2 layers, 1.6 mm) and choose a **black** solder mask with white silkscreen.
-2. Turn on assembly for the top side and upload `jlc-bom.csv` and `jlc-cpl.csv`. Every part has an LCSC number.
+2. Turn on assembly and upload `jlc-bom.csv` and `jlc-cpl.csv`. Every part has an LCSC number. The SMD parts and JST connectors are on the top; J1 is a through-hole part on the bottom, so pick the option that assembles both sides if JLCPCB asks.
 3. In the placement preview, check each part's rotation, especially U1/U2 (pin 1 dot) and the JST connectors (opening toward the board edge). Rotate any that JLCPCB shows wrongly.
-4. J1 is left out of the assembly files: solder the header yourself on the underside.
+4. Check J1 sits on the bottom with its pin 1 on the square pad, beside the `1` on the top. KiCad places it by pin 1 rather than its centre, so JLCPCB may need to nudge it into line with the 20 holes.

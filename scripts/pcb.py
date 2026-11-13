@@ -18,9 +18,6 @@ SCH = PROJECT / "mosaic-carrier.kicad_sch"
 PCB = PROJECT / "mosaic-carrier.kicad_pcb"
 BUILD = ROOT / "hardware" / "pcb" / "build"
 
-# Hand-soldered rather than placed by the assembler: the header mounts on the underside.
-HAND_SOLDERED = {"J1"}
-
 GERBER_LAYERS = "F.Cu,B.Cu,F.Paste,B.Paste,F.Silkscreen,B.Silkscreen,F.Mask,B.Mask,Edge.Cuts"
 
 
@@ -101,7 +98,7 @@ def write_jlc_bom():
         out.writerow(["Comment", "Designator", "Footprint", "JLCPCB Part #"])
         for row in rows:
             refs = [r.strip() for r in row["Reference"].split(",")]
-            refs = [r for r in refs if r not in HAND_SOLDERED and not r.startswith("JP")]
+            refs = [r for r in refs if not r.startswith("JP")]  # solder jumpers are copper, not parts
             if refs and row["LCSC"]:
                 out.writerow([row["Value"], ",".join(refs), row["Footprint"].split(":")[-1], row["LCSC"]])
 
@@ -113,7 +110,7 @@ def write_jlc_cpl():
         out.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
         for row in rows:
             ref = row["Ref"]
-            if ref in HAND_SOLDERED or ref.startswith("JP"):
+            if ref.startswith("JP"):
                 continue
             out.writerow([ref, f"{row['PosX']}mm", f"{row['PosY']}mm", row["Side"].capitalize(), row["Rot"]])
 
