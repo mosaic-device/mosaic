@@ -42,6 +42,10 @@ idf_component_register(
          "features/clock/clock.cpp"
          "features/clock/service.cpp"
          "features/clock/sync.cpp"
+         "features/connection/backoff.cpp"
+         "features/connection/frames.cpp"
+         "features/connection/policy.cpp"
+         "features/connection/adapters/websocket.cpp"
          "features/home/screen.cpp"
          "features/settings/screen.cpp"
          "features/settings/service.cpp"
@@ -75,6 +79,7 @@ idf_component_register(
     REQUIRES esp32_p4_wifi6_touch_lcd_5 esp_lcd_hx8394 device_protos nanopb
              esp_wifi esp_wifi_remote esp_hosted esp_netif esp_event esp_http_server
              nvs_flash esp_timer bootloader_support lwip esp_driver_ppa esp_driver_gpio esp_driver_pcnt
+             esp_websocket_client mbedtls
              # Unconditional: IDF resolves requirements before options apply. Unused unless MOSAIC_DEBUG_TRIGGERS.
              console
     EMBED_TXTFILES "features/provisioning/assets/setup.html" "features/provisioning/assets/setup.js"
