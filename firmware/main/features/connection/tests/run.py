@@ -12,6 +12,11 @@ compiler = shlex.split(os.environ.get("CXX", "c++"))
 # Each test program and the feature sources it covers.
 programs = {
     "backoff": [feature / "backoff.cpp", feature / "tests/backoff_test.cpp"],
+    "policy": [
+        feature / "backoff.cpp",
+        feature / "policy.cpp",
+        feature / "tests/policy_test.cpp",
+    ],
 }
 
 with tempfile.TemporaryDirectory(prefix="mosaic-connection-") as work:
