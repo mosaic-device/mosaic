@@ -1,6 +1,8 @@
-import { Monitor } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { Monitor, Plus } from 'lucide-react'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
 function DevicesPage() {
@@ -9,6 +11,14 @@ function DevicesPage() {
       <PageHeader
         title="Devices"
         description="Mosaic devices paired with this server."
+        actions={
+          <Button asChild>
+            <Link to="/devices/pair">
+              <Plus aria-hidden="true" />
+              Pair a device
+            </Link>
+          </Button>
+        }
       />
       <Card>
         <CardContent>

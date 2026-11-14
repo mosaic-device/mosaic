@@ -1,14 +1,20 @@
+import type { ReactNode } from 'react'
 import { CircleAlert } from 'lucide-react'
 import { cn } from 'cn'
 import { describeError } from '@/api/describe-error'
 
-/** Shows an API error (or a bug) as one plain message. Renders nothing for `null`. */
+/**
+ * Shows an API error (or a bug) as one plain message, with optional advice
+ * from the page below it. Renders nothing for `null`.
+ */
 function ApiErrorNotice({
   error,
   className,
+  children,
 }: {
   error: unknown
   className?: string
+  children?: ReactNode
 }) {
   if (error === null || error === undefined) return null
   const { message, reference } = describeError(error)
@@ -27,6 +33,7 @@ function ApiErrorNotice({
       />
       <div className="grid min-w-0 gap-1">
         <p>{message}</p>
+        {children}
         {reference && (
           <p className="text-muted-foreground text-caption break-all">
             Reference: {reference}

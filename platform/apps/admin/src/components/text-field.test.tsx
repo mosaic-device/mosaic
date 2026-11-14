@@ -23,6 +23,11 @@ describe('TextField', () => {
     expect(document.getElementById('code-error')?.textContent).toBe('Required.')
   })
 
+  it('announces its error, even when focus is already in the field', () => {
+    render(<TextField id="code" label="Code" error="Required." />)
+    expect(screen.getByRole('alert').textContent).toBe('Required.')
+  })
+
   it('is not marked invalid without an error', () => {
     render(<TextField id="name" name="name" label="Username" />)
     const input = screen.getByLabelText('Username')

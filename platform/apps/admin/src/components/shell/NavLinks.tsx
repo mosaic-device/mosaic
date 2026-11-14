@@ -1,22 +1,35 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useMatchRoute } from '@tanstack/react-router'
 import { House, Monitor, SlidersHorizontal } from 'lucide-react'
 
+// `subpages` also mark a section current.
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: House },
-  { to: '/devices', label: 'Devices', icon: Monitor },
-  { to: '/settings', label: 'Settings', icon: SlidersHorizontal },
+  { to: '/', label: 'Home', icon: House, subpages: [] },
+  {
+    to: '/devices',
+    label: 'Devices',
+    icon: Monitor,
+    subpages: ['/devices/pair'],
+  },
+  { to: '/settings', label: 'Settings', icon: SlidersHorizontal, subpages: [] },
 ] as const
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  const matchRoute = useMatchRoute()
+
   return (
     <ul className="grid gap-1">
-      {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+      {NAV_ITEMS.map(({ to, label, icon: Icon, subpages }) => (
         <li key={to}>
           <Link
             to={to}
-            // Exact until nested pages exist, so "/" or a not-found page under
-            // /devices doesn't mark a section current. Revisit with /devices/$id (M3).
+            // Exact, plus the listed subpages, so "/" or a not-found page
+            // under /devices doesn't mark a section current.
             activeOptions={{ exact: true }}
+            aria-current={
+              subpages.some((page) => matchRoute({ to: page }))
+                ? 'page'
+                : undefined
+            }
             onClick={onNavigate}
             // The current page gets a dark shade of the primary purple, so it
             // stands out without competing with primary buttons.

@@ -62,8 +62,10 @@ function TextField({
           {hint}
         </p>
       )}
+      {/* An alert, so it is read out even when focus is already in the
+          field (a form submitted with Enter). */}
       {error && (
-        <p id={errorId} className="text-danger text-sm">
+        <p id={errorId} role="alert" className="text-danger text-sm">
           {error}
         </p>
       )}
