@@ -1,9 +1,9 @@
 # @mosaic/admin
 
 Vite/React/Tailwind admin app. It has the signed-in shell (sidebar on wide screens,
-top bar and menu sheet on narrow ones) and Home, Devices, Settings and not-found pages
-in their empty states, the shared API client in `src/api/`, and the first-run setup
-and login pages, and session handling. Routes live in `src/router.ts`, pages in
+top bar and menu sheet on narrow ones) and Home, Settings and not-found pages in their
+empty states, the shared API client in `src/api/`, the first-run setup and login
+pages, session handling, and pairing, listing and removing devices. Routes live in `src/router.ts`, pages in
 `src/pages/`, the shell in `src/components/shell/`. `/dev/components` is development-only and excluded from
 production. `pnpm build:admin-assets` copies `dist/` into the server's `wwwroot/`;
 local `/api` and `/ws` proxies target `http://localhost:5000`.
@@ -19,7 +19,7 @@ pnpm web:check
 
 `test` runs the Vitest suite (`src/**/*.test.{ts,tsx}`: direct loading of every route,
 navigation, the phone menu, page states, the API client and its error states, setup
-and login), then builds production and checks preview
+and login, pairing, the device list), then builds production and checks preview
 exclusion, root-relative asset paths, local fonts, and font notices. After changing primitives, manually check keyboard focus,
 dialog trapping/restoration, pending/disabled states, field errors, mobile layout,
 forced colors, and reduced motion at `/dev/components`.
@@ -27,7 +27,8 @@ forced colors, and reduced motion at `/dev/components`.
 ## Calling the API
 
 Screens call the functions in `src/api/auth.ts` (`getSetupStatus`, `completeSetup`,
-`login`, `logout`, `getSession`) and `src/api/devices.ts` (`claimDevice`), never
+`login`, `logout`, `getSession`) and `src/api/devices.ts` (`claimDevice`,
+`listDevices`, `removeDevice`), never
 `fetch` directly. URLs are relative
 (`/api/...`): in development the Vite proxy forwards them to the server, and in
 production the server serves the app itself, so it is always same-origin. The
@@ -98,6 +99,19 @@ again, which the server answers with the same device. A `401` re-runs the route
 guard, so login opens with a way back. Success shows the device as paired, and
 as online or offline. A "Devices" link with a back arrow above the title leads
 back (`PageHeader`'s `back` option).
+
+## Paired devices
+
+`/devices` lists the paired devices from `GET /api/devices` (loaded by the route),
+oldest first. Devices have no names yet, so each is "Mosaic" plus its ID. Every row
+says when it was paired and whether it's online right now. The server never pushes
+changes, so `useDeviceList` asks again every 10 seconds while the tab is visible and
+as soon as the owner comes back to it; a failed check keeps the last list and says
+when the server last answered. Remove opens a dialog that stays open until the
+server answers `DELETE /api/devices/{id}`. A `404 device_not_found` counts as
+removed (the contract's "already removed"). After a removal the row goes and
+"Mosaic 3 removed." takes focus. A failure where the removal may have gone through
+anyway asks the owner to try again, which is safe.
 
 ## UI constraints
 

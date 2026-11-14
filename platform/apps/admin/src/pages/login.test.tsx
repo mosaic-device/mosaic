@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
   jsonResponse,
+  noDevicesResponse,
   problemResponse,
   sessionResponse,
   stubFetch,
@@ -62,6 +63,7 @@ describe('login page', () => {
       '/login?redirect=/devices',
       loginOk(),
       sessionResponse(),
+      noDevicesResponse(),
     )
 
     fill('Username', 'bridger')

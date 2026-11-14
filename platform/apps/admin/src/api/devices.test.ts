@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { claimDevice, validateClaim } from '@/api/devices'
+import {
+  claimDevice,
+  listDevices,
+  removeDevice,
+  validateClaim,
+} from '@/api/devices'
 import { ApiError } from '@/api/errors'
-import { jsonResponse, problemResponse, stubFetch } from '@/test/fetch-stub'
+import {
+  emptyResponse,
+  jsonResponse,
+  problemResponse,
+  stubFetch,
+} from '@/test/fetch-stub'
 
 // Examples from the Admin API Contract, section 5.
 const device = { id: 3, pairedAt: '2026-11-06T18:30:00Z', connected: true }
@@ -81,5 +91,61 @@ describe('claimDevice', () => {
     stubFetch(jsonResponse(body))
     const error = await apiFailure(claimDevice({ code: 'K7QF-2M9X' }))
     expect(error.kind).toBe('malformed')
+  })
+})
+
+describe('listDevices', () => {
+  it('returns the paired devices', async () => {
+    const offline = {
+      id: 5,
+      pairedAt: '2026-11-14T20:12:00Z',
+      connected: false,
+    }
+    const { calls } = stubFetch(jsonResponse({ devices: [device, offline] }))
+    await expect(listDevices()).resolves.toEqual({
+      devices: [device, offline],
+    })
+    expect(calls[0]?.url).toBe('/api/devices')
+    expect(calls[0]?.init.method).toBe('GET')
+  })
+
+  it('returns an empty list', async () => {
+    stubFetch(jsonResponse({ devices: [] }))
+    await expect(listDevices()).resolves.toEqual({ devices: [] })
+  })
+
+  it.each([
+    {},
+    { devices: null },
+    { devices: device },
+    { devices: [device, { ...device, connected: 'yes' }] },
+    { device },
+  ])('rejects a list the app cannot use: %j', async (body) => {
+    stubFetch(jsonResponse(body))
+    const error = await apiFailure(listDevices())
+    expect(error.kind).toBe('malformed')
+  })
+})
+
+describe('removeDevice', () => {
+  it('deletes the device by ID', async () => {
+    const { calls } = stubFetch(emptyResponse(204))
+    await expect(removeDevice(3)).resolves.toBeUndefined()
+    expect(calls[0]?.url).toBe('/api/devices/3')
+    expect(calls[0]?.init.method).toBe('DELETE')
+    expect(calls[0]?.init.body).toBeUndefined()
+  })
+
+  it('reports a device that is already gone', async () => {
+    stubFetch(
+      problemResponse({
+        status: 404,
+        code: 'device_not_found',
+        title: "That device isn't paired with this server.",
+      }),
+    )
+    const error = await apiFailure(removeDevice(3))
+    expect(error.kind).toBe('problem')
+    expect(error.code).toBe('device_not_found')
   })
 })
