@@ -389,3 +389,16 @@ describe('pairing help', () => {
     expect(help('Where to find the code')).toBeTruthy()
   })
 })
+
+describe('pairing help for an offline device', () => {
+  it('says the device shows it is paired once it connects', async () => {
+    await openPairPage(claimed(false))
+    enterCode('K7QF-2M9X')
+    const after = await screen.findByRole('complementary', {
+      name: 'On your Mosaic',
+    })
+    expect(after.textContent).toContain(
+      "When it next connects, your Mosaic shows that it's paired, then opens its Home screen.",
+    )
+  })
+})

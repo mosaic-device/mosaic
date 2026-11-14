@@ -1,5 +1,6 @@
 import { CircleCheck } from 'lucide-react'
 import { useId } from 'react'
+import type { Device } from '@/api/devices'
 import { Wordmark } from '@/components/shell/Wordmark'
 
 const STEPS = [
@@ -8,9 +9,13 @@ const STEPS = [
   'Enter the code within 10 minutes. If it runs out, your Mosaic shows a new one.',
 ]
 
-/** Beside the pair form: where the code comes from, then what the device does once paired. */
-function PairingHelp({ paired }: { paired: boolean }) {
+/**
+ * Beside the pair form: where the code comes from, then what the device does
+ * once paired. A device claimed while offline only shows it when it connects.
+ */
+function PairingHelp({ device }: { device: Device | null }) {
   const headingId = useId()
+  const paired = device !== null
 
   return (
     <aside aria-labelledby={headingId} className="grid content-start gap-4">
@@ -20,7 +25,8 @@ function PairingHelp({ paired }: { paired: boolean }) {
       <DeviceScreen paired={paired} />
       {paired ? (
         <p className="text-muted-foreground text-sm">
-          Your Mosaic shows that it's paired, then opens its Home screen.
+          {device.connected ? 'Your' : 'When it next connects, your'} Mosaic
+          shows that it's paired, then opens its Home screen.
         </p>
       ) : (
         <ol className="text-muted-foreground grid list-decimal gap-1 pl-5 text-sm">

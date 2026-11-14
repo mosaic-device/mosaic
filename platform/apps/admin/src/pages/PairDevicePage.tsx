@@ -56,7 +56,7 @@ function PairDevicePage() {
               <PairForm focusOnMount={pairingAnother} onPaired={setPaired} />
             )}
             <div className="border-border border-t pt-8 @xl:border-t-0 @xl:border-l @xl:pt-0 @xl:pl-8">
-              <PairingHelp paired={paired !== null} />
+              <PairingHelp device={paired} />
             </div>
           </div>
         </CardContent>
