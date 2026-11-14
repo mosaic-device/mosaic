@@ -5,6 +5,7 @@ import type { ApiError, ApiErrorCode } from '@/api/errors'
 import { useApiAction } from '@/api/use-api-action'
 import { ApiErrorNotice } from '@/components/ApiErrorNotice'
 import { PageHeader } from '@/components/PageHeader'
+import { PairedAt } from '@/components/PairedAt'
 import { PairingHelp } from '@/components/PairingHelp'
 import { StatusIndicator } from '@/components/StatusIndicator'
 import { TextField } from '@/components/TextField'
@@ -24,11 +25,6 @@ const CODE_PROBLEMS: readonly ApiErrorCode[] = [
   'pairing_code_expired',
   'pairing_code_used',
 ]
-
-const pairedAtFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
 
 function PairDevicePage() {
   const [paired, setPaired] = useState<Device | null>(null)
@@ -203,12 +199,7 @@ function PairedDevice({
         <StatusIndicator tone={device.connected ? 'success' : 'neutral'}>
           {device.connected ? 'Online' : 'Offline'}
         </StatusIndicator>
-        <p className="text-muted-foreground text-sm">
-          Paired{' '}
-          <time dateTime={device.pairedAt}>
-            {pairedAtFormat.format(new Date(device.pairedAt))}
-          </time>
-        </p>
+        <PairedAt value={device.pairedAt} />
         {!device.connected && (
           <p className="text-muted-foreground">
             It finishes pairing the next time it connects to this server.

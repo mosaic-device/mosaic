@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
   jsonResponse,
+  noDevicesResponse,
   problemResponse,
   sessionResponse,
   stubFetch,
@@ -36,7 +37,7 @@ async function openPairPage(...answers: Parameters<typeof stubFetch>) {
 
 describe('getting to the pair page', () => {
   it('Devices links to it', async () => {
-    stubFetch(sessionResponse(), sessionResponse())
+    stubFetch(sessionResponse(), noDevicesResponse(), sessionResponse())
     await renderAppAt('/devices')
     const main = screen.getByRole('main')
 
@@ -408,7 +409,7 @@ describe('pairing help for an offline device', () => {
 
 describe('leaving the pair page', () => {
   it('has a way back to Devices above the title', async () => {
-    stubFetch(sessionResponse(), sessionResponse())
+    stubFetch(sessionResponse(), sessionResponse(), noDevicesResponse())
     const router = await renderAppAt('/devices/pair')
     await screen.findByRole('heading', { level: 1, name: 'Pair a device' })
     const main = screen.getByRole('main')

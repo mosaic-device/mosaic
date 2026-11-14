@@ -7,6 +7,7 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router'
 import { getSession, getSetupStatus } from '@/api/auth'
+import { listDevices } from '@/api/devices'
 import { isUnauthenticated } from '@/api/errors'
 import { PageError } from '@/components/PageError'
 import { PageLoading } from '@/components/PageLoading'
@@ -55,6 +56,19 @@ type RouterContext = { auth: SignInMemory }
  * - `session: 'ended'`: this tab was signed in and the session is gone.
  */
 type LoginSearch = { setup?: 'complete'; redirect?: string; session?: 'ended' }
+
+/**
+ * Sends a visitor without a session to login, with a way back to `href`.
+ * Login says the session ended when this tab had been signed in.
+ */
+function loginRedirect(auth: SignInMemory, href: string) {
+  const search: LoginSearch = {}
+  const returnPath = returnPathFor(href)
+  if (returnPath) search.redirect = returnPath
+  if (auth.wasSignedIn) search.session = 'ended'
+  auth.signedOut()
+  return redirect({ to: '/login', search })
+}
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: Outlet,
@@ -122,12 +136,7 @@ const appRoute = createRoute({
       return { session }
     } catch (error) {
       if (!isUnauthenticated(error)) throw error
-      const search: LoginSearch = {}
-      const returnPath = returnPathFor(location.href)
-      if (returnPath) search.redirect = returnPath
-      if (context.auth.wasSignedIn) search.session = 'ended'
-      context.auth.signedOut()
-      throw redirect({ to: '/login', search })
+      throw loginRedirect(context.auth, location.href)
     }
   },
   pendingComponent: SessionCheckLoading,
@@ -142,6 +151,20 @@ const homeRoute = createRoute({
 const devicesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'devices',
+  loader: async ({ abortController, context, location }) => {
+    try {
+      const { devices } = await listDevices(abortController.signal)
+      return { devices, loadedAt: Date.now() }
+    } catch (error) {
+      if (isUnauthenticated(error)) {
+        throw loginRedirect(context.auth, location.href)
+      }
+      throw error
+    }
+  },
+  // Each visit loads a fresh list, so a device removed on an earlier visit
+  // can't flash back from the cache.
+  gcTime: 0,
   component: DevicesPage,
 })
 const pairDeviceRoute = createRoute({

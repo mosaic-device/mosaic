@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   emptyResponse,
   jsonResponse,
+  noDevicesResponse,
   sessionResponse,
   stubFetch,
   unauthenticatedResponse,
@@ -22,7 +23,7 @@ const loggedOut = () => [
 
 describe('session check', () => {
   it('restores a session on a direct load', async () => {
-    const { calls } = stubFetch(sessionResponse())
+    const { calls } = stubFetch(sessionResponse(), noDevicesResponse())
     await renderAppAt('/devices')
 
     expect(
@@ -134,6 +135,7 @@ describe('account and logout', () => {
   it('logs out and opens a plain login page', async () => {
     const { calls } = stubFetch(
       sessionResponse(),
+      noDevicesResponse(),
       emptyResponse(204),
       adminExists(),
       unauthenticatedResponse(),
@@ -143,8 +145,8 @@ describe('account and logout', () => {
     logOut()
 
     await screen.findByRole('heading', { level: 1, name: 'Log in' })
-    expect(calls[1]?.url).toBe('/api/auth/logout')
-    expect(calls[1]?.init.method).toBe('POST')
+    expect(calls[2]?.url).toBe('/api/auth/logout')
+    expect(calls[2]?.init.method).toBe('POST')
     expect(router.state.location.search).toEqual({})
     expect(screen.queryByText(ENDED)).toBeNull()
   })
@@ -153,6 +155,7 @@ describe('account and logout', () => {
     stubFetch(
       sessionResponse(),
       sessionResponse(),
+      noDevicesResponse(),
       emptyResponse(204),
       adminExists(),
       unauthenticatedResponse(),
@@ -233,13 +236,13 @@ describe('account and logout', () => {
 describe('coming back to the tab', () => {
   it('opens login with the note when the session ended', async () => {
     stubFetch(sessionResponse(), unauthenticatedResponse(), ...loggedOut())
-    const router = await renderAppAt('/devices')
+    const router = await renderAppAt('/settings')
 
     showTab()
 
     await screen.findByRole('heading', { level: 1, name: 'Log in' })
     expect(router.state.location.search).toEqual({
-      redirect: '/devices',
+      redirect: '/settings',
       session: 'ended',
     })
     expect(screen.getByText(ENDED)).toBeTruthy()
