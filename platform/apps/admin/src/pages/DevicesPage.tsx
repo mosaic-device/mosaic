@@ -145,8 +145,12 @@ function DeviceList({ loaded }: { loaded: LoadedDevices }) {
 }
 
 /**
- * Name, status and paired date, with Remove on the right. Stacked beside
- * the icon in a narrow card; the status moves next to Remove in a wide one.
+ * Name, status and paired date, with Remove on the right. A narrow card
+ * stacks them and leaves out the icon, so the text has room; a wide one adds
+ * the icon and moves the status next to Remove.
+ *
+ * Each `@md:row-span-*` also sets `@md:row-start-*`: the span sets the whole
+ * `grid-row`, which would otherwise drop a start line given without `@md:`.
  */
 function DeviceRow({
   device,
@@ -158,24 +162,33 @@ function DeviceRow({
   const name = deviceName(device)
 
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 py-4 @md:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 py-4 @md:grid-cols-[auto_minmax(0,1fr)_auto_auto]">
       <div
         aria-hidden="true"
-        className="bg-surface-raised text-muted-foreground row-span-3 grid size-10 place-items-center self-start rounded-md @md:row-span-2 @md:self-center"
+        className="bg-surface-raised text-muted-foreground hidden size-10 place-items-center rounded-md @md:row-span-2 @md:row-start-1 @md:grid"
       >
         <Monitor className="size-5" />
       </div>
-      <h2 className="col-start-2 font-medium">{name}</h2>
-      <div className="col-start-2 @md:col-start-3 @md:row-span-2 @md:row-start-1">
+      {/* Sized like Home's card titles, below the page title. */}
+      <h2 className="col-start-1 text-base font-medium @md:col-start-2">
+        {name}
+      </h2>
+      {/* The minimum width lines the status dots up from row to row. */}
+      <div className="col-start-1 @md:col-start-3 @md:row-span-2 @md:row-start-1 @md:min-w-20">
         <StatusIndicator tone={device.connected ? 'success' : 'neutral'}>
           {device.connected ? 'Online' : 'Offline'}
         </StatusIndicator>
       </div>
-      <PairedAt value={device.pairedAt} className="col-start-2" />
+      {/* A narrow card shows the date only, so it fits on one line. */}
+      <PairedAt
+        value={device.pairedAt}
+        className="col-start-1 @md:col-start-2"
+        timeClassName="hidden @md:inline"
+      />
       <Button
         variant="secondary"
         aria-label={`Remove ${name}`}
-        className="col-start-3 row-span-3 row-start-1 self-start @md:col-start-4 @md:row-span-2 @md:self-center"
+        className="col-start-2 row-span-3 row-start-1 self-start @md:col-start-4 @md:row-span-2 @md:row-start-1 @md:self-center"
         onClick={(event) => onRemove(event.currentTarget)}
       >
         Remove
