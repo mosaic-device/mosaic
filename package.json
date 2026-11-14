@@ -25,6 +25,8 @@
     "fw:preview": "python3 firmware/preview/run.py",
     "fw:flash": "python3 scripts/firmware.py flash",
     "fw:monitor": "python3 scripts/firmware.py monitor",
+    "pcb:check": "python3 scripts/pcb.py check",
+    "pcb:export": "python3 scripts/pcb.py export",
     "companion:format": "cargo fmt --manifest-path platform/apps/companion/src-tauri/Cargo.toml",
     "companion:check": "cargo fmt --check --manifest-path platform/apps/companion/src-tauri/Cargo.toml && cargo clippy --manifest-path platform/apps/companion/src-tauri/Cargo.toml -- -D warnings",
     "generate-tokens": "pnpm --filter @mosaic/tokens build",

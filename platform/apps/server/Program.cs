@@ -24,6 +24,7 @@ builder.Services.AddSingleton<DeviceStore>();
 builder.Services.AddSingleton<PairingCodes>();
 builder.Services.AddSingleton<DeviceConnections>();
 builder.Services.AddSingleton<DevicePairing>();
+builder.Services.AddSingleton<NotificationDelivery>();
 builder.Services.AddDeviceApi();
 builder.Services.AddSingleton<DeviceConnectionHandler>();
 var app = builder.Build();

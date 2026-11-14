@@ -1,6 +1,6 @@
 # Pull request checks
 
-[PR checks](../.github/workflows/checks.yml) runs on every pull request, on pushes to `main`, and on manual dispatch. Its seven jobs run independently and report failures separately. A new push cancels older runs for the same PR. Jobs have read-only repository permissions and never commit formatting fixes; run the [formatters](../README.md#check-your-changes) yourself.
+[PR checks](../.github/workflows/checks.yml) runs on every pull request, on pushes to `main`, and on manual dispatch. Its eight jobs run independently and report failures separately. A new push cancels older runs for the same PR. Jobs have read-only repository permissions and never commit formatting fixes; run the [formatters](../README.md#check-your-changes) yourself.
 
 Run commands from the repository root. [Setup](setup.md) covers installing each toolchain.
 
@@ -15,6 +15,7 @@ Run commands from the repository root. [Setup](setup.md) covers installing each 
 | **Firmware host checks** | Firmware formatting and every firmware host test                                                          | `pnpm fw:format:check`, `pnpm fw:test`                                          |
 | **Firmware preview**     | The preview compiles on Linux, macOS and Windows                                                          | `pnpm fw:preview --build-only`                                                  |
 | **Firmware build**       | A clean ESP-IDF build, the committed dependency lock unchanged, no debug-trigger code in the normal image | [Firmware build commands](#firmware-build)                                      |
+| **PCB**                  | Carrier board ERC, DRC with schematic parity, and the fabrication files, uploaded as an artifact          | `pnpm pcb:export`                                                               |
 
 `pnpm fw:test` finds every tracked `tests/run.py` and `tests/*.test.mjs` under `firmware/`, plus `scripts/firmware_test.py`, so a new runner needs no CI or documentation change. Each runner's output starts with `== <path>`.
 
@@ -38,7 +39,7 @@ dotnet publish platform/apps/server/Mosaic.Server.csproj --configuration Release
 python3 scripts/smoke-server.py publish/ci/Mosaic.Server
 ```
 
-The publish and smoke steps work as written only on Linux x64, with `clang` and `zlib1g-dev` installed; elsewhere, use the [verify container](../platform/apps/server/README.md#automated-publish-and-startup-verification). Publish into a fresh output directory. The smoke test checks static assets, SPA routing, missing API and WebSocket routes, first-run setup, login and sessions, an unpaired device handshake, claiming its code through the API, a paired handshake, that the pairing and other data survive a restart without migrations running twice, and listing and removing the device, whose reconnect is then rejected, also after another restart.
+The publish and smoke steps work as written only on Linux x64, with `clang` and `zlib1g-dev` installed; elsewhere, use the [verify container](../platform/apps/server/README.md#automated-publish-and-startup-verification). Publish into a fresh output directory. The smoke test checks static assets, SPA routing, missing API and WebSocket routes, first-run setup, login and sessions, an unpaired device handshake, claiming its code through the API, a paired handshake, that the pairing and other data survive a restart without migrations running twice, a test notification to the offline and then the connected device, and listing and removing the device, whose reconnect and test notification are then refused, also after another restart.
 
 ### Rust
 
