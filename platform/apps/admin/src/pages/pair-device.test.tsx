@@ -88,7 +88,10 @@ describe('pair page', () => {
     expect(JSON.parse(String(calls[1]?.init.body))).toEqual({
       code: 'k7qf2m9x',
     })
-    expect(document.activeElement).toBe(heading)
+    // Focus moves in an effect after the heading renders, so wait for it.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(heading)
+    })
     expect(screen.getByText('Online')).toBeTruthy()
     // The device drawing also says "Paired"; the date line is the paragraph.
     expect(
