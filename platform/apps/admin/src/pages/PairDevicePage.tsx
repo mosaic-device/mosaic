@@ -39,6 +39,7 @@ function PairDevicePage() {
       <PageHeader
         title="Pair a device"
         description="Enter the code your Mosaic shows to pair it with this server."
+        back={{ to: '/devices', label: 'Devices' }}
       />
       <Card>
         {/* Side by side only when the card itself has room, not just the window. */}

@@ -96,7 +96,8 @@ claim may have gone through anyway (server out of reach, an unexpected answer,
 `internal_error`) never looks like success: it asks the owner to try the same code
 again, which the server answers with the same device. A `401` re-runs the route
 guard, so login opens with a way back. Success shows the device as paired, and
-as online or offline.
+as online or offline. A "Devices" link with a back arrow above the title leads
+back (`PageHeader`'s `back` option).
 
 ## UI constraints
 

@@ -402,3 +402,24 @@ describe('pairing help for an offline device', () => {
     )
   })
 })
+
+describe('leaving the pair page', () => {
+  it('has a way back to Devices above the title', async () => {
+    stubFetch(sessionResponse(), sessionResponse())
+    const router = await renderAppAt('/devices/pair')
+    await screen.findByRole('heading', { level: 1, name: 'Pair a device' })
+    const main = screen.getByRole('main')
+
+    const back = within(main).getByRole('link', { name: 'Back to Devices' })
+    expect(back.getAttribute('href')).toBe('/devices')
+    const position = back.compareDocumentPosition(
+      within(main).getByRole('heading', { level: 1 }),
+    )
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    fireEvent.click(back)
+
+    await screen.findByRole('heading', { level: 1, name: 'Devices' })
+    expect(router.state.location.pathname).toBe('/devices')
+  })
+})
