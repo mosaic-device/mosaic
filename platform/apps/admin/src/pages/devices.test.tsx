@@ -267,6 +267,33 @@ describe('removing a device', () => {
     await waitFor(() => expect(removedMessage()).not.toBeNull())
   })
 
+  it('puts focus back on Remove device after a failure', async () => {
+    await openDevices(list(online), new TypeError('Failed to fetch'))
+    const dialog = await startRemoving()
+
+    confirmRemoval(dialog)
+
+    await within(dialog).findByRole('alert')
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(dialog).getByRole('button', { name: 'Remove device' }),
+      ),
+    )
+  })
+
+  it("doesn't close on a click outside it", async () => {
+    await openDevices(list(online))
+    const dialog = await startRemoving()
+    // Radix starts listening for outside presses after a tick.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)))
+
+    // Radix waits for the click that follows the press.
+    fireEvent.pointerDown(document.body)
+    fireEvent.click(document.body)
+
+    expect(screen.getByRole('alertdialog')).toBe(dialog)
+  })
+
   it('shows other refusals without the retry advice', async () => {
     await openDevices(
       list(online),
@@ -314,6 +341,22 @@ describe('removing a device', () => {
     await act(async () => answer(emptyResponse(204)))
 
     await waitFor(() => expect(removedMessage()).not.toBeNull())
+  })
+
+  it('stays and says so when the session check then passes', async () => {
+    await openDevices(
+      list(online),
+      unauthenticatedResponse(),
+      sessionResponse(),
+      list(online),
+    )
+    const dialog = await startRemoving()
+
+    confirmRemoval(dialog)
+
+    const alert = await within(dialog).findByRole('alert')
+    expect(alert.textContent).toContain('Log in to continue.')
+    expect(screen.getByRole('alertdialog')).toBe(dialog)
   })
 
   it('sends an ended session to login and back here', async () => {

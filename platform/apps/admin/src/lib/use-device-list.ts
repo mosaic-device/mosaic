@@ -24,6 +24,8 @@ export type LoadedDevices = { devices: Device[]; loadedAt: number }
  * - `forget(id)` drops a device removed on this page, also from a check that
  *   started before the removal. IDs are never reused, so this never hides a
  *   device paired later.
+ * - A newer `loaded` (the route loaded again) replaces the list in place, so
+ *   the page around it keeps its state.
  */
 export function useDeviceList(
   loaded: LoadedDevices,
@@ -40,7 +42,14 @@ export function useDeviceList(
   })
   const [refreshError, setRefreshError] = useState<unknown>(null)
   const [removed, setRemoved] = useState<ReadonlySet<number>>(() => new Set())
+  const [loadedAt, setLoadedAt] = useState(loaded.loadedAt)
   const sessionEnded = useEffectEvent(onUnauthenticated)
+
+  if (loaded.loadedAt !== loadedAt) {
+    setLoadedAt(loaded.loadedAt)
+    setList({ devices: loaded.devices, reportedAt: loaded.loadedAt })
+    setRefreshError(null)
+  }
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -60,6 +69,8 @@ export function useDeviceList(
       controller = current
       try {
         const { devices } = await listDevices(current.signal)
+        // An answer that lands just as the check is cancelled is dropped.
+        if (current.signal.aborted) return
         setList({ devices, reportedAt: Date.now() })
         setRefreshError(null)
       } catch (error) {

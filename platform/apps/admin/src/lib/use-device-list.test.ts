@@ -128,6 +128,29 @@ describe('useDeviceList', () => {
     expect(result.current.devices).toEqual([offline])
   })
 
+  it('takes a newer load, still leaving out removed devices', async () => {
+    stubFetch(new TypeError('Failed to fetch'))
+    const { result, rerender } = renderHook(
+      ({ loaded }) => useDeviceList(loaded, vi.fn()),
+      {
+        initialProps: {
+          loaded: { devices: [online, offline], loadedAt: LOADED_AT },
+        },
+      },
+    )
+    act(() => result.current.forget(3))
+    await wait(REFRESH_MS)
+    expect(result.current.refreshError).not.toBeNull()
+
+    const later = LOADED_AT + 60_000
+    const added = { id: 7, pairedAt: '2026-11-14T21:00:30Z', connected: true }
+    rerender({ loaded: { devices: [online, added], loadedAt: later } })
+
+    expect(result.current.devices).toEqual([added])
+    expect(result.current.reportedAt).toBe(later)
+    expect(result.current.refreshError).toBeNull()
+  })
+
   it('stops asking once the page is gone', async () => {
     let signal: AbortSignal | null | undefined
     const { calls } = stubFetch((call) => {

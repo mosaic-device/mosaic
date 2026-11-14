@@ -1,6 +1,6 @@
 import { getRouteApi, Link, useRouter } from '@tanstack/react-router'
 import { CircleCheck, Monitor, Plus } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { removeDevice, type Device } from '@/api/devices'
 import type { ApiError } from '@/api/errors'
 import { useApiAction } from '@/api/use-api-action'
@@ -49,8 +49,7 @@ function DevicesPage() {
           </Button>
         }
       />
-      {/* A new load starts the list over. */}
-      <DeviceList key={loaded.loadedAt} loaded={loaded} />
+      <DeviceList loaded={loaded} />
     </>
   )
 }
@@ -204,6 +203,7 @@ function RemoveDeviceDialog({
   const router = useRouter()
   const { run, pending } = useApiAction(removeDevice)
   const [failure, setFailure] = useState<ApiError | null>(null)
+  const confirmRef = useRef<HTMLButtonElement>(null)
   // Keeps the name while the dialog closes.
   const [shown, setShown] = useState(device)
   if (device && device !== shown) setShown(device)
@@ -234,6 +234,12 @@ function RemoveDeviceDialog({
     setFailure(result.error)
   }
 
+  // The pending button lost focus when it was disabled; give it back so the
+  // owner can retry from the keyboard.
+  useEffect(() => {
+    if (failure) confirmRef.current?.focus()
+  }, [failure])
+
   const name = shown ? deviceName(shown) : ''
 
   return (
@@ -247,6 +253,8 @@ function RemoveDeviceDialog({
         role="alertdialog"
         showCloseButton={false}
         onCloseAutoFocus={onCloseAutoFocus}
+        // A confirmation closes only through its buttons or Escape.
+        onInteractOutside={(event) => event.preventDefault()}
       >
         <DialogHeader>
           {/* No close button to make room for, so no right padding. */}
@@ -268,6 +276,7 @@ function RemoveDeviceDialog({
             Cancel
           </Button>
           <Button
+            ref={confirmRef}
             variant="destructive"
             pending={pending}
             onClick={() => void remove()}
