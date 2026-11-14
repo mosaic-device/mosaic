@@ -90,9 +90,11 @@ describe('pair page', () => {
     })
     expect(document.activeElement).toBe(heading)
     expect(screen.getByText('Online')).toBeTruthy()
-    expect(screen.getByText(/^Paired/).querySelector('time')?.dateTime).toBe(
-      '2026-11-06T18:30:00Z',
-    )
+    // The device drawing also says "Paired"; the date line is the paragraph.
+    expect(
+      screen.getByText(/^Paired/, { selector: 'p' }).querySelector('time')
+        ?.dateTime,
+    ).toBe('2026-11-06T18:30:00Z')
     expect(screen.queryByLabelText('Pairing code')).toBeNull()
   })
 
@@ -337,5 +339,53 @@ describe('pair page', () => {
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toContain('Log in to continue.')
     expect(screen.queryByRole('heading', { name: 'Mosaic paired' })).toBeNull()
+  })
+})
+
+const STEPS = [
+  'Plug in your Mosaic and finish its Wi-Fi setup.',
+  "It shows an 8-character code and this server's address.",
+  'Enter the code within 10 minutes. If it runs out, your Mosaic shows a new one.',
+]
+const help = (name: string) => screen.getByRole('complementary', { name })
+
+describe('pairing help', () => {
+  it('explains where the code comes from', async () => {
+    await openPairPage()
+    const items = within(help('Where to find the code')).getAllByRole(
+      'listitem',
+    )
+    expect(items.map((item) => item.textContent)).toEqual(STEPS)
+  })
+
+  it('keeps the drawing out of the accessibility tree', async () => {
+    await openPairPage()
+    const sample = within(help('Where to find the code')).getByText('K7QF-2M9X')
+    expect(sample.closest('[aria-hidden="true"]')).not.toBeNull()
+  })
+
+  it('puts the form before the help', async () => {
+    await openPairPage()
+    const position = codeField().compareDocumentPosition(
+      help('Where to find the code'),
+    )
+    expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('shows the paired screen after a claim', async () => {
+    await openPairPage(claimed())
+    enterCode('K7QF-2M9X')
+    const after = await screen.findByRole('complementary', {
+      name: 'On your Mosaic',
+    })
+    expect(after.textContent).toContain(
+      "Your Mosaic shows that it's paired, then opens its Home screen.",
+    )
+    expect(
+      screen.queryByRole('complementary', { name: 'Where to find the code' }),
+    ).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pair another device' }))
+    expect(help('Where to find the code')).toBeTruthy()
   })
 })

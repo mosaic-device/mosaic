@@ -5,6 +5,7 @@ import type { ApiError, ApiErrorCode } from '@/api/errors'
 import { useApiAction } from '@/api/use-api-action'
 import { ApiErrorNotice } from '@/components/ApiErrorNotice'
 import { PageHeader } from '@/components/PageHeader'
+import { PairingHelp } from '@/components/PairingHelp'
 import { StatusIndicator } from '@/components/StatusIndicator'
 import { TextField } from '@/components/TextField'
 import { Button } from '@/components/ui/button'
@@ -39,19 +40,25 @@ function PairDevicePage() {
         title="Pair a device"
         description="Enter the code your Mosaic shows to pair it with this server."
       />
-      <Card className="max-w-lg">
-        <CardContent>
-          {paired ? (
-            <PairedDevice
-              device={paired}
-              onPairAnother={() => {
-                setPaired(null)
-                setPairingAnother(true)
-              }}
-            />
-          ) : (
-            <PairForm focusOnMount={pairingAnother} onPaired={setPaired} />
-          )}
+      <Card>
+        {/* Side by side only when the card itself has room, not just the window. */}
+        <CardContent className="@container">
+          <div className="grid items-start gap-8 @xl:grid-cols-2">
+            {paired ? (
+              <PairedDevice
+                device={paired}
+                onPairAnother={() => {
+                  setPaired(null)
+                  setPairingAnother(true)
+                }}
+              />
+            ) : (
+              <PairForm focusOnMount={pairingAnother} onPaired={setPaired} />
+            )}
+            <div className="border-border border-t pt-8 @xl:border-t-0 @xl:border-l @xl:pt-0 @xl:pl-8">
+              <PairingHelp paired={paired !== null} />
+            </div>
+          </div>
         </CardContent>
       </Card>
     </>
