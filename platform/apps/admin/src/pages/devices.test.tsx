@@ -553,7 +553,7 @@ describe('sending a test notification', () => {
     expect(alert.textContent).not.toContain(DIDNT_HEAR)
   })
 
-  it('waits out another test that is still waiting', async () => {
+  it('waits out another test that is still waiting, then clears', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     await openDevices(
       list(online),
@@ -584,6 +584,8 @@ describe('sending a test notification', () => {
 
     await act(() => vi.advanceTimersByTimeAsync(3000))
 
+    // The other test is over, so the banner no longer says it's waiting.
+    expect(resultOf().textContent).toBe('')
     menu = await openActions()
     expect(
       within(menu)

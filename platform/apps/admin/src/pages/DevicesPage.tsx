@@ -345,7 +345,8 @@ function useTestNotification(
   return {
     send,
     pending,
-    result,
+    // "Still waiting" is only true until `Retry-After` runs out.
+    result: result === 'busy' && secondsLeft === 0 ? null : result,
     failure,
     canSend: !pending && secondsLeft === 0,
     sendLabel: pending
