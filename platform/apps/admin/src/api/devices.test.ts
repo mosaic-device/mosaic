@@ -3,6 +3,7 @@ import {
   claimDevice,
   listDevices,
   removeDevice,
+  sendTestNotification,
   validateClaim,
 } from '@/api/devices'
 import { ApiError } from '@/api/errors'
@@ -147,5 +148,58 @@ describe('removeDevice', () => {
     const error = await apiFailure(removeDevice(3))
     expect(error.kind).toBe('problem')
     expect(error.code).toBe('device_not_found')
+  })
+})
+
+describe('sendTestNotification', () => {
+  it.each(['delivered', 'offline', 'no_answer', 'rejected'])(
+    'posts to the device and returns the outcome %j',
+    async (outcome) => {
+      const { calls } = stubFetch(jsonResponse({ outcome }))
+      await expect(sendTestNotification(3)).resolves.toEqual({ outcome })
+      expect(calls[0]?.url).toBe('/api/devices/3/test-notification')
+      expect(calls[0]?.init.method).toBe('POST')
+      expect(calls[0]?.init.body).toBeUndefined()
+    },
+  )
+
+  it.each([
+    {},
+    { outcome: 'lost' },
+    { outcome: null },
+    { result: 'delivered' },
+  ])('rejects an answer the app cannot use: %j', async (body) => {
+    stubFetch(jsonResponse(body))
+    const error = await apiFailure(sendTestNotification(3))
+    expect(error.kind).toBe('malformed')
+  })
+
+  it('reports a device that is no longer paired', async () => {
+    stubFetch(
+      problemResponse({
+        status: 404,
+        code: 'device_not_found',
+        title: "That device isn't paired with this server.",
+      }),
+    )
+    const error = await apiFailure(sendTestNotification(3))
+    expect(error.kind).toBe('problem')
+    expect(error.code).toBe('device_not_found')
+  })
+
+  it('reports another test still waiting, with how long to wait', async () => {
+    stubFetch(
+      problemResponse(
+        {
+          status: 429,
+          code: 'too_many_requests',
+          title: 'Too many attempts. Wait a moment and try again.',
+        },
+        { 'Retry-After': '7' },
+      ),
+    )
+    const error = await apiFailure(sendTestNotification(3))
+    expect(error.code).toBe('too_many_requests')
+    expect(error.retryAfterSeconds).toBe(7)
   })
 })

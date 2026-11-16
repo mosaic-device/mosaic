@@ -85,6 +85,26 @@ describe('useDeviceList', () => {
     expect(result.current.devices).toEqual([online])
   })
 
+  it('checks at once when asked, then waits a full 10 seconds again', async () => {
+    const { calls } = stubFetch(
+      list({ ...online, connected: false }, offline),
+      list(online, offline),
+    )
+    const { result } = renderList()
+
+    await wait(REFRESH_MS - 2000)
+    act(() => result.current.refresh())
+    await wait(0)
+    expect(calls).toHaveLength(1)
+    expect(result.current.devices[0]?.connected).toBe(false)
+
+    await wait(REFRESH_MS - 1)
+    expect(calls).toHaveLength(1)
+    await wait(1)
+    expect(calls).toHaveLength(2)
+    expect(result.current.devices[0]?.connected).toBe(true)
+  })
+
   it('keeps the list when a check fails, until one works again', async () => {
     stubFetch(new TypeError('Failed to fetch'), list(online))
     const { result } = renderList()

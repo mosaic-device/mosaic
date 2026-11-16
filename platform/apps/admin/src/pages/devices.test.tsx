@@ -35,11 +35,50 @@ function removedMessage(): HTMLElement | null {
   return screen.queryByText('Mosaic 3 removed.')
 }
 
-/** Clicks a row's Remove button and returns the confirmation dialog. */
+function actionsButton(name = 'Mosaic 3'): HTMLElement {
+  return screen.getByRole('button', { name: `Actions for ${name}` })
+}
+
+/** Opens a row's menu from the keyboard and returns it. */
+async function openActions(name = 'Mosaic 3'): Promise<HTMLElement> {
+  fireEvent.keyDown(actionsButton(name), { key: 'Enter' })
+  return screen.findByRole('menu')
+}
+
+/** Picks Remove from a row's menu and returns the confirmation dialog. */
 async function startRemoving(name = 'Mosaic 3'): Promise<HTMLElement> {
-  fireEvent.click(screen.getByRole('button', { name: `Remove ${name}` }))
+  const menu = await openActions(name)
+  fireEvent.click(within(menu).getByRole('menuitem', { name: 'Remove' }))
   return screen.findByRole('alertdialog', { name: `Remove ${name}?` })
 }
+
+/** Picks Send test from a row's menu. */
+async function sendTest(name = 'Mosaic 3') {
+  const menu = await openActions(name)
+  fireEvent.click(within(menu).getByRole('menuitem', { name: 'Send test' }))
+  await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+}
+
+/** The row's own result region, which screen readers read out. */
+function resultOf(name = 'Mosaic 3'): HTMLElement {
+  const row = screen
+    .getByRole('heading', { level: 2, name })
+    .closest('li') as HTMLElement
+  return within(row).getByRole('status')
+}
+
+/** A request that stays open until the test calls `answer`. */
+function deferred() {
+  let answer: (response: Response) => void = () => {}
+  const reply = () =>
+    new Promise<Response>((resolve) => {
+      answer = resolve
+    })
+  return { reply, answer: (response: Response) => answer(response) }
+}
+
+const outcome = (value: string) => jsonResponse({ outcome: value })
+const DIDNT_HEAR = "The app didn't hear whether it arrived."
 
 function confirmRemoval(dialog: HTMLElement) {
   fireEvent.click(within(dialog).getByRole('button', { name: 'Remove device' }))
@@ -69,7 +108,9 @@ describe('device list', () => {
       online.pairedAt,
     )
     expect(first!.textContent).toMatch(/Paired \w/)
-    expect(one.getByRole('button', { name: 'Remove Mosaic 3' })).toBeTruthy()
+    expect(
+      one.getByRole('button', { name: 'Actions for Mosaic 3' }),
+    ).toBeTruthy()
 
     const two = within(second!)
     expect(
@@ -79,7 +120,9 @@ describe('device list', () => {
     expect(second!.querySelector('time')?.getAttribute('dateTime')).toBe(
       offline.pairedAt,
     )
-    expect(two.getByRole('button', { name: 'Remove Mosaic 5' })).toBeTruthy()
+    expect(
+      two.getByRole('button', { name: 'Actions for Mosaic 5' }),
+    ).toBeTruthy()
   })
 
   it('shows the empty state without devices', async () => {
@@ -201,11 +244,7 @@ describe('removing a device', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
-    await waitFor(() =>
-      expect(document.activeElement).toBe(
-        screen.getByRole('button', { name: 'Remove Mosaic 3' }),
-      ),
-    )
+    await waitFor(() => expect(document.activeElement).toBe(actionsButton()))
     expect(rows()).toHaveLength(2)
     expect(calls).toHaveLength(2)
   })
@@ -377,5 +416,230 @@ describe('removing a device', () => {
         session: 'ended',
       }),
     )
+  })
+})
+
+describe('sending a test notification', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("offers it next to Remove in each device's menu", async () => {
+    await openDevices(list(online, offline))
+
+    const menu = await openActions('Mosaic 5')
+
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Send test', 'Remove'])
+  })
+
+  it('waits for the device, then says it was delivered', async () => {
+    const send = deferred()
+    const { calls } = await openDevices(
+      list(online, offline),
+      send.reply,
+      list(online, offline),
+    )
+
+    await sendTest()
+
+    expect(calls[2]?.url).toBe('/api/devices/3/test-notification')
+    expect(calls[2]?.init.method).toBe('POST')
+    expect(calls[2]?.init.body).toBeUndefined()
+    await waitFor(() =>
+      expect(resultOf().textContent).toBe('Waiting for Mosaic 3 to answer…'),
+    )
+    const menu = await openActions()
+    const sending = within(menu).getByRole('menuitem', { name: 'Sending…' })
+    expect(sending.getAttribute('aria-disabled')).toBe('true')
+    fireEvent.click(sending)
+    expect(calls).toHaveLength(3)
+    fireEvent.keyDown(menu, { key: 'Escape' })
+
+    await act(async () => send.answer(outcome('delivered')))
+
+    await waitFor(() =>
+      expect(resultOf().textContent).toBe(
+        'Delivered. Mosaic 3 confirmed it got the test notification.',
+      ),
+    )
+    expect(resultOf('Mosaic 5').textContent).toBe('')
+  })
+
+  it.each([
+    [
+      'offline',
+      "Not sent. Mosaic 3 is offline. Check that it's on and connected to Wi-Fi.",
+    ],
+    [
+      'no_answer',
+      "No answer. Mosaic 3 didn't confirm within 10 seconds, so it may not have arrived.",
+    ],
+    [
+      'rejected',
+      'Mosaic 3 refused the test notification. This is a server problem, and the server logged it.',
+    ],
+  ])('says what happened when the outcome is %s', async (value, text) => {
+    await openDevices(list(online), outcome(value), list(online))
+
+    await sendTest()
+
+    await waitFor(() => expect(resultOf().textContent).toBe(text))
+  })
+
+  it('checks the list again so Online and Offline agree with the result', async () => {
+    const { calls } = await openDevices(
+      list(online),
+      outcome('offline'),
+      list({ ...online, connected: false }),
+    )
+
+    await sendTest()
+
+    await waitFor(() => expect(calls[3]?.url).toBe('/api/devices'))
+    await waitFor(() =>
+      expect(within(rows()[0]!).getByText('Offline')).toBeTruthy(),
+    )
+  })
+
+  it('keeps the result when the list refreshes', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    await openDevices(
+      list(online),
+      outcome('delivered'),
+      list(online),
+      list(online),
+    )
+
+    await sendTest()
+    await waitFor(() => expect(resultOf().textContent).toMatch(/^Delivered/))
+
+    await act(() => vi.advanceTimersByTimeAsync(REFRESH_MS))
+
+    expect(resultOf().textContent).toMatch(/^Delivered/)
+  })
+
+  it("says when the app didn't hear back, since it may have arrived", async () => {
+    await openDevices(list(online), new TypeError('Failed to fetch'))
+
+    await sendTest()
+
+    const row = rows()[0]!
+    const alert = await within(row).findByRole('alert')
+    expect(alert.textContent).toContain("Can't reach the Mosaic server.")
+    expect(alert.textContent).toContain(DIDNT_HEAR)
+    expect(resultOf().textContent).toBe('')
+  })
+
+  it('shows other refusals without saying it may have arrived', async () => {
+    await openDevices(
+      list(online),
+      problemResponse({
+        status: 403,
+        code: 'forbidden_origin',
+        title: 'This request did not come from the admin app.',
+      }),
+    )
+
+    await sendTest()
+
+    const alert = await within(rows()[0]!).findByRole('alert')
+    expect(alert.textContent).toContain(
+      'This request did not come from the admin app.',
+    )
+    expect(alert.textContent).not.toContain(DIDNT_HEAR)
+  })
+
+  it('waits out another test that is still waiting', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    await openDevices(
+      list(online),
+      problemResponse(
+        {
+          status: 429,
+          code: 'too_many_requests',
+          title: 'Too many attempts. Wait a moment and try again.',
+        },
+        { 'Retry-After': '3' },
+      ),
+    )
+
+    await sendTest()
+
+    await waitFor(() =>
+      expect(resultOf().textContent).toBe(
+        'Another test notification to Mosaic 3 is still waiting for an answer.',
+      ),
+    )
+    let menu = await openActions()
+    const waiting = within(menu).getByRole('menuitem', {
+      name: 'Try again in 3 seconds',
+    })
+    expect(waiting.getAttribute('aria-disabled')).toBe('true')
+    fireEvent.keyDown(menu, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+
+    await act(() => vi.advanceTimersByTimeAsync(3000))
+
+    menu = await openActions()
+    expect(
+      within(menu)
+        .getByRole('menuitem', { name: 'Send test' })
+        .getAttribute('aria-disabled'),
+    ).toBeNull()
+  })
+
+  it('drops a device removed elsewhere and says nothing was sent', async () => {
+    await openDevices(list(online, offline), notFound())
+
+    await sendTest()
+
+    const message = await screen.findByText(
+      "Mosaic 3 isn't paired anymore, so nothing was sent.",
+    )
+    expect(
+      rows().map((row) => within(row).getByRole('heading').textContent),
+    ).toEqual(['Mosaic 5'])
+    await waitFor(() => expect(document.activeElement).toBe(message))
+  })
+
+  it('sends an ended session to login and back here', async () => {
+    const { router } = await openDevices(
+      list(online),
+      unauthenticatedResponse(),
+      unauthenticatedResponse(),
+      jsonResponse({ setupRequired: false }),
+      unauthenticatedResponse(),
+    )
+
+    await sendTest()
+
+    await screen.findByRole('heading', { level: 1, name: 'Log in' })
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({
+        redirect: '/devices',
+        session: 'ended',
+      }),
+    )
+  })
+
+  it('lets the device be removed while a test waits', async () => {
+    const send = deferred()
+    await openDevices(list(online, offline), send.reply, emptyResponse(204))
+
+    await sendTest()
+    await waitFor(() =>
+      expect(resultOf().textContent).toBe('Waiting for Mosaic 3 to answer…'),
+    )
+    confirmRemoval(await startRemoving())
+
+    await waitFor(() => expect(removedMessage()).not.toBeNull())
+    await act(async () => send.answer(outcome('no_answer')))
+    expect(
+      rows().map((row) => within(row).getByRole('heading').textContent),
+    ).toEqual(['Mosaic 5'])
   })
 })

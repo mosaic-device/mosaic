@@ -3,6 +3,7 @@ import {
   useEffect,
   useEffectEvent,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { listDevices, type Device } from '@/api/devices'
@@ -26,6 +27,8 @@ export type LoadedDevices = { devices: Device[]; loadedAt: number }
  *   device paired later.
  * - A newer `loaded` (the route loaded again) replaces the list in place, so
  *   the page around it keeps its state.
+ * - `refresh()` checks now, such as after a test notification found the
+ *   device online or offline, and the next check comes 10 seconds later.
  */
 export function useDeviceList(
   loaded: LoadedDevices,
@@ -35,6 +38,7 @@ export function useDeviceList(
   reportedAt: number
   refreshError: unknown
   forget: (id: number) => void
+  refresh: () => void
 } {
   const [list, setList] = useState({
     devices: loaded.devices,
@@ -44,6 +48,7 @@ export function useDeviceList(
   const [removed, setRemoved] = useState<ReadonlySet<number>>(() => new Set())
   const [loadedAt, setLoadedAt] = useState(loaded.loadedAt)
   const sessionEnded = useEffectEvent(onUnauthenticated)
+  const checkNow = useRef<(() => void) | null>(null)
 
   if (loaded.loadedAt !== loadedAt) {
     setLoadedAt(loaded.loadedAt)
@@ -92,8 +97,10 @@ export function useDeviceList(
     }
 
     scheduleNext()
+    checkNow.current = () => void check()
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => {
+      checkNow.current = null
       document.removeEventListener('visibilitychange', onVisibilityChange)
       clearTimeout(timer)
       controller?.abort()
@@ -108,5 +115,13 @@ export function useDeviceList(
     setRemoved((previous) => new Set(previous).add(id))
   }, [])
 
-  return { devices, reportedAt: list.reportedAt, refreshError, forget }
+  const refresh = useCallback(() => checkNow.current?.(), [])
+
+  return {
+    devices,
+    reportedAt: list.reportedAt,
+    refreshError,
+    forget,
+    refresh,
+  }
 }
