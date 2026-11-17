@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using Google.Protobuf;
+using Microsoft.Extensions.Options;
 using Mosaic.Device.V1;
 
 namespace Mosaic.Server.Devices;
@@ -62,17 +63,40 @@ public sealed partial class DeviceConnectionHandler(
     DeviceConnections connections,
     TimeProvider time,
     IHostApplicationLifetime lifetime,
+    IOptions<HostOptions> host,
     ILogger<DeviceConnectionHandler> logger)
 {
     // How long to wait for the device's close reply after the server closes. Real time, so a
     // test clock cannot hold a socket open.
     private static readonly TimeSpan CloseGrace = TimeSpan.FromSeconds(1);
 
+    // Left of the host's shutdown limit for handlers to return and the host to finish stopping.
+    private static readonly TimeSpan ShutdownMargin = TimeSpan.FromSeconds(1);
+
     private static readonly Task<DeviceSignal> NoSignal = new TaskCompletionSource<DeviceSignal>().Task;
 
     // Completes when the server starts shutting down. One for every connection: a wait made per
     // connection would stay registered on the shutdown token after its connection ended.
     private readonly Task _stopping = Task.Delay(Timeout.Infinite, lifetime.ApplicationStopping);
+
+    // Cancelled once shutdown has used all but ShutdownMargin of the host's limit. Every write and
+    // close drain ends by then, even one already under way when shutdown began, so a write
+    // timeout that is long next to the shutdown limit can't make the host force connections shut.
+    // Never disposed: disposing would cancel its timer, and the host can dispose this handler
+    // while a connection is still writing.
+    private readonly CancellationToken _shutdownDeadline = ShutdownDeadline(lifetime, host.Value);
+
+    private static CancellationToken ShutdownDeadline(IHostApplicationLifetime lifetime, HostOptions host)
+    {
+        var source = new CancellationTokenSource();
+        if (host.ShutdownTimeout != Timeout.InfiniteTimeSpan)
+        {
+            var budget = host.ShutdownTimeout - ShutdownMargin;
+            lifetime.ApplicationStopping.Register(() => source.CancelAfter(budget > TimeSpan.Zero ? budget : TimeSpan.Zero));
+        }
+
+        return source.Token;
+    }
 
     private enum FrameKind
     {
@@ -88,11 +112,14 @@ public sealed partial class DeviceConnectionHandler(
     /// The socket and its one outstanding receive, which every step waits on together. Every
     /// write goes through <see cref="WriteAsync"/>, one at a time from the connection's loop.
     /// </summary>
-    private sealed class Link(WebSocket socket, TimeSpan writeTimeout)
+    private sealed class Link(WebSocket socket, TimeSpan writeTimeout, CancellationToken shutdownDeadline)
     {
         public WebSocket Socket { get; } = socket;
 
         public Task<Frame> Receive { get; private set; } = ReceiveAsync(socket);
+
+        /// <summary>Cancelled when shutdown's time for device connections runs out.</summary>
+        public CancellationToken ShutdownDeadline { get; } = shutdownDeadline;
 
         /// <summary>A write ran out of time and the socket was aborted.</summary>
         public bool Stalled { get; private set; }
@@ -101,13 +128,15 @@ public sealed partial class DeviceConnectionHandler(
         public void ReceiveNext() => Receive = ReceiveAsync(Socket);
 
         /// <summary>
-        /// Runs one write within the write timeout. Past it the socket is aborted, which ends the
-        /// write, and this throws <see cref="WebSocketException"/> as if the device had gone, so
-        /// nothing else is written to it.
+        /// Runs one write within the write timeout, or until the shutdown deadline if that comes
+        /// first. Past it the socket is aborted, which ends the write, and this throws
+        /// <see cref="WebSocketException"/> as if the device had gone, so nothing else is written
+        /// to it.
         /// </summary>
         public async Task WriteAsync(Func<WebSocket, CancellationToken, Task> write)
         {
-            using var deadline = new CancellationTokenSource(writeTimeout);
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ShutdownDeadline);
+            deadline.CancelAfter(writeTimeout);
 
             // Cancelling a WebSocket write aborts the socket, but a write still waiting its turn
             // behind a keep-alive ping may only stop waiting. Aborting here ends both.
@@ -139,7 +168,7 @@ public sealed partial class DeviceConnectionHandler(
 
     public async Task RunAsync(WebSocket socket)
     {
-        var link = new Link(socket, options.WriteTimeout);
+        var link = new Link(socket, options.WriteTimeout, _shutdownDeadline);
         try
         {
             await RunAsync(link, _stopping);
@@ -155,7 +184,11 @@ public sealed partial class DeviceConnectionHandler(
         }
         finally
         {
-            if (link.Stalled)
+            if (link.Stalled && link.ShutdownDeadline.IsCancellationRequested)
+            {
+                LogStalledAtShutdown();
+            }
+            else if (link.Stalled)
             {
                 LogStalled(options.WriteTimeout);
             }
@@ -429,7 +462,8 @@ public sealed partial class DeviceConnectionHandler(
 
     /// <summary>
     /// Sends the close frame and waits briefly for the device's reply. Takes at most the write
-    /// timeout plus <see cref="CloseGrace"/> from start to finish.
+    /// timeout plus <see cref="CloseGrace"/> from start to finish, and never past the shutdown
+    /// deadline.
     /// </summary>
     private static async Task CloseAsync(Link link, WebSocketCloseStatus status)
     {
@@ -447,7 +481,8 @@ public sealed partial class DeviceConnectionHandler(
             // with unread data resets the connection, which can discard what was just sent to it.
             // The deadline is checked before each frame, since WhenAny would favour a frame that is
             // already waiting and a device that never stops sending would hold the socket open.
-            var grace = Task.Delay(CloseGrace);
+            // Cancelling ends the delay, which ends the drain.
+            var grace = Task.Delay(CloseGrace, link.ShutdownDeadline);
             while (true)
             {
                 await Task.WhenAny(link.Receive, grace);
@@ -521,6 +556,9 @@ public sealed partial class DeviceConnectionHandler(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Dropped a device connection that stopped reading: a write took over {Timeout}")]
     private partial void LogStalled(TimeSpan timeout);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Dropped a device connection at shutdown: a write was still waiting when shutdown's time ran out")]
+    private partial void LogStalledAtShutdown();
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Device connection failed unexpectedly")]
     private partial void LogUnexpectedFailure(Exception exception);

@@ -170,14 +170,82 @@ public sealed class DeviceWriteDeadlineTests : IDisposable
         Assert.Equal(WebSocketState.CloseSent, socket.State);
     }
 
-    /// <summary>Starts a test notification once the connection has been told it is paired.</summary>
-    private async Task<Task<NotificationOutcome>> StartNotificationAsync(long id, TestDevice identity)
+    public enum AtShutdown
     {
-        var delivery = _factory.Services.GetRequiredService<NotificationDelivery>();
+        /// <summary>A notification write is already stuck.</summary>
+        StuckWrite,
+
+        /// <summary>A slow notification write finishes, then the close frame is stuck.</summary>
+        SlowWriteThenStuckClose,
+    }
+
+    [Theory]
+    [InlineData(AtShutdown.StuckWrite)]
+    [InlineData(AtShutdown.SlowWriteThenStuckClose)]
+    public async Task ShutdownEndsDeviceWritesWithinTheHostsLimit(AtShutdown at)
+    {
+        // A write timeout well past the host's shutdown limit, which the settings allow: each
+        // write alone would hold shutdown past the limit.
+        var shutdownTimeout = TimeSpan.FromSeconds(3);
+        using var factory = new DeviceApiFactory(
+            settings => settings["Devices:WriteTimeout"] = "00:00:20",
+            services: services => services.Configure<HostOptions>(host => host.ShutdownTimeout = shutdownTimeout));
+        var handler = factory.Services.GetRequiredService<DeviceConnectionHandler>();
+        var connections = factory.Connections;
+        var lifetime = factory.Services.GetRequiredService<IHostApplicationLifetime>();
+        var identity = TestDevice.Create();
+        var id = factory.Pair(identity);
+        var socket = at == AtShutdown.StuckWrite
+            ? new StallingSocket(identity.Connect().ToByteArray(), stallSendsFrom: 1, stallClose: false)
+            : new StallingSocket(identity.Connect().ToByteArray(), stallSendsFrom: int.MaxValue, stallClose: true, delay: TimeSpan.FromSeconds(1));
+        var run = Task.Run(() => handler.RunAsync(socket), TestContext.Current.CancellationToken);
+        await WaitUntil(() => socket.Sent.Count == 1);
+
+        var outcome = await StartNotificationAsync(factory, id, identity);
+        if (at == AtShutdown.StuckWrite)
+        {
+            await socket.Stalled.WaitAsync(Bound, TestContext.Current.CancellationToken);
+        }
+        else
+        {
+            // The notification is being written.
+            await WaitUntil(() => socket.Sent.Count == 2);
+        }
+
+        var elapsed = Stopwatch.StartNew();
+        lifetime.StopApplication();
+        await run.WaitAsync(shutdownTimeout + Bound, TestContext.Current.CancellationToken);
+
+        // Ended by the shutdown deadline, a second short of the host's limit.
+        Assert.InRange(elapsed.Elapsed, shutdownTimeout - TimeSpan.FromSeconds(1.5), shutdownTimeout);
+        Assert.Equal(WebSocketState.Aborted, socket.State);
+        Assert.False(socket.Overlapped);
+        Assert.Equal(0, socket.WritesAfterAbort);
+        Assert.False(connections.IsConnected(identity.SecretHash));
+        Assert.Contains(factory.Logs, line => line.Contains("at shutdown", StringComparison.Ordinal));
+        Assert.Equal(PayloadCase.Notification, BackendToDeviceEnvelope.Parser.ParseFrom(socket.Sent[1]).PayloadCase);
+        if (at == AtShutdown.SlowWriteThenStuckClose)
+        {
+            // The slow write finished and the server went on to close for shutdown.
+            Assert.Equal(WebSocketCloseStatus.EndpointUnavailable, socket.CloseStatus);
+        }
+        else
+        {
+            Assert.Equal(NotificationOutcome.NoAnswer, await outcome.WaitAsync(Bound, TestContext.Current.CancellationToken));
+        }
+    }
+
+    /// <summary>Starts a test notification once the connection has been told it is paired.</summary>
+    private Task<Task<NotificationOutcome>> StartNotificationAsync(long id, TestDevice identity) =>
+        StartNotificationAsync(_factory, id, identity);
+
+    private static async Task<Task<NotificationOutcome>> StartNotificationAsync(DeviceApiFactory factory, long id, TestDevice identity)
+    {
+        var delivery = factory.Services.GetRequiredService<NotificationDelivery>();
         DeliveryStart? start = null;
         await WaitUntil(() =>
         {
-            start = delivery.Start(id, identity.SecretHash, DeviceApi.TestNotification(_factory.Time.GetUtcNow()));
+            start = delivery.Start(id, identity.SecretHash, DeviceApi.TestNotification(factory.Time.GetUtcNow()));
             return start.Kind == DeliveryStartKind.Started;
         });
         return start!.Outcome!;
