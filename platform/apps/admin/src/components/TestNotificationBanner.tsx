@@ -12,6 +12,9 @@ import type { TestNotificationOutcome } from '@/api/devices'
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger'
 
+/** What the server said, or `busy` while another test to the device waits. */
+type TestBannerResult = TestNotificationOutcome | 'busy'
+
 const toneClasses: Record<Tone, { box: string; icon: string }> = {
   neutral: {
     box: 'border-border bg-surface-raised',
@@ -36,7 +39,7 @@ function TestNotificationBanner({
 }: {
   name: string
   pending: boolean
-  result: TestNotificationOutcome | 'busy' | null
+  result: TestBannerResult | null
   className?: string
 }) {
   if (pending) {
@@ -119,4 +122,4 @@ function Banner({
   )
 }
 
-export { TestNotificationBanner }
+export { TestNotificationBanner, type TestBannerResult }

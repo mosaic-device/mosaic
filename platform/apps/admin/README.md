@@ -122,13 +122,17 @@ answer, or rejected (a server bug the server logs). Each of these is a `200`, an
 list checks again right away so Online and Offline agree. The banner stays until the
 next send. A request failure shows the error in the row, plus "The app didn't hear
 whether it arrived." when it may have been sent. `429 too_many_requests` (another
-test to that device is still waiting) disables Send test for `Retry-After`, and
+test to that device is still waiting) says so in the banner and turns Send test into
+"Try again in N seconds" for `Retry-After` (kept to 1 to 10), then the banner clears.
 `404 device_not_found` drops the row with "Mosaic 3 isn't paired anymore, so nothing
 was sent." above the list.
 
 Home's Device card loads the same list (both routes share the loader) and stays
 current the same way: "Not paired" with a link to pair, one device's Online or
 Offline and paired date, or "1 of 2 online" for several, with a link to Devices.
+When a check fails, the card keeps the last report, drops the green dot and says
+when the server last answered. If the first load fails, Home shows the error page
+with "Try again", as Devices does.
 
 ## UI constraints
 

@@ -91,6 +91,33 @@ describe("Home's Device card", () => {
     )
   })
 
+  it("says when it can't reach the server, until a check works again", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    await openHome(
+      list(online),
+      new TypeError('Failed to fetch'),
+      list({ ...online, connected: false }),
+    )
+
+    await act(() => vi.advanceTimersByTimeAsync(REFRESH_MS))
+
+    await waitFor(() =>
+      expect(deviceCard().textContent).toMatch(
+        /Can't reach the server\. This is what it last reported, at \S/,
+      ),
+    )
+    // Still the last report, but no longer shown as live.
+    expect(within(deviceCard()).getByText('Online')).toBeTruthy()
+    expect(deviceCard().querySelector('.bg-success')).toBeNull()
+
+    await act(() => vi.advanceTimersByTimeAsync(REFRESH_MS))
+
+    await waitFor(() =>
+      expect(within(deviceCard()).getByText('Offline')).toBeTruthy(),
+    )
+    expect(deviceCard().textContent).not.toContain("Can't reach the server")
+  })
+
   it('sends an ended session to login, which returns to Home', async () => {
     stubFetch(
       sessionResponse(),

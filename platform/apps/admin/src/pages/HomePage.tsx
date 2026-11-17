@@ -16,6 +16,9 @@ import { useDeviceList } from '@/lib/use-device-list'
 const route = getRouteApi('/app/')
 
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
+const reportedAtFormat = new Intl.DateTimeFormat(undefined, {
+  timeStyle: 'short',
+})
 
 // Placeholder states until integrations (M4, M5) report real ones.
 const connections = [
@@ -71,14 +74,25 @@ function HomePage() {
 /**
  * The paired devices at a glance, kept current like the Devices page: every
  * 10 seconds while the tab is visible, and when the owner comes back to it.
+ * While checks fail it keeps the last report but stops showing it as live.
  */
 function DeviceCard() {
   const router = useRouter()
-  const { devices } = useDeviceList(route.useLoaderData(), () => {
-    // The route guard asks again and opens login with a way back here.
-    void router.invalidate()
-  })
+  const { devices, reportedAt, refreshError } = useDeviceList(
+    route.useLoaderData(),
+    () => {
+      // The route guard asks again and opens login with a way back here.
+      void router.invalidate()
+    },
+  )
   const online = devices.filter((device) => device.connected).length
+  const stale = refreshError !== null && refreshError !== undefined
+  const staleNote = stale && (
+    <p className="text-warning text-sm">
+      Can't reach the server. This is what it last reported, at{' '}
+      {reportedAtFormat.format(reportedAt)}.
+    </p>
+  )
 
   if (devices.length === 0) {
     return (
@@ -88,6 +102,7 @@ function DeviceCard() {
         tone="neutral"
         status="Not paired"
         detail="No device is paired with this server."
+        note={staleNote}
         link={<CardLink to="/devices/pair">Pair a device</CardLink>}
       />
     )
@@ -97,7 +112,7 @@ function DeviceCard() {
     <ConnectionCard
       label="Device"
       icon={Monitor}
-      tone={online > 0 ? 'success' : 'neutral'}
+      tone={online > 0 && !stale ? 'success' : 'neutral'}
       status={
         devices.length === 1
           ? online > 0
@@ -112,6 +127,7 @@ function DeviceCard() {
           `${devices.length} devices are paired with this server.`
         )
       }
+      note={staleNote}
       link={<CardLink to="/devices">View devices</CardLink>}
     />
   )
@@ -136,6 +152,7 @@ function ConnectionCard({
   tone,
   status,
   detail,
+  note,
   link,
 }: {
   label: string
@@ -143,6 +160,7 @@ function ConnectionCard({
   tone: StatusTone
   status: string
   detail: ReactNode
+  note?: ReactNode
   link?: ReactNode
 }) {
   return (
@@ -154,6 +172,7 @@ function ConnectionCard({
         </h2>
         <StatusIndicator tone={tone}>{status}</StatusIndicator>
         <p className="text-muted-foreground text-sm">{detail}</p>
+        {note}
         {link}
       </CardContent>
     </Card>

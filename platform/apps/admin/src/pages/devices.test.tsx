@@ -594,6 +594,66 @@ describe('sending a test notification', () => {
     ).toBeNull()
   })
 
+  it.each([
+    ['no Retry-After', {}, 'Try again in 10 seconds'],
+    ['a Retry-After of 0', { 'Retry-After': '0' }, 'Try again in 1 second'],
+    [
+      'a Retry-After of 600',
+      { 'Retry-After': '600' },
+      'Try again in 10 seconds',
+    ],
+  ])(
+    'waits 1 to 10 seconds after a busy answer with %s',
+    async (_, headers, label) => {
+      await openDevices(
+        list(online),
+        problemResponse(
+          {
+            status: 429,
+            code: 'too_many_requests',
+            title: 'Too many attempts. Wait a moment and try again.',
+          },
+          headers,
+        ),
+      )
+
+      await sendTest()
+
+      await waitFor(() =>
+        expect(resultOf().textContent).toBe(
+          'Another test notification to Mosaic 3 is still waiting for an answer.',
+        ),
+      )
+      const menu = await openActions()
+      expect(within(menu).getByRole('menuitem', { name: label })).toBeTruthy()
+    },
+  )
+
+  it('shows the empty state when the last device was removed elsewhere', async () => {
+    await openDevices(list(online), notFound())
+
+    await sendTest()
+
+    await screen.findByRole('heading', { level: 2, name: 'No devices yet' })
+    expect(
+      screen.getByText("Mosaic 3 isn't paired anymore, so nothing was sent."),
+    ).toBeTruthy()
+  })
+
+  it('stays and says so when the session check then passes', async () => {
+    await openDevices(
+      list(online),
+      unauthenticatedResponse(),
+      sessionResponse(),
+      list(online),
+    )
+
+    await sendTest()
+
+    const alert = await within(rows()[0]!).findByRole('alert')
+    expect(alert.textContent).toContain('Log in to continue.')
+  })
+
   it('drops a device removed elsewhere and says nothing was sent', async () => {
     await openDevices(list(online, offline), notFound())
 

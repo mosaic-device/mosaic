@@ -9,12 +9,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import {
-  removeDevice,
-  sendTestNotification,
-  type Device,
-  type TestNotificationOutcome,
-} from '@/api/devices'
+import { removeDevice, sendTestNotification, type Device } from '@/api/devices'
 import type { ApiError } from '@/api/errors'
 import { useApiAction } from '@/api/use-api-action'
 import { ApiErrorNotice } from '@/components/ApiErrorNotice'
@@ -22,7 +17,10 @@ import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { PairedAt } from '@/components/PairedAt'
 import { StatusIndicator } from '@/components/StatusIndicator'
-import { TestNotificationBanner } from '@/components/TestNotificationBanner'
+import {
+  TestNotificationBanner,
+  type TestBannerResult,
+} from '@/components/TestNotificationBanner'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -295,8 +293,6 @@ function DeviceRow({
   )
 }
 
-type TestResult = TestNotificationOutcome | 'busy'
-
 /**
  * Sends one test notification at a time and keeps what the server said. A
  * `200` is always an answer about the notification, even `offline`; the
@@ -310,7 +306,7 @@ function useTestNotification(
 ) {
   const router = useRouter()
   const { run, pending } = useApiAction(sendTestNotification)
-  const [result, setResult] = useState<TestResult | null>(null)
+  const [result, setResult] = useState<TestBannerResult | null>(null)
   const [failure, setFailure] = useState<ApiError | null>(null)
   const { secondsLeft, start } = useCountdown()
 
@@ -332,7 +328,13 @@ function useTestNotification(
         return
       case 'too_many_requests':
         setResult('busy')
-        start(sent.error.retryAfterSeconds ?? MAX_TEST_WAIT_SECONDS)
+        // The contract sends 1 to 10; anything else still waits a little.
+        start(
+          Math.min(
+            Math.max(sent.error.retryAfterSeconds ?? MAX_TEST_WAIT_SECONDS, 1),
+            MAX_TEST_WAIT_SECONDS,
+          ),
+        )
         return
       case 'unauthenticated':
         // Login opens with a way back. If the session turns out fine after
