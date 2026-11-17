@@ -12,3 +12,10 @@ publish
 platform/apps/*/dist
 platform/apps/server/wwwroot
 platform/apps/companion/src-tauri/target
+# Local server data holds the admin's password hash and session and device credential
+# hashes. Git ignores it; keep it out of every image and build cache too.
+platform/apps/server/data
+**/*.db
+**/*.db-journal
+**/*.db-wal
+**/*.db-shm

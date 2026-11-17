@@ -8,6 +8,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY platform/ platform/
 COPY scripts/copy-admin-assets.mjs scripts/copy-admin-assets.mjs
 
+# .dockerignore keeps local server data out of the build. Fail rather than build an image or
+# cache that holds a database; the build stage below copies a subset of the same files.
+RUN if find platform -name '*.db' -o -name '*.db-*' | grep -q .; then \
+        echo 'A SQLite database reached the build context; check .dockerignore.' >&2; exit 1; \
+    fi
+
 RUN pnpm install --frozen-lockfile
 RUN pnpm build:admin-assets
 
