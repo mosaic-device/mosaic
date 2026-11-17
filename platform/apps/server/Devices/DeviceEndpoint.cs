@@ -84,27 +84,69 @@ public sealed partial class DeviceConnectionHandler(
 
     private readonly record struct Frame(FrameKind Kind, byte[] Bytes);
 
-    /// <summary>The socket and its one outstanding receive, which every step waits on together.</summary>
-    private sealed class Link(WebSocket socket)
+    /// <summary>
+    /// The socket and its one outstanding receive, which every step waits on together. Every
+    /// write goes through <see cref="WriteAsync"/>, one at a time from the connection's loop.
+    /// </summary>
+    private sealed class Link(WebSocket socket, TimeSpan writeTimeout)
     {
         public WebSocket Socket { get; } = socket;
 
         public Task<Frame> Receive { get; private set; } = ReceiveAsync(socket);
 
+        /// <summary>A write ran out of time and the socket was aborted.</summary>
+        public bool Stalled { get; private set; }
+
         /// <summary>Starts reading the next frame once the current one has been handled.</summary>
         public void ReceiveNext() => Receive = ReceiveAsync(Socket);
+
+        /// <summary>
+        /// Runs one write within the write timeout. Past it the socket is aborted, which ends the
+        /// write, and this throws <see cref="WebSocketException"/> as if the device had gone, so
+        /// nothing else is written to it.
+        /// </summary>
+        public async Task WriteAsync(Func<WebSocket, CancellationToken, Task> write)
+        {
+            using var deadline = new CancellationTokenSource(writeTimeout);
+
+            // Cancelling a WebSocket write aborts the socket, but a write still waiting its turn
+            // behind a keep-alive ping may only stop waiting. Aborting here ends both.
+            var abort = deadline.Token.Register(static socket => ((WebSocket)socket!).Abort(), Socket);
+            try
+            {
+                await write(Socket, deadline.Token);
+            }
+            catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+            {
+                // Handled below.
+            }
+            finally
+            {
+                await abort.DisposeAsync();
+            }
+
+            // An abort can also let the write finish as if it succeeded. Abort again here: the
+            // write may have ended on the cancellation before the registered abort ran, and
+            // disposing the registration then drops it.
+            if (deadline.IsCancellationRequested)
+            {
+                Socket.Abort();
+                Stalled = true;
+                throw new WebSocketException(WebSocketError.ConnectionClosedPrematurely, "The device stopped reading.");
+            }
+        }
     }
 
     public async Task RunAsync(WebSocket socket)
     {
-        var link = new Link(socket);
+        var link = new Link(socket, options.WriteTimeout);
         try
         {
             await RunAsync(link, _stopping);
         }
         catch (WebSocketException)
         {
-            // The device went away, or missed its pongs and the socket was aborted.
+            // The device went away, missed its pongs, or stopped reading, and the socket was aborted.
         }
         catch (Exception exception)
         {
@@ -113,6 +155,11 @@ public sealed partial class DeviceConnectionHandler(
         }
         finally
         {
+            if (link.Stalled)
+            {
+                LogStalled(options.WriteTimeout);
+            }
+
             // Observe the last receive so its failure after close is never unobserved.
             _ = link.Receive.ContinueWith(static task => _ = task.Exception, TaskScheduler.Default);
         }
@@ -376,9 +423,14 @@ public sealed partial class DeviceConnectionHandler(
             throw new InvalidOperationException($"A server frame of {bytes.Length} bytes exceeds the device's limit.");
         }
 
-        await link.Socket.SendAsync(bytes, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
+        await link.WriteAsync((socket, token) =>
+            socket.SendAsync((ReadOnlyMemory<byte>)bytes, WebSocketMessageType.Binary, endOfMessage: true, token).AsTask());
     }
 
+    /// <summary>
+    /// Sends the close frame and waits briefly for the device's reply. Takes at most the write
+    /// timeout plus <see cref="CloseGrace"/> from start to finish.
+    /// </summary>
     private static async Task CloseAsync(Link link, WebSocketCloseStatus status)
     {
         if (link.Socket.State is not (WebSocketState.Open or WebSocketState.CloseReceived))
@@ -388,7 +440,7 @@ public sealed partial class DeviceConnectionHandler(
 
         try
         {
-            await link.Socket.CloseOutputAsync(status, null, CancellationToken.None);
+            await link.WriteAsync((socket, token) => socket.CloseOutputAsync(status, null, token));
 
             // Give the device a moment to answer, so the close frame isn't lost to an abort. Frames
             // it sent before seeing the close are read and dropped until its close arrives: closing
@@ -409,7 +461,7 @@ public sealed partial class DeviceConnectionHandler(
         }
         catch (WebSocketException)
         {
-            // Already gone.
+            // Already gone, or stopped reading before the close frame could be written.
         }
     }
 
@@ -466,6 +518,9 @@ public sealed partial class DeviceConnectionHandler(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Rejected an unpaired device: {Limit} pairing codes are already live")]
     private partial void LogPendingLimit(int limit);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Dropped a device connection that stopped reading: a write took over {Timeout}")]
+    private partial void LogStalled(TimeSpan timeout);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Device connection failed unexpectedly")]
     private partial void LogUnexpectedFailure(Exception exception);

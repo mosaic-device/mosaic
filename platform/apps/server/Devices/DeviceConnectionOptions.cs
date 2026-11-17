@@ -5,7 +5,7 @@ namespace Mosaic.Server.Devices;
 /// <summary>
 /// Device settings. The transport defaults follow the Device Connection Protocol: a 10-second
 /// handshake, and ping/pong every 15 seconds with a 15-second timeout (section 6). The claim
-/// limit follows the Admin API Contract, section 5.
+/// limit follows the Admin API Contract, section 5. The write timeout is the server's own.
 /// </summary>
 public sealed record DeviceConnectionOptions
 {
@@ -16,6 +16,14 @@ public sealed record DeviceConnectionOptions
     public TimeSpan KeepAliveInterval { get; init; } = TimeSpan.FromSeconds(15);
 
     public TimeSpan KeepAliveTimeout { get; init; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// The longest one write to a device may take, a frame or the close frame. A device that
+    /// stops reading fills the connection's buffers and the next write waits; past this the
+    /// connection is dropped. Keep-alive would drop it too, but only after its interval and
+    /// timeout, longer than the host gives shutdown. Measured in real time.
+    /// </summary>
+    public TimeSpan WriteTimeout { get; init; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// The most live pairing codes at once. Each unpaired credential holds one, and a code
@@ -37,6 +45,7 @@ public sealed record DeviceConnectionOptions
             HandshakeTimeout = Duration(section, nameof(HandshakeTimeout), defaults.HandshakeTimeout),
             KeepAliveInterval = Duration(section, nameof(KeepAliveInterval), defaults.KeepAliveInterval),
             KeepAliveTimeout = Duration(section, nameof(KeepAliveTimeout), defaults.KeepAliveTimeout),
+            WriteTimeout = Duration(section, nameof(WriteTimeout), defaults.WriteTimeout),
             MaxPendingPairings = Count(section, nameof(MaxPendingPairings), defaults.MaxPendingPairings),
             ClaimAttemptsPerMinute = Count(section, nameof(ClaimAttemptsPerMinute), defaults.ClaimAttemptsPerMinute),
         };
