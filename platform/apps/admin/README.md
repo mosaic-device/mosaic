@@ -112,7 +112,7 @@ when the server last answered. Each row's actions menu (⋯) holds Send test and
 Remove. Remove opens a dialog that stays open until the
 server answers `DELETE /api/devices/{id}`. A `404 device_not_found` counts as
 removed (the contract's "already removed"). After a removal the row goes and
-"Mosaic 3 removed." takes focus. A failure where the removal may have gone through
+"Mosaic 3 removed." takes focus. Messages above the list have an X too; closing one moves focus to "Pair a device". A failure where the removal may have gone through
 anyway asks the owner to try again, which is safe.
 
 Send test calls `POST /api/devices/{id}/test-notification`, which waits up to 10
@@ -120,7 +120,7 @@ seconds for the device to confirm. A banner under that row says "Waiting for Mos
 3 to answer…", then what the server reported: delivered, offline (nothing sent), no
 answer, or rejected (a server bug the server logs). Each of these is a `200`, and the
 list checks again right away so Online and Offline agree. The banner stays until the
-next send. A request failure shows the error in the row, plus "The app didn't hear
+next send, or until the owner closes it with its X (focus goes back to the ⋯ button). A request failure shows the error in the row, plus "The app didn't hear
 whether it arrived." when it may have been sent. `429 too_many_requests` (another
 test to that device is still waiting) says so in the banner and turns Send test into
 "Try again in N seconds" for `Retry-After` (kept to 1 to 10), then the banner clears.
