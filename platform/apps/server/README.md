@@ -218,6 +218,7 @@ under `Devices`:
 | `Devices:HandshakeTimeout` | `00:00:10` | Time allowed for the first `connect` |
 | `Devices:KeepAliveInterval` | `00:00:15` | Ping interval |
 | `Devices:KeepAliveTimeout` | `00:00:15` | Pong timeout before the connection is dropped |
+| `Devices:WriteTimeout` | `00:00:10` | Longest a single write to a device, including the close frame, may take before the connection is dropped |
 | `Devices:MaxPendingPairings` | `32` | Live pairing codes at once; more unpaired devices get `SERVER_BUSY` |
 | `Devices:ClaimAttemptsPerMinute` | `10` | Signed-in claim attempts per client per minute |
 

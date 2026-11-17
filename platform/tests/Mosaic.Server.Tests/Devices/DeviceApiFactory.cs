@@ -31,9 +31,14 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
     private readonly string _directory;
     private readonly bool _ownsDirectory;
     private readonly Dictionary<string, string?> _settings;
+    private readonly Action<IServiceCollection>? _services;
 
-    public DeviceApiFactory(Action<Dictionary<string, string?>>? configure = null, string? directory = null)
+    public DeviceApiFactory(
+        Action<Dictionary<string, string?>>? configure = null,
+        string? directory = null,
+        Action<IServiceCollection>? services = null)
     {
+        _services = services;
         _ownsDirectory = directory is null;
         _directory = directory ?? Path.Combine(Path.GetTempPath(), "mosaic-tests", Guid.NewGuid().ToString("N"));
         _settings = new()
@@ -141,6 +146,7 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<TimeProvider>(Time);
             services.AddSingleton<IStartupFilter, PeerAddressFilter>();
             services.AddLogging(logging => logging.AddProvider(new CaptureLoggerProvider(Logs)));
+            _services?.Invoke(services);
         });
     }
 
