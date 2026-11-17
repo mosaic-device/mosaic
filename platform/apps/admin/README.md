@@ -144,6 +144,10 @@ with "Try again", as Devices does.
   do not replace shared tokens with a CLI preset theme.
 - Dark appearance only. Use Manrope 400 for body and 500 for labels, headings, and
   titles; Outfit 500 is reserved for the MOSAIC wordmark.
+- The focus ring in `src/index.css` shows after keyboard use only: `src/lib/input-modality.ts`
+  marks `<html data-input>` with the last input, and after a pointer press buttons, links
+  and other focusable elements lose the ring (text fields keep it). This is needed because
+  Radix menus move focus by script, which Chrome otherwise rings even after a mouse click.
 - Icon-only buttons need `aria-label`. `pending` sets native disabled and
   `aria-busy`; supply meaningful pending text. Pending/disabled actions must remain
   native buttons, not `asChild` links.
