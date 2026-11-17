@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   emptyResponse,
   jsonResponse,
+  noDevicesResponse,
   problemResponse,
   sessionResponse,
   stubFetch,
@@ -116,6 +117,7 @@ describe('setup page', () => {
       noAdmin(),
       jsonResponse({ admin: { username: 'bridger' } }, 201),
       sessionResponse(),
+      noDevicesResponse(),
     )
     const router = await renderAppAt('/setup')
     await screen.findByRole('heading', { name: 'Set up Mosaic' })
@@ -139,6 +141,7 @@ describe('setup page', () => {
       noAdmin(),
       jsonResponse({ admin: { username: 'bridger' } }, 201),
       sessionResponse(),
+      noDevicesResponse(),
     )
     await renderAppAt('/setup')
     await screen.findByRole('heading', { name: 'Set up Mosaic' })

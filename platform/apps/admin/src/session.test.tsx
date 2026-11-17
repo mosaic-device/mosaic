@@ -51,7 +51,11 @@ describe('session check', () => {
   })
 
   it('checks again on every move between pages', async () => {
-    const { calls } = stubFetch(sessionResponse(), sessionResponse())
+    const { calls } = stubFetch(
+      sessionResponse(),
+      noDevicesResponse(),
+      sessionResponse(),
+    )
     const router = await renderAppAt('/')
 
     await act(() => router.navigate({ to: '/settings' }))
@@ -61,12 +65,13 @@ describe('session check', () => {
     ).toBeTruthy()
     expect(calls.map((call) => call.url)).toEqual([
       '/api/auth/session',
+      '/api/devices',
       '/api/auth/session',
     ])
   })
 
   it('marks a session that ended while signed in', async () => {
-    stubFetch(sessionResponse(), ...loggedOut())
+    stubFetch(sessionResponse(), noDevicesResponse(), ...loggedOut())
     const router = await renderAppAt('/')
 
     await act(() => router.navigate({ to: '/settings' }))
@@ -117,7 +122,7 @@ function logOut() {
 
 describe('account and logout', () => {
   it('shows who is signed in', async () => {
-    stubFetch(sessionResponse('bridger'))
+    stubFetch(sessionResponse('bridger'), noDevicesResponse())
     await renderAppAt('/')
 
     expect(screen.getByText('Signed in as bridger')).toBeTruthy()
@@ -180,6 +185,7 @@ describe('account and logout', () => {
     const logoutAnswer = deferred()
     stubFetch(
       sessionResponse(),
+      noDevicesResponse(),
       logoutAnswer.answer,
       ...loggedOut(),
       adminExists(),
@@ -200,6 +206,7 @@ describe('account and logout', () => {
     const logoutAnswer = deferred()
     stubFetch(
       sessionResponse(),
+      noDevicesResponse(),
       logoutAnswer.answer,
       adminExists(),
       unauthenticatedResponse(),
@@ -219,7 +226,7 @@ describe('account and logout', () => {
   })
 
   it('stays signed in when logout fails', async () => {
-    stubFetch(sessionResponse(), emptyResponse(502))
+    stubFetch(sessionResponse(), noDevicesResponse(), emptyResponse(502))
     const router = await renderAppAt('/')
 
     logOut()
@@ -249,17 +256,18 @@ describe('coming back to the tab', () => {
   })
 
   it('leaves the page alone when the check fails', async () => {
+    // Settings, since Home and Devices also check their devices then.
     const { calls } = stubFetch(sessionResponse(), emptyResponse(502))
-    const router = await renderAppAt('/')
+    const router = await renderAppAt('/settings')
 
     showTab()
 
     await waitFor(() => expect(calls).toHaveLength(2))
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Welcome' }),
+      screen.getByRole('heading', { level: 1, name: 'Settings' }),
     ).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
-    expect(router.state.location.pathname).toBe('/')
+    expect(router.state.location.pathname).toBe('/settings')
   })
 })

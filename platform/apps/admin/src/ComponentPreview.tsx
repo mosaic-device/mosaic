@@ -1,5 +1,13 @@
 import { useState } from 'react'
-import { Settings, Check, Hourglass, Monitor } from 'lucide-react'
+import {
+  Settings,
+  Check,
+  Ellipsis,
+  Hourglass,
+  Monitor,
+  Send,
+  Trash2,
+} from 'lucide-react'
 import { ApiError } from '@/api/errors'
 import { ApiErrorNotice } from '@/components/ApiErrorNotice'
 import { EmptyState } from '@/components/EmptyState'
@@ -28,6 +36,12 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const stack = 'grid min-w-0 gap-[var(--space-4)]'
 const controlRow = 'flex flex-wrap items-center gap-[var(--space-3)]'
@@ -164,6 +178,38 @@ export default function ComponentPreview() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            <div className={controlRow}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Example actions"
+                    className="[@media(max-width:640px)]:min-w-control-touch"
+                  >
+                    <Ellipsis aria-hidden="true" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem>
+                    <Send aria-hidden="true" />
+                    Example action
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled>
+                    <Hourglass aria-hidden="true" />
+                    Disabled action
+                  </DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive">
+                    <Trash2 aria-hidden="true" />
+                    Destructive action
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <p className="text-caption text-muted-foreground">
+                Arrow keys move through the menu. Escape closes it and returns
+                focus to the button.
+              </p>
+            </div>
           </CardContent>
         </Card>
         <Card>

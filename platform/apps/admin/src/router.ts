@@ -19,6 +19,7 @@ import {
   SessionCheckLoading,
 } from '@/components/shell/SessionCheck'
 import { DevPreview } from '@/DevPreview'
+import type { LoadedDevices } from '@/lib/use-device-list'
 import { returnPathFor, safeReturnPath } from '@/lib/return-path'
 import { DevicesPage } from '@/pages/DevicesPage'
 import { HomePage } from '@/pages/HomePage'
@@ -143,25 +144,41 @@ const appRoute = createRoute({
   errorComponent: SessionCheckError,
   component: AppShell,
 })
+/**
+ * The paired devices for Home and Devices. A `401` goes to login with a way
+ * back, like the guard; any other failure shows the error page.
+ */
+async function loadDevices({
+  abortController,
+  context,
+  location,
+}: {
+  abortController: AbortController
+  context: RouterContext
+  location: { href: string }
+}): Promise<LoadedDevices> {
+  try {
+    const { devices } = await listDevices(abortController.signal)
+    return { devices, loadedAt: Date.now() }
+  } catch (error) {
+    if (isUnauthenticated(error)) {
+      throw loginRedirect(context.auth, location.href)
+    }
+    throw error
+  }
+}
+
 const homeRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/',
+  loader: loadDevices,
+  gcTime: 0,
   component: HomePage,
 })
 const devicesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'devices',
-  loader: async ({ abortController, context, location }) => {
-    try {
-      const { devices } = await listDevices(abortController.signal)
-      return { devices, loadedAt: Date.now() }
-    } catch (error) {
-      if (isUnauthenticated(error)) {
-        throw loginRedirect(context.auth, location.href)
-      }
-      throw error
-    }
-  },
+  loader: loadDevices,
   // Each visit loads a fresh list, so a device removed on an earlier visit
   // can't flash back from the cache.
   gcTime: 0,

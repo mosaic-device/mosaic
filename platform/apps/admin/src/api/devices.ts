@@ -12,6 +12,22 @@ export type DeviceResult = { device: Device }
 export type DeviceList = { devices: Device[] }
 export type ClaimInput = { code: string }
 
+/**
+ * What happened to a test notification. An offline or silent device is an
+ * answer, not an error: `offline` means nothing was sent, `no_answer` that
+ * the device didn't confirm within 10 seconds, and `rejected` that it refused
+ * the notification as invalid, which the server logs as its own bug.
+ */
+export const TEST_NOTIFICATION_OUTCOMES = [
+  'delivered',
+  'offline',
+  'no_answer',
+  'rejected',
+] as const
+export type TestNotificationOutcome =
+  (typeof TEST_NOTIFICATION_OUTCOMES)[number]
+export type TestNotificationResult = { outcome: TestNotificationOutcome }
+
 /** The letters and digits a pairing code uses: no 0, 1, I or O. */
 const CODE_ALPHABET = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/
 
@@ -56,6 +72,22 @@ export function removeDevice(id: number, signal?: AbortSignal): Promise<void> {
   return requestEmpty(`/api/devices/${id}`, { method: 'DELETE', signal })
 }
 
+/**
+ * Sends the device the server's fixed test notification and waits up to 10
+ * seconds for it to confirm. Each send is a new notification, so sending
+ * again can show a second one on the device.
+ */
+export function sendTestNotification(
+  id: number,
+  signal?: AbortSignal,
+): Promise<TestNotificationResult> {
+  return requestJson(`/api/devices/${id}/test-notification`, {
+    method: 'POST',
+    signal,
+    check: isTestNotificationResult,
+  })
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
@@ -79,5 +111,14 @@ function isDeviceList(json: unknown): json is DeviceList {
     isRecord(json) &&
     Array.isArray(json.devices) &&
     json.devices.every(isDevice)
+  )
+}
+
+function isTestNotificationResult(
+  json: unknown,
+): json is TestNotificationResult {
+  return (
+    isRecord(json) &&
+    (TEST_NOTIFICATION_OUTCOMES as readonly unknown[]).includes(json.outcome)
   )
 }

@@ -56,6 +56,15 @@
   outline-offset: var(--focus-offset);
   box-shadow: none;
 }
+/* After a pointer press, focus a script moved (a menu, its trigger, a dialog
+   opened from it) keeps no ring; text fields keep theirs. See input-modality.ts. */
+:root[data-input='pointer'] :where(button, a, [tabindex]):focus-visible {
+  outline: none;
+}
+/* Menus clip their items, so a keyboard ring on an item sits inside it. */
+[role^='menuitem']:focus-visible {
+  outline-offset: calc(-1 * var(--focus-width));
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -71,5 +80,11 @@
   }
   :where(button, input, [tabindex]):focus-visible {
     outline-color: Highlight;
+  }
+  /* Forced colors drop the highlight background, so a pointer user still
+     sees which menu item is under the pointer. */
+  :root[data-input='pointer'] [role^='menuitem'][data-highlighted] {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
   }
 }
