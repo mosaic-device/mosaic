@@ -14,6 +14,7 @@
     "web:check": "turbo run lint typecheck build",
     "server:dev": "dotnet run --project platform/apps/server/Mosaic.Server.csproj --",
     "server:dev:funnel": "node scripts/server-funnel.mjs",
+    "scripts:test": "node --test scripts/*.test.mjs",
     "server:format": "dotnet format platform/Mosaic.slnx",
     "server:format:check": "dotnet format platform/Mosaic.slnx --verify-no-changes",
     "server:build": "dotnet build platform/Mosaic.slnx",
