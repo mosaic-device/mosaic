@@ -8,11 +8,12 @@ import {
   Send,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { removeDevice, sendTestNotification, type Device } from '@/api/devices'
 import type { ApiError } from '@/api/errors'
 import { useApiAction } from '@/api/use-api-action'
 import { ApiErrorNotice } from '@/components/ApiErrorNotice'
+import { DismissButton } from '@/components/DismissButton'
 import { EmptyState } from '@/components/EmptyState'
 import { PageHeader } from '@/components/PageHeader'
 import { PairedAt } from '@/components/PairedAt'
@@ -60,6 +61,8 @@ type PageNotice = { text: string; tone: 'success' | 'neutral' }
 
 function DevicesPage() {
   const loaded = route.useLoaderData()
+  // Where focus goes after the owner dismisses a page message.
+  const pairLink = useRef<HTMLAnchorElement>(null)
 
   return (
     <>
@@ -68,19 +71,25 @@ function DevicesPage() {
         description="Mosaic devices paired with this server."
         actions={
           <Button asChild>
-            <Link to="/devices/pair">
+            <Link ref={pairLink} to="/devices/pair">
               <Plus aria-hidden="true" />
               Pair a device
             </Link>
           </Button>
         }
       />
-      <DeviceList loaded={loaded} />
+      <DeviceList loaded={loaded} pairLink={pairLink} />
     </>
   )
 }
 
-function DeviceList({ loaded }: { loaded: LoadedDevices }) {
+function DeviceList({
+  loaded,
+  pairLink,
+}: {
+  loaded: LoadedDevices
+  pairLink: RefObject<HTMLAnchorElement | null>
+}) {
   const router = useRouter()
   const { devices, reportedAt, refreshError, forget, refresh } = useDeviceList(
     loaded,
@@ -125,7 +134,14 @@ function DeviceList({ loaded }: { loaded: LoadedDevices }) {
               className="text-muted-foreground size-5 shrink-0"
             />
           )}
-          {notice.text}
+          <span className="min-w-0 flex-1">{notice.text}</span>
+          <DismissButton
+            label="Dismiss message"
+            onClick={() => {
+              setNotice(null)
+              pairLink.current?.focus()
+            }}
+          />
         </p>
       )}
       <ApiErrorNotice error={refreshError}>
@@ -219,6 +235,16 @@ function DeviceRow({
   const name = deviceName(device)
   const menuButton = useRef<HTMLButtonElement>(null)
   const test = useTestNotification(device, { onTested, onUnpaired })
+  // The X goes away with the message, so focus goes back to the menu.
+  const dismiss = (
+    <DismissButton
+      label={`Dismiss result for ${name}`}
+      onClick={() => {
+        test.dismiss()
+        menuButton.current?.focus()
+      }}
+    />
+  )
 
   return (
     <li className="py-4">
@@ -282,9 +308,10 @@ function DeviceRow({
           pending={test.pending}
           result={test.result}
           className="mt-3"
+          action={dismiss}
         />
       </div>
-      <ApiErrorNotice error={test.failure} className="mt-3">
+      <ApiErrorNotice error={test.failure} className="mt-3" action={dismiss}>
         {test.failure && mayHaveGoneThrough(test.failure) && (
           <p>The app didn't hear whether it arrived.</p>
         )}
@@ -344,8 +371,14 @@ function useTestNotification(
     setFailure(sent.error)
   }
 
+  function dismiss() {
+    setResult(null)
+    setFailure(null)
+  }
+
   return {
     send,
+    dismiss,
     pending,
     // "Still waiting" is only true until `Retry-After` runs out.
     result: result === 'busy' && secondsLeft === 0 ? null : result,

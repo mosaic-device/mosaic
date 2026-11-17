@@ -36,11 +36,14 @@ function TestNotificationBanner({
   pending,
   result,
   className,
+  action,
 }: {
   name: string
   pending: boolean
   result: TestBannerResult | null
   className?: string
+  /** Shown on finished results only, such as a dismiss button. */
+  action?: ReactNode
 }) {
   if (pending) {
     return (
@@ -54,34 +57,59 @@ function TestNotificationBanner({
       return null
     case 'delivered':
       return (
-        <Banner tone="success" icon={CircleCheck} className={className}>
+        <Banner
+          tone="success"
+          icon={CircleCheck}
+          className={className}
+          action={action}
+        >
           Delivered. {name} confirmed it got the test notification.
         </Banner>
       )
     case 'offline':
       return (
-        <Banner tone="warning" icon={TriangleAlert} className={className}>
+        <Banner
+          tone="warning"
+          icon={TriangleAlert}
+          className={className}
+          action={action}
+        >
           Not sent. {name} is offline. Check that it's on and connected to
           Wi-Fi.
         </Banner>
       )
     case 'no_answer':
       return (
-        <Banner tone="warning" icon={TriangleAlert} className={className}>
+        <Banner
+          tone="warning"
+          icon={TriangleAlert}
+          className={className}
+          action={action}
+        >
           No answer. {name} didn't confirm within 10 seconds, so it may not have
           arrived.
         </Banner>
       )
     case 'rejected':
       return (
-        <Banner tone="danger" icon={CircleX} className={className}>
+        <Banner
+          tone="danger"
+          icon={CircleX}
+          className={className}
+          action={action}
+        >
           {name} refused the test notification. This is a server problem, and
           the server logged it.
         </Banner>
       )
     case 'busy':
       return (
-        <Banner tone="neutral" icon={Clock} className={className}>
+        <Banner
+          tone="neutral"
+          icon={Clock}
+          className={className}
+          action={action}
+        >
           Another test notification to {name} is still waiting for an answer.
         </Banner>
       )
@@ -93,16 +121,18 @@ function Banner({
   icon: Icon,
   spin = false,
   className,
+  action,
   children,
 }: {
   tone: Tone
   icon: LucideIcon
   spin?: boolean
   className?: string
+  action?: ReactNode
   children: ReactNode
 }) {
   return (
-    <p
+    <div
       className={cn(
         'flex gap-3 rounded-md border px-4 py-3',
         toneClasses[tone].box,
@@ -117,8 +147,9 @@ function Banner({
           spin && 'animate-spin',
         )}
       />
-      <span>{children}</span>
-    </p>
+      <p className="min-w-0 flex-1">{children}</p>
+      {action}
+    </div>
   )
 }
 

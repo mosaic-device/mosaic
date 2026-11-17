@@ -31,8 +31,9 @@ async function openDevices(...answers: Parameters<typeof stubFetch>) {
   return { ...stub, router }
 }
 
+/** The page notice that says so, which takes focus. */
 function removedMessage(): HTMLElement | null {
-  return screen.queryByText('Mosaic 3 removed.')
+  return screen.queryByText('Mosaic 3 removed.')?.closest('p') ?? null
 }
 
 function actionsButton(name = 'Mosaic 3'): HTMLElement {
@@ -275,6 +276,17 @@ describe('removing a device', () => {
     await waitFor(() => expect(removedMessage()).not.toBeNull())
     expect(screen.queryByRole('alertdialog')).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Mosaic 3' })).toBeNull()
+  })
+
+  it('dismisses the removed message', async () => {
+    await openDevices(list(online, offline), emptyResponse(204))
+
+    confirmRemoval(await startRemoving())
+    await waitFor(() => expect(removedMessage()).not.toBeNull())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss message' }))
+
+    expect(removedMessage()).toBeNull()
   })
 
   it('shows the empty state after the last device', async () => {
@@ -659,9 +671,11 @@ describe('sending a test notification', () => {
 
     await sendTest()
 
-    const message = await screen.findByText(
-      "Mosaic 3 isn't paired anymore, so nothing was sent.",
-    )
+    const message = (
+      await screen.findByText(
+        "Mosaic 3 isn't paired anymore, so nothing was sent.",
+      )
+    ).closest('p')
     expect(
       rows().map((row) => within(row).getByRole('heading').textContent),
     ).toEqual(['Mosaic 5'])
@@ -684,6 +698,69 @@ describe('sending a test notification', () => {
       expect(router.state.location.search).toEqual({
         redirect: '/devices',
         session: 'ended',
+      }),
+    )
+  })
+
+  it('dismisses a result and puts focus back on the menu button', async () => {
+    await openDevices(list(online), outcome('delivered'), list(online))
+
+    await sendTest()
+    await waitFor(() => expect(resultOf().textContent).toMatch(/^Delivered/))
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Dismiss result for Mosaic 3' }),
+    )
+
+    expect(resultOf().textContent).toBe('')
+    expect(document.activeElement).toBe(actionsButton())
+  })
+
+  it('dismisses a failure too', async () => {
+    await openDevices(list(online), new TypeError('Failed to fetch'))
+
+    await sendTest()
+    await within(rows()[0]!).findByRole('alert')
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Dismiss result for Mosaic 3' }),
+    )
+
+    expect(within(rows()[0]!).queryByRole('alert')).toBeNull()
+    expect(document.activeElement).toBe(actionsButton())
+  })
+
+  it('has nothing to dismiss while it waits', async () => {
+    const send = deferred()
+    await openDevices(list(online), send.reply, list(online))
+
+    await sendTest()
+    await waitFor(() =>
+      expect(resultOf().textContent).toBe('Waiting for Mosaic 3 to answer…'),
+    )
+
+    expect(
+      screen.queryByRole('button', { name: 'Dismiss result for Mosaic 3' }),
+    ).toBeNull()
+    await act(async () => send.answer(outcome('offline')))
+  })
+
+  it('dismisses the message about a device removed elsewhere', async () => {
+    await openDevices(list(online, offline), notFound())
+
+    await sendTest()
+    await screen.findByText(
+      "Mosaic 3 isn't paired anymore, so nothing was sent.",
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss message' }))
+
+    expect(
+      screen.queryByText("Mosaic 3 isn't paired anymore, so nothing was sent."),
+    ).toBeNull()
+    expect(document.activeElement).toBe(
+      within(screen.getByRole('main')).getByRole('link', {
+        name: 'Pair a device',
       }),
     )
   })
