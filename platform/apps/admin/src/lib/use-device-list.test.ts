@@ -1,7 +1,11 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api/errors'
-import { REFRESH_MS, useDeviceList } from '@/lib/use-device-list'
+import {
+  CHECK_TIMEOUT_MS,
+  REFRESH_MS,
+  useDeviceList,
+} from '@/lib/use-device-list'
 import {
   jsonResponse,
   stubFetch,
@@ -118,6 +122,54 @@ describe('useDeviceList', () => {
     await wait(REFRESH_MS)
     expect(result.current.refreshError).toBeNull()
     expect(result.current.devices).toEqual([online])
+  })
+
+  it('gives up on a check that never answers, then keeps checking', async () => {
+    const { calls } = stubFetch(
+      () => new Promise<Response>(() => {}),
+      list(online),
+    )
+    const { result } = renderList()
+
+    await wait(REFRESH_MS + CHECK_TIMEOUT_MS - 1)
+    expect(result.current.refreshError).toBeNull()
+    await wait(1)
+    expect(result.current.refreshError).toBeInstanceOf(ApiError)
+    expect((result.current.refreshError as ApiError).kind).toBe('unavailable')
+    expect(calls[0]?.init.signal?.aborted).toBe(true)
+    expect(result.current.devices).toEqual([online, offline])
+
+    await wait(REFRESH_MS)
+    expect(calls).toHaveLength(2)
+    expect(result.current.refreshError).toBeNull()
+    expect(result.current.devices).toEqual([online])
+  })
+
+  it('gives up on a check whose body stalls', async () => {
+    const stalled = () =>
+      new Response(new ReadableStream({ start() {} }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    const { calls } = stubFetch(stalled, list(online))
+    const { result } = renderList()
+
+    await wait(REFRESH_MS + CHECK_TIMEOUT_MS)
+    expect(result.current.refreshError).toBeInstanceOf(ApiError)
+
+    await wait(REFRESH_MS)
+    expect(calls).toHaveLength(2)
+    expect(result.current.refreshError).toBeNull()
+  })
+
+  it('stays quiet when a hidden tab cancels a slow check', async () => {
+    stubFetch(() => new Promise<Response>(() => {}))
+    const { result } = renderList()
+
+    await wait(REFRESH_MS)
+    setVisibility('hidden')
+    await wait(CHECK_TIMEOUT_MS + REFRESH_MS)
+
+    expect(result.current.refreshError).toBeNull()
   })
 
   it('hands an ended session to the caller', async () => {
