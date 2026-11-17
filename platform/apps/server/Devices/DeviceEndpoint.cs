@@ -63,8 +63,9 @@ public static class DeviceEndpoint
             }
 
             // Only a paired credential gets a seat of its own. Any other, unknown or revoked, waits
-            // with everyone else, so made-up secrets can't take places held for devices.
-            var paired = presented is not null && devices.Find(presented).State == CredentialState.Paired ? presented : null;
+            // with everyone else, so made-up secrets can't take places held for devices. Checked
+            // in memory: this runs for anyone, before the budget, so it does no database work.
+            var paired = presented is not null && devices.IsPaired(presented) ? presented : null;
             using var slot = budget.TryEnter(paired, out var firstRefusal);
             if (slot is null)
             {
