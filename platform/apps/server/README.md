@@ -203,6 +203,16 @@ Frames are limited to 512 bytes from the device (larger ones close with 1009) an
 messages so a field added later still reaches the decoder; a test checks that every
 generated message fits.
 
+Connections that haven't finished their handshake are limited to
+`Devices:MaxHandshakes` at once; past that, upgrades get `503` before the WebSocket
+opens, and a device retries with backoff. A connection gives its place back once it
+has its `paired` or `pairing_pending` reply, or when it ends for any reason. A paired
+device can send its secret as 64 hex digits in a `Mosaic-Device-Credential` upgrade
+header: if that secret is paired, the device has a seat of its own, one handshake at a
+time, and gets in while anonymous clients fill the limit. Its `connect` must then carry
+the same secret, or it is rejected with `MALFORMED_REQUEST`. A malformed header gets
+`400`; an unknown or revoked one waits with everyone else.
+
 The `devices` table stores only the SHA-256 of each device's 32-byte secret.
 Secrets and pairing codes are never logged. Requests with an `Origin` header get 403,
 so a web page cannot open device connections. The server pings every 15 seconds and
@@ -220,6 +230,7 @@ under `Devices`:
 | `Devices:KeepAliveTimeout` | `00:00:15` | Pong timeout before the connection is dropped |
 | `Devices:WriteTimeout` | `00:00:10` | Longest a single write to a device, including the close frame, may take before the connection is dropped |
 | `Devices:MaxPendingPairings` | `32` | Live pairing codes at once; more unpaired devices get `SERVER_BUSY` |
+| `Devices:MaxHandshakes` | `64` | Connections, from anyone, still waiting to finish their handshake; more get `503` at the upgrade |
 | `Devices:ClaimAttemptsPerMinute` | `10` | Signed-in claim attempts per client per minute |
 
 ## Claiming a device

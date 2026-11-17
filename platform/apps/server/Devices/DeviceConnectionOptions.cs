@@ -28,10 +28,17 @@ public sealed record DeviceConnectionOptions
     /// <summary>
     /// The most live pairing codes at once. Each unpaired credential holds one, and a code
     /// outlives a brief disconnect, so this bounds pairing state and the unpaired connections
-    /// that get past their first frame. It doesn't limit connections still waiting to send one;
-    /// the handshake timeout drops those.
+    /// that get past their first frame. Connections still waiting to send one are limited by
+    /// <see cref="MaxHandshakes"/> instead, and the handshake timeout drops each of them.
     /// </summary>
     public int MaxPendingPairings { get; init; } = 32;
+
+    /// <summary>
+    /// The most device connections, open to anyone, that may be waiting to finish their
+    /// handshake at once. More are refused at the upgrade with 503. A device that presents a
+    /// paired credential at the upgrade isn't held back by this (see <see cref="HandshakeBudget"/>).
+    /// </summary>
+    public int MaxHandshakes { get; init; } = 64;
 
     /// <summary>Signed-in claim attempts allowed per client per minute, counted apart from setup and login.</summary>
     public int ClaimAttemptsPerMinute { get; init; } = 10;
@@ -47,6 +54,7 @@ public sealed record DeviceConnectionOptions
             KeepAliveTimeout = Duration(section, nameof(KeepAliveTimeout), defaults.KeepAliveTimeout),
             WriteTimeout = Duration(section, nameof(WriteTimeout), defaults.WriteTimeout),
             MaxPendingPairings = Count(section, nameof(MaxPendingPairings), defaults.MaxPendingPairings),
+            MaxHandshakes = Count(section, nameof(MaxHandshakes), defaults.MaxHandshakes),
             ClaimAttemptsPerMinute = Count(section, nameof(ClaimAttemptsPerMinute), defaults.ClaimAttemptsPerMinute),
         };
     }

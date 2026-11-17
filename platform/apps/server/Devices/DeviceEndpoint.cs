@@ -1,6 +1,9 @@
+using System.Buffers;
 using System.Net.WebSockets;
+using System.Security.Cryptography;
 using Google.Protobuf;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using Mosaic.Device.V1;
 
 namespace Mosaic.Server.Devices;
@@ -13,6 +16,13 @@ namespace Mosaic.Server.Devices;
 public static class DeviceEndpoint
 {
     public const string Path = "/ws/device";
+
+    /// <summary>
+    /// Optional upgrade header with the device's saved secret as 64 hex digits, so a paired device
+    /// can be recognized before its first frame (Device Connection Protocol, section 1). When
+    /// present, the <c>connect</c> frame must carry the same secret.
+    /// </summary>
+    public const string CredentialHeader = "Mosaic-Device-Credential";
 
     // Fixed frame limits, part of protocol version 1 (Device Connection Protocol, section 1). They
     // leave room above the generated nanopb sizes, so a field added later still reaches the
@@ -28,6 +38,8 @@ public static class DeviceEndpoint
     {
         var options = app.Services.GetRequiredService<DeviceConnectionOptions>();
         var handler = app.Services.GetRequiredService<DeviceConnectionHandler>();
+        var devices = app.Services.GetRequiredService<DeviceStore>();
+        var budget = app.Services.GetRequiredService<HandshakeBudget>();
         app.Map(Path, async context =>
         {
             // A browser always sends Origin; the device never does. This stops a web page from
@@ -44,14 +56,63 @@ public static class DeviceEndpoint
                 return;
             }
 
+            if (!TryReadCredential(context.Request.Headers[CredentialHeader], out var presented))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
+            // Only a paired credential gets a seat of its own. Any other, unknown or revoked, waits
+            // with everyone else, so made-up secrets can't take places held for devices.
+            var paired = presented is not null && devices.Find(presented).State == CredentialState.Paired ? presented : null;
+            using var slot = budget.TryEnter(paired, out var firstRefusal);
+            if (slot is null)
+            {
+                if (firstRefusal)
+                {
+                    handler.LogHandshakesFull(options.MaxHandshakes);
+                }
+
+                // Before the upgrade, so the device sees a failed connection and retries with backoff.
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                return;
+            }
+
             using var socket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
             {
                 DangerousEnableCompression = false,
                 KeepAliveInterval = options.KeepAliveInterval,
                 KeepAliveTimeout = options.KeepAliveTimeout,
             });
-            await handler.RunAsync(socket);
+            await handler.RunAsync(socket, presented, slot);
         });
+    }
+
+    /// <summary>
+    /// Reads <see cref="CredentialHeader"/> into the secret's hash. True with null when it is
+    /// absent; false when it is repeated or isn't exactly 32 bytes as hex.
+    /// </summary>
+    internal static bool TryReadCredential(StringValues header, out byte[]? secretHash)
+    {
+        secretHash = null;
+        if (header.Count == 0)
+        {
+            return true;
+        }
+
+        Span<byte> secret = stackalloc byte[DeviceSecret.SecretSize];
+        var ok = header.Count == 1
+            && header[0] is { Length: DeviceSecret.SecretSize * 2 } value
+            && Convert.FromHexString(value, secret, out _, out var written) == OperationStatus.Done
+            && written == DeviceSecret.SecretSize
+            && DeviceSecret.TryHash(secret, out secretHash);
+        CryptographicOperations.ZeroMemory(secret);
+        if (!ok)
+        {
+            secretHash = null;
+        }
+
+        return ok;
     }
 }
 
@@ -166,12 +227,18 @@ public sealed partial class DeviceConnectionHandler(
         }
     }
 
-    public async Task RunAsync(WebSocket socket)
+    public Task RunAsync(WebSocket socket) => RunAsync(socket, null, null);
+
+    /// <summary>
+    /// Runs the connection. <paramref name="presented"/> is the hash of the secret from the
+    /// upgrade header, if any; <paramref name="slot"/> is released once the handshake completes.
+    /// </summary>
+    public async Task RunAsync(WebSocket socket, byte[]? presented, HandshakeSlot? slot)
     {
         var link = new Link(socket, options.WriteTimeout, _shutdownDeadline);
         try
         {
-            await RunAsync(link, _stopping);
+            await RunAsync(link, _stopping, presented, slot);
         }
         catch (WebSocketException)
         {
@@ -193,12 +260,14 @@ public sealed partial class DeviceConnectionHandler(
                 LogStalled(options.WriteTimeout);
             }
 
+            slot?.Dispose();
+
             // Observe the last receive so its failure after close is never unobserved.
             _ = link.Receive.ContinueWith(static task => _ = task.Exception, TaskScheduler.Default);
         }
     }
 
-    private async Task RunAsync(Link link, Task stopping)
+    private async Task RunAsync(Link link, Task stopping, byte[]? presented, HandshakeSlot? slot)
     {
         using var handshake = new CancellationTokenSource();
         var deadline = Task.Delay(options.HandshakeTimeout, time, handshake.Token);
@@ -242,6 +311,15 @@ public sealed partial class DeviceConnectionHandler(
             return;
         }
 
+        // The upgrade and the first frame must name the same credential, or a seat taken with one
+        // secret could carry another.
+        if (presented is not null && !CryptographicOperations.FixedTimeEquals(presented, connect.SecretHash))
+        {
+            LogCredentialMismatch();
+            await RejectAsync(link, ConnectionRejectReason.MalformedRequest);
+            return;
+        }
+
         // Version and fields are checked; now the credential (section 5). The connection is
         // registered first, so a claim that commits after the credential is read can reach it.
         var connection = connections.Register(connect.SecretHash);
@@ -261,6 +339,7 @@ public sealed partial class DeviceConnectionHandler(
             {
                 LogPaired(credential.DeviceId!.Value);
                 await SendPairedAsync(link, connection);
+                slot?.Dispose();
             }
             else
             {
@@ -273,6 +352,9 @@ public sealed partial class DeviceConnectionHandler(
 
                 LogPending();
                 await SendAsync(link, Pending(code));
+
+                // From here the pairing limit bounds it, not the handshake budget.
+                slot?.Dispose();
             }
 
             await ConnectedAsync(link, stopping, connection, connect, code);
@@ -553,6 +635,13 @@ public sealed partial class DeviceConnectionHandler(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Rejected an unpaired device: {Limit} pairing codes are already live")]
     private partial void LogPendingLimit(int limit);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rejected a device connection: its upgrade header and connect frame named different credentials")]
+    private partial void LogCredentialMismatch();
+
+    /// <summary>Logged once each time the budget fills, not for every refusal, so a flood can't flood the log.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Refusing device connections: {Limit} are already waiting to finish their handshake")]
+    internal partial void LogHandshakesFull(int limit);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Dropped a device connection that stopped reading: a write took over {Timeout}")]
     private partial void LogStalled(TimeSpan timeout);
