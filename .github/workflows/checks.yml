@@ -42,6 +42,8 @@ jobs:
         run: pnpm web:check
       - name: Design and production tests
         run: pnpm design:check
+      - name: Developer script tests
+        run: pnpm scripts:test
 
   server:
     name: .NET

@@ -6,16 +6,16 @@ Run commands from the repository root. [Setup](setup.md) covers installing each 
 
 ## Jobs
 
-| Job                      | Checks                                                                                                    | Run it locally                                                                  |
-| ------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| **Web**                  | Prettier formatting; lint, types and builds of every web app; asset, token and admin tests                | `pnpm web:format:check`, `pnpm web:check`, `pnpm design:check`                  |
-| **.NET**                 | C# formatting, Release build, server tests, Linux Native AOT publish and a smoke test of the binary       | `pnpm server:format:check`, `pnpm server:test`; [AOT publish](#net-aot-publish) |
-| **Rust**                 | Companion rustfmt, Clippy with warnings as errors, Rust tests                                             | [Rust commands](#rust)                                                          |
-| **Generated code**       | Protobuf lint, committed bindings match the schema, token generator tests                                 | [Generated code commands](#generated-code)                                      |
-| **Firmware host checks** | Firmware formatting and every firmware host test                                                          | `pnpm fw:format:check`, `pnpm fw:test`                                          |
-| **Firmware preview**     | The preview compiles on Linux, macOS and Windows; on Windows, the firmware wrapper tests also run         | `pnpm fw:preview --build-only`, `python scripts/firmware_test.py`               |
-| **Firmware build**       | A clean ESP-IDF build, the committed dependency lock unchanged, no debug-trigger code in the normal image | [Firmware build commands](#firmware-build)                                      |
-| **PCB**                  | Carrier board ERC, DRC with schematic parity, and the fabrication files, uploaded as an artifact          | `pnpm pcb:export`                                                               |
+| Job                      | Checks                                                                                                    | Run it locally                                                                      |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Web**                  | Prettier formatting; lint, types and builds of every web app; asset, token and admin tests; script tests  | `pnpm web:format:check`, `pnpm web:check`, `pnpm design:check`, `pnpm scripts:test` |
+| **.NET**                 | C# formatting, Release build, server tests, Linux Native AOT publish and a smoke test of the binary       | `pnpm server:format:check`, `pnpm server:test`; [AOT publish](#net-aot-publish)     |
+| **Rust**                 | Companion rustfmt, Clippy with warnings as errors, Rust tests                                             | [Rust commands](#rust)                                                              |
+| **Generated code**       | Protobuf lint, committed bindings match the schema, token generator tests                                 | [Generated code commands](#generated-code)                                          |
+| **Firmware host checks** | Firmware formatting and every firmware host test                                                          | `pnpm fw:format:check`, `pnpm fw:test`                                              |
+| **Firmware preview**     | The preview compiles on Linux, macOS and Windows; on Windows, the firmware wrapper tests also run         | `pnpm fw:preview --build-only`, `python scripts/firmware_test.py`                   |
+| **Firmware build**       | A clean ESP-IDF build, the committed dependency lock unchanged, no debug-trigger code in the normal image | [Firmware build commands](#firmware-build)                                          |
+| **PCB**                  | Carrier board ERC, DRC with schematic parity, and the fabrication files, uploaded as an artifact          | `pnpm pcb:export`                                                                   |
 
 `pnpm fw:test` finds every tracked `tests/run.py` and `tests/*.test.mjs` under `firmware/`, plus `scripts/firmware_test.py`, so a new runner needs no CI or documentation change. Each runner's output starts with `== <path>`.
 

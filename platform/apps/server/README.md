@@ -88,6 +88,11 @@ The server is public while the command runs. Ctrl+C stops both the server and Fu
 and if either stops on its own, the other stops too. Keep the laptop awake while a
 device depends on it.
 
+The command binds the server to exactly `127.0.0.1:5000`, the address Funnel forwards
+to, and starts Funnel only once the server reports it is listening there. If another
+program already holds that address, the server fails to start and Funnel is never
+started, so that program is never made public.
+
 On macOS, AirPlay Receiver also listens on port 5000. The server still gets requests
 to `localhost:5000`, but if you see `403` from `AirTunes`, the server isn't running yet.
 
