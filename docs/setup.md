@@ -2,20 +2,20 @@
 
 Install only what the pieces you work on need. Versions come from the files that pin them; the tools below read those files, so you don't need to match numbers by hand.
 
-| Tool                                                    | Needed for                                                                        | Version pinned by                            |
-| ------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------- |
-| [Node and pnpm](#node-and-pnpm)                         | Admin, companion, generated files, firmware formatting                            | `.nvmrc`, `packageManager` in `package.json` |
-| [.NET SDK](#net-sdk)                                    | Server                                                                            | `global.json`                                |
-| [Rust and Tauri](#rust-and-tauri)                       | Companion                                                                         | `rust-toolchain.toml`                        |
-| [Python 3](#python-3)                                   | Firmware preview, firmware tests, firmware builds, server smoke test, PCB scripts | Any Python 3; CI uses 3.12                   |
-| [C++ compiler, CMake, SDL2](#c-compiler-cmake-and-sdl2) | Firmware preview and firmware tests                                               | Any C++23 compiler                           |
-| [clang-format](#clang-format)                           | Firmware formatting                                                               | 23.1.2                                       |
-| [ESP-IDF](#esp-idf)                                     | Building and flashing firmware                                                    | 5.5.4                                        |
-| [KiCad](#kicad)                                         | Carrier PCB checks and fabrication files                                          | 10 (CI uses 10.0.8)                          |
-| [Docker](#docker)                                       | Building the server's Linux container (optional)                                  | Any recent version                           |
-| [Tailscale](#tailscale)                                 | Letting a device reach the server on your laptop                                  | Any recent version                           |
+| Tool                                                    | Needed for                                                                                                | Version pinned by                            |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| [Node and pnpm](#node-and-pnpm)                         | Admin, companion, generated files, firmware formatting, design tokens for firmware builds and the preview | `.nvmrc`, `packageManager` in `package.json` |
+| [.NET SDK](#net-sdk)                                    | Server                                                                                                    | `global.json`                                |
+| [Rust and Tauri](#rust-and-tauri)                       | Companion                                                                                                 | `rust-toolchain.toml`                        |
+| [Python 3](#python-3)                                   | Firmware preview, firmware tests, firmware builds, server smoke test, PCB scripts                         | Any Python 3; CI uses 3.12                   |
+| [C++ compiler, CMake, SDL2](#c-compiler-cmake-and-sdl2) | Firmware preview and firmware tests                                                                       | Any C++23 compiler                           |
+| [clang-format](#clang-format)                           | Firmware formatting                                                                                       | 23.1.2                                       |
+| [ESP-IDF](#esp-idf)                                     | Building and flashing firmware                                                                            | 5.5.4                                        |
+| [KiCad](#kicad)                                         | Carrier PCB checks and fabrication files                                                                  | 10 (CI uses 10.0.8)                          |
+| [Docker](#docker)                                       | Building the server's Linux container (optional)                                                          | Any recent version                           |
+| [Tailscale](#tailscale)                                 | Letting a device reach the server on your laptop                                                          | Any recent version                           |
 
-For example, admin work needs Node, pnpm and .NET. The device preview needs Python, a compiler, CMake and SDL2, but not ESP-IDF.
+For example, admin work needs Node, pnpm and .NET. The device preview needs Node, Python, a compiler, CMake and SDL2, but not ESP-IDF; its build generates the design tokens with Node alone, so it needs no `pnpm install`.
 
 ## Node and pnpm
 
