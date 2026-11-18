@@ -14,6 +14,7 @@
 #include <cassert>
 #include <chrono>
 #include <cstring>
+#include <fstream>
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -275,13 +276,59 @@ void nvs_read() {
     platform::erase_nvs();
     assert(nvs_open("store", NVS_READONLY, &handle) == ESP_ERR_NVS_NOT_FOUND);
 }
+
+// One entry in the state file's format: namespace\0 key\0 type:u8 length:u32le, then value.
+std::string entry(std::string_view key, unsigned char type, uint32_t length, std::string_view value) {
+    std::string bytes = "store";
+    bytes += '\0';
+    bytes += key;
+    bytes += '\0';
+    bytes += static_cast<char>(type);
+    for (int shift = 0; shift < 32; shift += 8)
+        bytes += static_cast<char>((length >> shift) & 0xff);
+    bytes += value;
+    return bytes;
+}
+
+// A damaged state file is rejected as a whole, even after a good entry: the preview starts
+// erased instead of crashing or allocating whatever length the file claims.
+void nvs_damaged(const char* path, std::string_view damage) {
+    std::string bytes = entry("kept", 2, 4, "good");
+    if (damage == "truncated")
+        bytes += entry("blob", 2, 10, "abc");
+    else if (damage == "oversized")
+        bytes += entry("blob", 2, 0xffffffff, "abc");
+    else if (damage == "empty-u8")
+        bytes += entry("flag", 1, 0, "");
+    else if (damage == "unknown-type")
+        bytes += entry("flag", 7, 1, "x");
+    else if (damage == "too-large")
+        bytes += entry("big", 2, 70000, std::string(70000, 'x')); // Well formed, but over 64 KiB.
+    else if (damage == "cut-header")
+        bytes += entry("flag", 1, 1, "x").substr(0, 13);
+    else
+        assert(!"unknown damage");
+    {
+        std::ofstream out(path, std::ios::binary | std::ios::trunc);
+        out.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
+        assert(out);
+    }
+    assert(nvs_flash_init() == ESP_OK);
+    nvs_handle_t handle;
+    assert(nvs_open("store", NVS_READONLY, &handle) == ESP_ERR_NVS_NOT_FOUND);
+}
 } // namespace
 
 int main(int argc, char** argv) {
-    assert(argc == 3);
+    assert(argc >= 3);
     platform::set_nvs_file(argv[2]);
     if (std::string_view(argv[1]) == "read") {
         nvs_read();
+        return 0;
+    }
+    if (std::string_view(argv[1]) == "damaged") {
+        assert(argc == 4);
+        nvs_damaged(argv[2], argv[3]);
         return 0;
     }
     assert(std::strcmp(esp_err_to_name(ESP_ERR_NVS_NOT_FOUND), "ESP_ERR_NVS_NOT_FOUND") == 0);

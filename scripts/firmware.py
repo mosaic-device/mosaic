@@ -48,24 +48,26 @@ def run(firmware, args, executable="idf.py"):
     firmware = pathlib.Path(firmware).resolve()
     lock = firmware / "dependencies.lock"
     guard = firmware / ".mosaic-idf.lock"
-    # Refuse concurrent wrappers: each invocation temporarily edits the same lockfile.
-    with guard.open("x"):
+    # Refuse concurrent wrappers: each invocation temporarily edits the same lockfile. The
+    # guard's existence is the lock, so its handle is closed straight away: Windows can't delete
+    # a file that is still open. A refused invocation raises here and never removes it.
+    guard.open("x").close()
+    try:
+        absolute = (firmware / "components/esp_lcd_hx8394").as_posix()
+        original = lock.read_text()
+        expanded = replace_path(original, PLACEHOLDER, absolute)
+        lock.write_text(expanded)
         try:
-            absolute = (firmware / "components/esp_lcd_hx8394").as_posix()
-            original = lock.read_text()
-            expanded = replace_path(original, PLACEHOLDER, absolute)
-            lock.write_text(expanded)
-            try:
-                result = subprocess.run([executable, *args], cwd=firmware).returncode
-                if result == 0:
-                    select_compilation_database(firmware, args)
-                return result
-            finally:
-                # Keep IDF's other edits, including real dependency version changes.
-                current = lock.read_text()
-                lock.write_text(replace_path(current, absolute, PLACEHOLDER))
+            result = subprocess.run([executable, *args], cwd=firmware).returncode
+            if result == 0:
+                select_compilation_database(firmware, args)
+            return result
         finally:
-            guard.unlink()
+            # Keep IDF's other edits, including real dependency version changes.
+            current = lock.read_text()
+            lock.write_text(replace_path(current, absolute, PLACEHOLDER))
+    finally:
+        guard.unlink()
 
 
 if __name__ == "__main__":

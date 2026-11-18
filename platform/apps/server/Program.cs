@@ -37,6 +37,7 @@ var rateLimits = app.Services.GetRequiredService<AuthRateLimitOptions>();
 var trustedProxies = app.Services.GetRequiredService<TrustedProxies>();
 var deviceOptions = app.Services.GetRequiredService<DeviceConnectionOptions>();
 var appliedMigrations = database.Migrate();
+app.Services.GetRequiredService<DeviceStore>().LoadPaired();
 app.Logger.LogInformation(
     "Database {Path} at schema version {Version}; applied {Applied} migration(s) at startup",
     database.Path,

@@ -2,7 +2,9 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
+#include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -25,6 +27,9 @@ struct Handle {
 };
 // NVS limits namespace and key names to 15 characters.
 constexpr size_t kMaxName = 15;
+// The largest state file the preview loads. The device's NVS partition is 24 KiB (0x6000 in
+// partitions.csv), so a real state file is far smaller; anything over this is damaged.
+constexpr std::streamsize kMaxFileBytes = 64 * 1024;
 
 std::mutex g_lock;
 std::map<std::string, Namespace> g_store;
@@ -38,8 +43,38 @@ std::atomic_bool g_write_failure = false;
 void write_string(std::ofstream& out, const std::string& text) {
     out.write(text.c_str(), static_cast<std::streamsize>(text.size() + 1));
 }
-bool read_string(std::ifstream& in, std::string& text) {
-    return static_cast<bool>(std::getline(in, text, '\0'));
+
+// Reads a NUL-terminated name at offset, checking it is one NVS would accept.
+bool parse_name(const std::vector<unsigned char>& data, size_t& offset, std::string& text) {
+    const auto begin = data.begin() + static_cast<std::ptrdiff_t>(offset);
+    const auto end = std::find(begin, data.end(), static_cast<unsigned char>(0));
+    if (end == data.end())
+        return false;
+    text.assign(begin, end);
+    offset += text.size() + 1;
+    return !text.empty() && text.size() <= kMaxName;
+}
+
+// Parses the whole file, checking every entry's type, size and remaining length before
+// copying it. Any damage rejects the file as a whole, so nothing half-read is used.
+bool parse(const std::vector<unsigned char>& data, std::map<std::string, Namespace>& loaded) {
+    size_t offset = 0;
+    std::string name, key;
+    while (offset < data.size()) {
+        if (!parse_name(data, offset, name) || !parse_name(data, offset, key) || data.size() - offset < 5)
+            return false;
+        const unsigned char* header = data.data() + offset;
+        const uint32_t length = header[1] | header[2] << 8 | header[3] << 16 | static_cast<uint32_t>(header[4]) << 24;
+        offset += 5;
+        const auto type = static_cast<Type>(header[0]);
+        const bool sized = type == Type::u8 ? length == 1 : type == Type::blob;
+        if (!sized || length > data.size() - offset)
+            return false;
+        const auto value = data.begin() + static_cast<std::ptrdiff_t>(offset);
+        loaded[name][key] = { type, std::vector<unsigned char>(value, value + length) };
+        offset += length;
+    }
+    return true;
 }
 
 // With g_lock held. Writes a temporary file first so a crash cannot truncate NVS.
@@ -116,21 +151,16 @@ esp_err_t nvs_flash_init() {
     std::ifstream in(g_file, std::ios::binary);
     if (!in)
         return ESP_OK; // Erased flash.
+    // Read at most one byte past the limit, so a huge or sparse file is never read whole.
+    std::vector<unsigned char> data(static_cast<size_t>(kMaxFileBytes) + 1);
+    in.read(reinterpret_cast<char*>(data.data()), kMaxFileBytes + 1);
+    const std::streamsize count = in.gcount();
+    data.resize(static_cast<size_t>(count));
     std::map<std::string, Namespace> loaded;
-    std::string name, key;
-    while (read_string(in, name) && read_string(in, key)) {
-        unsigned char header[5];
-        if (!in.read(reinterpret_cast<char*>(header), 5))
-            break;
-        const uint32_t length = header[1] | header[2] << 8 | header[3] << 16 | static_cast<uint32_t>(header[4]) << 24;
-        Entry entry { static_cast<Type>(header[0]), std::vector<unsigned char>(length) };
-        if (!in.read(reinterpret_cast<char*>(entry.bytes.data()), length)) {
-            std::fprintf(stderr, "Preview NVS file %s is truncated; starting erased\n", g_file.string().c_str());
-            return ESP_OK;
-        }
-        loaded[name][key] = std::move(entry);
-    }
-    g_store = std::move(loaded);
+    if (!in.bad() && count <= kMaxFileBytes && parse(data, loaded))
+        g_store = std::move(loaded);
+    else
+        std::fprintf(stderr, "Preview NVS file %s is damaged; starting erased\n", g_file.string().c_str());
     return ESP_OK;
 }
 
