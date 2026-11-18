@@ -10,7 +10,8 @@ COPY scripts/copy-admin-assets.mjs scripts/copy-admin-assets.mjs
 
 # .dockerignore keeps local server data out of the build. Fail rather than build an image or
 # cache that holds a database; the build stage below copies a subset of the same files.
-RUN if find platform -name '*.db' -o -name '*.db-*' | grep -q .; then \
+RUN if find platform \( -name '*.db' -o -name '*.db-*' -o -name '*.sqlite' -o -name '*.sqlite-*' \
+        -o -name '*.sqlite3' -o -name '*.sqlite3-*' \) | grep -q .; then \
         echo 'A SQLite database reached the build context; check .dockerignore.' >&2; exit 1; \
     fi
 
