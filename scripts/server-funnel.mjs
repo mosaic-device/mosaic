@@ -101,7 +101,9 @@ export function launch({
   const serverChild = start(server, 'pipe')
 
   // Pass the server's output through, watching for Kestrel's line for this exact address.
-  const ready = `Now listening on: ${listen}`
+  // Compare the whole address: `includes` would also accept http://127.0.0.1:50001.
+  const listening = (line) =>
+    /Now listening on: (\S+)\s*$/.exec(line)?.[1] === listen
   let pending = ''
   serverChild.stdout.on('data', (chunk) => {
     process.stdout.write(chunk)
@@ -109,7 +111,7 @@ export function launch({
     pending += chunk.toString()
     const lines = pending.split(/\r?\n/)
     pending = lines.pop()
-    if (lines.some((line) => line.includes(ready))) {
+    if (lines.some(listening)) {
       pending = ''
       funnelChild = start(funnel, 'inherit')
     }

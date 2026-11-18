@@ -106,3 +106,18 @@ test('listening on another address, such as IPv6 only, does not start Funnel', a
   assert.equal(await done, 1)
   assert.equal(existsSync(marker), false)
 })
+
+test('an address that only starts with the expected one does not start Funnel', async () => {
+  const port = await freePort()
+  const { funnel, marker } = fakeFunnel()
+  const { done } = launch({
+    // Kestrel's line for port 50001 begins with the line for port 5000.
+    server: fakeServer(port, `http://127.0.0.1:${port}1`, { exitAfter: 300 }),
+    funnel,
+    listen: `http://127.0.0.1:${port}`,
+    log: () => {},
+  })
+
+  assert.equal(await done, 1)
+  assert.equal(existsSync(marker), false)
+})
