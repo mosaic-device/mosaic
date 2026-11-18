@@ -2,8 +2,12 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <initializer_list>
+#include <map>
+#include <string>
+#include <vector>
 
 #include "nvs.h"
 
@@ -13,42 +17,47 @@ namespace store = mosaic::features::provisioning::adapters::settings;
 namespace {
 constexpr esp_err_t kReadError = 0x201;
 constexpr esp_err_t kWriteError = 0x202;
-constexpr esp_err_t kCommitError = 0x203;
 constexpr esp_err_t kOpenError = 0x204;
 constexpr nvs_handle_t kHandle = 42;
 
+// NVS as ESP-IDF behaves: each set stores its item as it happens, so a later failure or power
+// loss doesn't undo earlier writes. write_budget limits how many writes succeed; past it every
+// write fails and stores nothing, as after a power loss.
 struct Fake {
+    std::map<std::string, std::vector<unsigned char>> blobs;
+    std::map<std::string, uint8_t> flags;
+    std::map<std::string, esp_err_t> read_errors;
     esp_err_t open_error = ESP_OK;
-    esp_err_t read_error = ESP_OK;
-    esp_err_t write_error = ESP_OK;
-    esp_err_t commit_error = ESP_OK;
-    esp_err_t flag_read_error = ESP_OK;
-    esp_err_t flag_write_error = ESP_OK;
-    uint8_t flag = 0;
-    int flag_reads = 0;
-    int flag_writes = 0;
-    Settings stored { };
-    size_t blob_size = sizeof(Settings);
-    bool partial_read = false;
+    int write_budget = -1;
+    // Stores the value, then reports the old copy couldn't be removed, as ESP-IDF can.
+    bool remove_failed = false;
     int opens = 0;
-    int reads = 0;
+    int closes = 0;
     int writes = 0;
     int commits = 0;
-    int closes = 0;
     nvs_open_mode_t mode = NVS_READONLY;
 } fake;
 
-Settings valid() {
+Settings network(const char* ssid) {
     Settings value { };
-    std::strcpy(value.ssid, "Test network");
+    std::strcpy(value.ssid, ssid);
     std::strcpy(value.pass, "secretpass");
     std::strcpy(value.ws_url, "wss://example.org/device");
     return value;
 }
 
+const Settings kOld = network("Old network");
+const Settings kNew = network("New network");
+
 void reset() {
     fake = Fake { };
-    fake.stored = valid();
+}
+
+// The layout devices were saved with before the record: a settings blob and a flag.
+void legacy(const Settings& settings, uint8_t flag) {
+    const auto* bytes = reinterpret_cast<const unsigned char*>(&settings);
+    fake.blobs["settings"].assign(bytes, bytes + sizeof(settings));
+    fake.flags["setup_next"] = flag;
 }
 
 bool cleared(const Settings& value) {
@@ -59,55 +68,101 @@ bool cleared(const Settings& value) {
     }
     return true;
 }
+
+bool same(const Settings& a, const Settings& b) {
+    return std::memcmp(&a, &b, sizeof(a)) == 0;
+}
+
+// What the next boot decides from, read the way the provisioning service reads it.
+struct Boot {
+    bool found;
+    Settings settings;
+    bool setup;
+};
+
+Boot boot() {
+    Boot result { false, { }, true };
+    assert(store::load(result.settings, result.found) == ESP_OK);
+    assert(store::load_setup_requested(result.setup) == ESP_OK);
+    return result;
+}
+
+bool boots_into_setup(const Boot& state) {
+    return !state.found || state.setup;
+}
+
+bool uses(const Boot& state, const Settings& settings) {
+    return state.found && !state.setup && same(state.settings, settings);
+}
 } // namespace
 
 esp_err_t nvs_open(const char* name, nvs_open_mode_t mode, nvs_handle_t* handle) {
     assert(std::strcmp(name, "mosaic_net") == 0);
     ++fake.opens;
     fake.mode = mode;
-    if (fake.open_error == ESP_OK)
-        *handle = kHandle;
-    return fake.open_error;
+    if (fake.open_error != ESP_OK)
+        return fake.open_error;
+    if (mode == NVS_READONLY && fake.blobs.empty() && fake.flags.empty())
+        return ESP_ERR_NVS_NOT_FOUND;
+    *handle = kHandle;
+    return ESP_OK;
 }
 
 esp_err_t nvs_get_blob(nvs_handle_t handle, const char* key, void* out, size_t* length) {
-    assert(handle == kHandle && std::strcmp(key, "settings") == 0);
-    assert(*length == sizeof(Settings));
-    ++fake.reads;
-    if (fake.read_error == ESP_OK || fake.partial_read) {
-        const size_t count = fake.blob_size < sizeof(Settings) ? fake.blob_size : sizeof(Settings);
-        std::memcpy(out, &fake.stored, count);
-        *length = fake.blob_size;
-    }
-    return fake.read_error;
+    assert(handle == kHandle);
+    if (auto error = fake.read_errors.find(key); error != fake.read_errors.end())
+        return error->second;
+    auto blob = fake.blobs.find(key);
+    if (blob == fake.blobs.end())
+        return ESP_ERR_NVS_NOT_FOUND;
+    if (*length < blob->second.size())
+        return ESP_ERR_NVS_INVALID_LENGTH;
+    std::memcpy(out, blob->second.data(), blob->second.size());
+    *length = blob->second.size();
+    return ESP_OK;
+}
+
+bool spend_write() {
+    if (fake.write_budget == 0)
+        return false;
+    if (fake.write_budget > 0)
+        --fake.write_budget;
+    ++fake.writes;
+    return true;
 }
 
 esp_err_t nvs_set_blob(nvs_handle_t handle, const char* key, const void* data, size_t length) {
-    assert(handle == kHandle && std::strcmp(key, "settings") == 0);
-    assert(length == sizeof(Settings));
-    assert(std::memcmp(data, &fake.stored, length) == 0);
-    ++fake.writes;
-    return fake.write_error;
+    assert(handle == kHandle && fake.mode == NVS_READWRITE);
+    if (!spend_write())
+        return kWriteError;
+    const auto* bytes = static_cast<const unsigned char*>(data);
+    fake.blobs[key].assign(bytes, bytes + length);
+    return fake.remove_failed ? ESP_ERR_NVS_REMOVE_FAILED : ESP_OK;
 }
 
 esp_err_t nvs_get_u8(nvs_handle_t handle, const char* key, uint8_t* value) {
-    assert(handle == kHandle && std::strcmp(key, "setup_next") == 0);
-    ++fake.flag_reads;
-    *value = fake.flag;
-    return fake.flag_read_error;
+    assert(handle == kHandle);
+    if (auto error = fake.read_errors.find(key); error != fake.read_errors.end())
+        return error->second;
+    auto flag = fake.flags.find(key);
+    if (flag == fake.flags.end())
+        return ESP_ERR_NVS_NOT_FOUND;
+    *value = flag->second;
+    return ESP_OK;
 }
+
 esp_err_t nvs_set_u8(nvs_handle_t handle, const char* key, uint8_t value) {
-    assert(handle == kHandle && std::strcmp(key, "setup_next") == 0);
-    ++fake.flag_writes;
-    if (fake.flag_write_error == ESP_OK)
-        fake.flag = value;
-    return fake.flag_write_error;
+    assert(handle == kHandle && fake.mode == NVS_READWRITE);
+    if (!spend_write())
+        return kWriteError;
+    fake.flags[key] = value;
+    return ESP_OK;
 }
 
 esp_err_t nvs_commit(nvs_handle_t handle) {
     assert(handle == kHandle);
     ++fake.commits;
-    return fake.commit_error;
+    return ESP_OK;
 }
 
 void nvs_close(nvs_handle_t handle) {
@@ -116,163 +171,168 @@ void nvs_close(nvs_handle_t handle) {
 }
 
 int main() {
+    // Nothing saved: setup opens.
     reset();
-    Settings result { };
-    bool found = false;
-    assert(store::load(result, found) == ESP_OK);
-    assert(found && std::memcmp(&result, &fake.stored, sizeof(result)) == 0);
-    assert(fake.mode == NVS_READONLY && fake.opens == 1 && fake.reads == 1 && fake.closes == 1);
+    Boot state = boot();
+    assert(!state.found && !state.setup && cleared(state.settings));
 
+    // A save is one write, read back by the next boot.
     reset();
-    fake.open_error = ESP_ERR_NVS_NOT_FOUND;
-    result = valid();
-    found = true;
-    assert(store::load(result, found) == ESP_OK);
-    assert(!found && cleared(result));
-    assert(fake.reads == 0 && fake.closes == 0);
+    assert(store::persist(kNew) == ESP_OK);
+    assert(fake.writes == 1 && fake.commits == 1 && fake.closes == 1 && fake.blobs.count("record") == 1);
+    assert(uses(boot(), kNew));
 
-    reset();
-    fake.open_error = kOpenError;
-    result = valid();
-    assert(store::load(result, found) == kOpenError);
-    assert(!found && cleared(result));
-    assert(fake.reads == 0 && fake.closes == 0);
-
-    reset();
-    fake.read_error = ESP_ERR_NVS_NOT_FOUND;
-    result = valid();
-    assert(store::load(result, found) == ESP_OK);
-    assert(!found && cleared(result));
-    assert(fake.closes == 1);
-
-    reset();
-    fake.read_error = kReadError;
-    fake.partial_read = true;
-    result = valid();
-    assert(store::load(result, found) == kReadError);
-    assert(!found && cleared(result) && fake.closes == 1);
-
-    // Failed reads clear a stale found flag as well as partial credentials.
-    reset();
-    fake.read_error = kReadError;
-    result = valid();
-    found = true;
-    assert(store::load(result, found) == kReadError);
-    assert(!found && cleared(result));
-    found = false;
-
-    reset();
-    fake.blob_size = sizeof(Settings) - 1;
-    result = valid();
-    assert(store::load(result, found) == ESP_OK);
-    assert(!found && cleared(result) && fake.closes == 1);
-
-    reset();
-    fake.stored.magic = 0;
-    result = valid();
-    assert(store::load(result, found) == ESP_OK);
-    assert(!found && cleared(result) && fake.closes == 1);
-
-    reset();
-    fake.stored.pass[0] = 0;
-    fake.stored.ssid[0] = 0;
-    result = valid();
-    assert(store::load(result, found) == ESP_OK);
-    assert(!found && cleared(result));
-
-    // Oversized blobs report INVALID_LENGTH; leave NVS untouched and reopen setup.
-    reset();
-    fake.blob_size = sizeof(Settings) + 1;
-    fake.read_error = ESP_ERR_NVS_INVALID_LENGTH;
-    result = valid();
-    found = true;
-    assert(store::load(result, found) == ESP_OK);
-    assert(!found && cleared(result) && fake.closes == 1);
-    assert(fake.writes == 0 && fake.commits == 0);
-
-    reset();
-    assert(store::persist(fake.stored) == ESP_OK);
-    assert(fake.mode == NVS_READWRITE && fake.writes == 1 && fake.commits == 1 && fake.closes == 1);
-
-    reset();
-    fake.open_error = kOpenError;
-    assert(store::persist(fake.stored) == kOpenError);
-    assert(fake.writes == 0 && fake.commits == 0 && fake.closes == 0);
-
-    reset();
-    fake.write_error = kWriteError;
-    assert(store::persist(fake.stored) == kWriteError);
-    assert(fake.writes == 1 && fake.commits == 0 && fake.closes == 1);
-
-    reset();
-    fake.commit_error = kCommitError;
-    assert(store::persist(fake.stored) == kCommitError);
-    assert(fake.writes == 1 && fake.commits == 1 && fake.closes == 1);
-
-    // Persist intentionally does not validate or alter the caller's blob.
-    reset();
-    fake.stored.magic = 0;
-    assert(store::persist(fake.stored) == ESP_OK);
-    assert(fake.commits == 1);
-    // Saving credentials clears a pending setup request in the same commit.
-    reset();
-    fake.flag = 1;
-    assert(store::persist(fake.stored) == ESP_OK);
-    assert(fake.flag == 0 && fake.flag_writes == 1 && fake.commits == 1);
-    reset();
-    fake.flag_write_error = kWriteError;
-    assert(store::persist(fake.stored) == kWriteError);
-    assert(fake.writes == 1 && fake.flag_writes == 1 && fake.commits == 0 && fake.closes == 1);
-    reset();
-    fake.write_error = kWriteError;
-    assert(store::persist(fake.stored) == kWriteError);
-    assert(fake.flag_writes == 0 && fake.commits == 0);
-
-    for (uint8_t value : { 0, 1, 2 }) {
+    // First setup: a save that fails, or loses power, at any write leaves setup to open again,
+    // never the settings whose save failed.
+    for (int budget : { 0, 1 }) {
         reset();
-        fake.flag = value;
-        bool requested = true;
-        assert(store::load_setup_requested(requested) == ESP_OK);
-        assert(requested == (value != 0));
-        assert(fake.mode == NVS_READONLY && fake.flag_reads == 1 && fake.closes == 1);
-    }
-    for (bool missing_namespace : { false, true }) {
-        reset();
-        if (missing_namespace)
-            fake.open_error = ESP_ERR_NVS_NOT_FOUND;
+        fake.write_budget = budget;
+        const esp_err_t err = store::persist(kNew);
+        fake.write_budget = -1;
+        if (err == ESP_OK)
+            assert(uses(boot(), kNew));
         else
-            fake.flag_read_error = ESP_ERR_NVS_NOT_FOUND;
-        bool requested = true;
-        assert(store::load_setup_requested(requested) == ESP_OK && !requested);
-        assert(fake.closes == (missing_namespace ? 0 : 1));
+            assert(boots_into_setup(boot()) && !boot().found);
     }
-    reset();
-    fake.open_error = kOpenError;
-    bool requested = true;
-    assert(store::load_setup_requested(requested) == kOpenError && !requested);
-    assert(fake.flag_reads == 0 && fake.closes == 0);
-    reset();
-    fake.flag = 1;
-    fake.flag_read_error = kReadError;
-    requested = true;
-    assert(store::load_setup_requested(requested) == kReadError && !requested);
-    assert(fake.closes == 1);
-    for (bool value : { false, true }) {
+
+    // ESP-IDF can write the new value, then fail to remove the old copy; NVS finishes on its next
+    // init and the next boot uses the new value. That save, and that request, count as done.
+    for (bool from_legacy : { true, false }) {
         reset();
-        assert(store::set_setup_requested(value) == ESP_OK);
-        assert(fake.flag == value && fake.flag_writes == 1 && fake.writes == 0);
-        assert(fake.mode == NVS_READWRITE && fake.commits == 1 && fake.closes == 1);
+        if (from_legacy)
+            legacy(kOld, 1);
+        fake.remove_failed = true;
+        assert(store::persist(kNew) == ESP_OK);
+        fake.remove_failed = false;
+        assert(uses(boot(), kNew));
     }
     reset();
-    fake.open_error = kOpenError;
-    assert(store::set_setup_requested(true) == kOpenError);
-    assert(fake.flag_writes == 0 && fake.commits == 0 && fake.closes == 0);
+    legacy(kOld, 0);
+    fake.remove_failed = true;
+    assert(store::set_setup_requested(true) == ESP_OK);
+    fake.remove_failed = false;
+    state = boot();
+    assert(state.found && same(state.settings, kOld) && state.setup);
+
+    // Devices saved with the earlier layout keep their settings and their setup request.
+    for (uint8_t flag : { 0, 1, 2 }) {
+        reset();
+        legacy(kOld, flag);
+        state = boot();
+        assert(state.found && same(state.settings, kOld) && state.setup == (flag != 0));
+        assert(fake.writes == 0);
+    }
+
+    // Recovery, from either layout: an interrupted save keeps the old settings and setup
+    // reopens; a finished one uses the new settings.
+    for (bool from_legacy : { true, false }) {
+        for (int budget : { 0, 1 }) {
+            reset();
+            legacy(kOld, from_legacy ? 1 : 0);
+            if (!from_legacy)
+                assert(store::set_setup_requested(true) == ESP_OK);
+            fake.write_budget = budget;
+            const esp_err_t err = store::persist(kNew);
+            fake.write_budget = -1;
+            state = boot();
+            if (err == ESP_OK) {
+                assert(uses(state, kNew));
+            } else {
+                assert(state.found && same(state.settings, kOld) && state.setup);
+            }
+        }
+    }
+
+    // Asking for setup keeps the saved settings and changes only the flag, in one write.
     reset();
-    fake.flag_write_error = kWriteError;
+    legacy(kOld, 0);
+    assert(store::set_setup_requested(true) == ESP_OK);
+    assert(fake.writes == 1);
+    state = boot();
+    assert(state.found && same(state.settings, kOld) && state.setup);
+    assert(store::set_setup_requested(false) == ESP_OK);
+    assert(uses(boot(), kOld));
+
+    // An interrupted request changes nothing.
+    reset();
+    legacy(kOld, 0);
+    fake.write_budget = 0;
     assert(store::set_setup_requested(true) == kWriteError);
-    assert(fake.flag_writes == 1 && fake.commits == 0 && fake.closes == 1);
+    fake.write_budget = -1;
+    assert(uses(boot(), kOld));
+
+    // A request with nothing saved still opens setup.
     reset();
-    fake.commit_error = kCommitError;
-    assert(store::set_setup_requested(true) == kCommitError);
-    assert(fake.flag_writes == 1 && fake.commits == 1 && fake.closes == 1);
+    assert(store::set_setup_requested(true) == ESP_OK);
+    state = boot();
+    assert(!state.found && state.setup);
+
+    // Unusable settings in either layout reopen setup without erasing anything.
+    {
+        reset();
+        Settings bad = kOld;
+        bad.magic = 0;
+        legacy(bad, 0);
+        state = boot();
+        assert(!state.found && cleared(state.settings) && fake.writes == 0);
+
+        reset();
+        legacy(kOld, 0);
+        fake.blobs["settings"].pop_back();
+        state = boot();
+        assert(!state.found && cleared(state.settings));
+
+        reset();
+        legacy(kOld, 0);
+        fake.blobs["settings"].push_back(0);
+        state = boot();
+        assert(!state.found && cleared(state.settings) && fake.blobs["settings"].size() == sizeof(Settings) + 1);
+
+        reset();
+        assert(store::persist(kNew) == ESP_OK);
+        fake.blobs["record"].pop_back();
+        state = boot();
+        assert(!state.found && !state.setup && cleared(state.settings));
+
+        reset();
+        assert(store::persist(kNew) == ESP_OK);
+        fake.blobs["record"][0] ^= 0xff;
+        state = boot();
+        assert(!state.found && cleared(state.settings));
+
+        // Persist doesn't validate the caller's settings; boot does.
+        reset();
+        assert(store::persist(bad) == ESP_OK);
+        assert(!boot().found);
+    }
+
+    // Storage failures are reported, with outputs cleared, and nothing is written.
+    for (const char* key : { "record", "settings" }) {
+        reset();
+        legacy(kOld, 1);
+        fake.read_errors[key] = kReadError;
+        Settings result = kOld;
+        bool found = true;
+        assert(store::load(result, found) == kReadError);
+        assert(!found && cleared(result));
+        assert(store::set_setup_requested(true) == kReadError);
+        assert(fake.writes == 0);
+    }
+    reset();
+    legacy(kOld, 1);
+    fake.read_errors["setup_next"] = kReadError;
+    bool requested = true;
+    assert(store::load_setup_requested(requested) == kReadError && !requested);
+
+    reset();
+    legacy(kOld, 1);
+    fake.open_error = kOpenError;
+    Settings result = kOld;
+    bool found = true;
+    assert(store::load(result, found) == kOpenError && !found && cleared(result));
+    requested = true;
+    assert(store::load_setup_requested(requested) == kOpenError && !requested);
+    assert(store::persist(kNew) == kOpenError);
+    assert(store::set_setup_requested(true) == kOpenError);
+    assert(fake.writes == 0 && fake.closes == 0);
 }
