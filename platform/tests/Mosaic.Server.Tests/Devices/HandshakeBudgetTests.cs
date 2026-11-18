@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.WebSockets;
+using Microsoft.Extensions.DependencyInjection;
 using Mosaic.Device.V1;
+using Mosaic.Server.Data;
 using Mosaic.Server.Devices;
 using PayloadCase = Mosaic.Device.V1.BackendToDeviceEnvelope.PayloadOneofCase;
 
@@ -160,6 +163,57 @@ public sealed class HandshakeBudgetTests : IDisposable
         // The places are all usable again.
         var after = await OpenSilentAsync(Limit);
         await DisposeAllAsync([connection, .. after]);
+    }
+
+    [Fact]
+    public async Task UpgradesAreDecidedWithoutTheDatabase()
+    {
+        var device = TestDevice.Create();
+        _factory.Pair(device);
+        var silent = await OpenSilentAsync(Limit);
+
+        // Another connection holds an exclusive lock, so any database read waits out the busy
+        // timeout. Admission and refusal must not.
+        using var holder = _factory.Services.GetRequiredService<MosaicDatabase>().OpenConnection();
+        using (var exclusive = holder.CreateCommand())
+        {
+            exclusive.CommandText = "BEGIN EXCLUSIVE";
+            exclusive.ExecuteNonQuery();
+        }
+
+        var elapsed = Stopwatch.StartNew();
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, await _factory.RefusedUpgradeAsync(Hex(TestDevice.Create())));
+        var paired = await _factory.ConnectAsync(device, presentCredential: true);
+        Assert.InRange(elapsed.Elapsed, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+        Assert.Equal(Limit + 1, _factory.Handshakes.Open);
+
+        // The credential itself is still checked against the database once the lock is gone.
+        using (var rollback = holder.CreateCommand())
+        {
+            rollback.CommandText = "ROLLBACK";
+            rollback.ExecuteNonQuery();
+        }
+
+        Assert.Equal(PayloadCase.Paired, (await paired.HandshakeAsync()).PayloadCase);
+        await DisposeAllAsync([paired, .. silent]);
+    }
+
+    [Fact]
+    public async Task ADeviceRemovedAfterStartupLosesItsSeat()
+    {
+        var device = TestDevice.Create();
+        var id = _factory.Pair(device);
+        var silent = await OpenSilentAsync(Limit);
+        await using (var before = await _factory.ConnectAsync(device, presentCredential: true))
+        {
+            Assert.Equal(1, _factory.Handshakes.Open - Limit);
+        }
+
+        await WaitUntil(() => _factory.Handshakes.Open == Limit);
+        _factory.Devices.Revoke(id);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, await _factory.RefusedUpgradeAsync(Hex(device)));
+        await DisposeAllAsync(silent);
     }
 
     [Fact]

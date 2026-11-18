@@ -3,9 +3,13 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 const { openSync } = createRequire(import.meta.url)('fontkit')
 const root = new URL('../', import.meta.url)
 const read = (file) => fs.readFileSync(new URL(file, root))
+// A file path for fontkit. URL.pathname would keep %20 for spaces and, on Windows,
+// a leading slash before the drive letter.
+const path = (file) => fileURLToPath(new URL(file, root))
 const json = (file) => JSON.parse(read(file))
 const hash = (file) => createHash('sha256').update(read(file)).digest('hex')
 test('committed outputs match checksums and sizes', () => {
@@ -169,12 +173,10 @@ test('WOFF2 retains upstream copyright, attribution and license metadata with fu
     ['Manrope', [400, 500, 600]],
     ['Outfit', [500]],
   ]) {
-    const source = openSync(new URL(`sources/${family}.ttf`, root).pathname)
+    const source = openSync(path(`sources/${family}.ttf`))
     const license = read(`sources/${family}-OFL.txt`).toString()
     for (const weight of weights) {
-      const font = openSync(
-        new URL(`web/${family.toLowerCase()}-${weight}.woff2`, root).pathname,
-      )
+      const font = openSync(path(`web/${family.toLowerCase()}-${weight}.woff2`))
       // OpenType IDs 0, 8–12 and 14 must survive subsetting, including translations.
       for (const key of [
         'copyright',
@@ -211,9 +213,7 @@ test('WOFF2 retains upstream copyright, attribution and license metadata with fu
 
 test('recorded coverage matches the committed static font inputs', () => {
   for (const entry of json('metadata/coverage.json')) {
-    const font = openSync(
-      new URL(`sources/Manrope-${entry.weight}.ttf`, root).pathname,
-    )
+    const font = openSync(path(`sources/Manrope-${entry.weight}.ttf`))
     for (const cp of entry.supported)
       assert.ok(font.hasGlyphForCodePoint(cp), `U+${cp.toString(16)}`)
     for (const cp of entry.missing)
