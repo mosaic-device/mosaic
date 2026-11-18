@@ -29,6 +29,8 @@ struct Fake {
     std::map<std::string, esp_err_t> read_errors;
     esp_err_t open_error = ESP_OK;
     int write_budget = -1;
+    // Stores the value, then reports the old copy couldn't be removed, as ESP-IDF can.
+    bool remove_failed = false;
     int opens = 0;
     int closes = 0;
     int writes = 0;
@@ -135,7 +137,7 @@ esp_err_t nvs_set_blob(nvs_handle_t handle, const char* key, const void* data, s
         return kWriteError;
     const auto* bytes = static_cast<const unsigned char*>(data);
     fake.blobs[key].assign(bytes, bytes + length);
-    return ESP_OK;
+    return fake.remove_failed ? ESP_ERR_NVS_REMOVE_FAILED : ESP_OK;
 }
 
 esp_err_t nvs_get_u8(nvs_handle_t handle, const char* key, uint8_t* value) {
@@ -192,6 +194,25 @@ int main() {
         else
             assert(boots_into_setup(boot()) && !boot().found);
     }
+
+    // ESP-IDF can write the new value, then fail to remove the old copy; NVS finishes on its next
+    // init and the next boot uses the new value. That save, and that request, count as done.
+    for (bool from_legacy : { true, false }) {
+        reset();
+        if (from_legacy)
+            legacy(kOld, 1);
+        fake.remove_failed = true;
+        assert(store::persist(kNew) == ESP_OK);
+        fake.remove_failed = false;
+        assert(uses(boot(), kNew));
+    }
+    reset();
+    legacy(kOld, 0);
+    fake.remove_failed = true;
+    assert(store::set_setup_requested(true) == ESP_OK);
+    fake.remove_failed = false;
+    state = boot();
+    assert(state.found && same(state.settings, kOld) && state.setup);
 
     // Devices saved with the earlier layout keep their settings and their setup request.
     for (uint8_t flag : { 0, 1, 2 }) {

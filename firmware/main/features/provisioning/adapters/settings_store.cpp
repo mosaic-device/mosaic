@@ -116,6 +116,11 @@ esp_err_t write_record(nvs_handle_t handle, const State& state) {
         record.settings = state.settings;
     esp_err_t err = nvs_set_blob(handle, kRecordKey, &record, sizeof(record));
     support::secure_erase(record);
+    // The new value is written but the old copy wasn't removed; NVS finishes removing it on its
+    // next init, and reads already return the new value. The next boot uses this save, so it
+    // must be reported as saved.
+    if (err == ESP_ERR_NVS_REMOVE_FAILED)
+        err = ESP_OK;
     if (err == ESP_OK)
         err = nvs_commit(handle);
     return err;
