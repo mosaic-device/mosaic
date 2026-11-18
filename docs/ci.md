@@ -13,7 +13,7 @@ Run commands from the repository root. [Setup](setup.md) covers installing each 
 | **Rust**                 | Companion rustfmt, Clippy with warnings as errors, Rust tests                                             | [Rust commands](#rust)                                                          |
 | **Generated code**       | Protobuf lint, committed bindings match the schema, token generator tests                                 | [Generated code commands](#generated-code)                                      |
 | **Firmware host checks** | Firmware formatting and every firmware host test                                                          | `pnpm fw:format:check`, `pnpm fw:test`                                          |
-| **Firmware preview**     | The preview compiles on Linux, macOS and Windows                                                          | `pnpm fw:preview --build-only`                                                  |
+| **Firmware preview**     | The preview compiles on Linux, macOS and Windows; on Windows, the firmware wrapper tests also run         | `pnpm fw:preview --build-only`, `python scripts/firmware_test.py`               |
 | **Firmware build**       | A clean ESP-IDF build, the committed dependency lock unchanged, no debug-trigger code in the normal image | [Firmware build commands](#firmware-build)                                      |
 | **PCB**                  | Carrier board ERC, DRC with schematic parity, and the fabrication files, uploaded as an artifact          | `pnpm pcb:export`                                                               |
 

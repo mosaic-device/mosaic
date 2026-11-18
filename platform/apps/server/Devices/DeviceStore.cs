@@ -28,8 +28,38 @@ public sealed record StoredDevice(long Id, DateTimeOffset PairedAt, byte[] Secre
 /// Paired devices in SQLite, keyed by the SHA-256 of their secret (see <see cref="DeviceSecret"/>).
 /// No plain secret is ever stored. Revoked rows stay so a revoked secret is recognized as such.
 /// </summary>
+/// <remarks>
+/// The hashes of paired devices are also kept in memory for <see cref="IsPaired"/>, which runs
+/// before a device's upgrade is admitted, so anyone can call it. It is loaded once from the
+/// database and kept in step by <see cref="Pair"/> and <see cref="Revoke"/>, which update it
+/// under the same lock as their write. This process is the database's only writer.
+/// </remarks>
 public sealed class DeviceStore(MosaicDatabase database, TimeProvider time)
 {
+    private readonly Lock _pairedLock = new();
+    private HashSet<string>? _paired;
+
+    /// <summary>
+    /// Whether this credential is paired, from memory, with no database work after the first
+    /// call. For admission only: <see cref="Find"/> stays the authority on a connection.
+    /// </summary>
+    public bool IsPaired(byte[] secretHash)
+    {
+        lock (_pairedLock)
+        {
+            return Paired().Contains(Convert.ToHexString(secretHash));
+        }
+    }
+
+    /// <summary>Loads the paired hashes now, at startup after migration, so no upgrade waits on it.</summary>
+    public void LoadPaired()
+    {
+        lock (_pairedLock)
+        {
+            Paired();
+        }
+    }
+
     public DeviceCredential Find(byte[] secretHash)
     {
         using var connection = database.OpenConnection();
@@ -53,6 +83,20 @@ public sealed class DeviceStore(MosaicDatabase database, TimeProvider time)
     /// same device. Returns null for a revoked credential, which can never be paired again.
     /// </summary>
     public PairedDevice? Pair(byte[] secretHash)
+    {
+        lock (_pairedLock)
+        {
+            var device = PairRow(secretHash);
+            if (device is not null)
+            {
+                _paired?.Add(Convert.ToHexString(secretHash));
+            }
+
+            return device;
+        }
+    }
+
+    private PairedDevice? PairRow(byte[] secretHash)
     {
         using var connection = database.OpenConnection();
         using var command = connection.CreateCommand("""
@@ -99,11 +143,38 @@ public sealed class DeviceStore(MosaicDatabase database, TimeProvider time)
     /// </summary>
     public byte[]? Revoke(long deviceId)
     {
-        using var connection = database.OpenConnection();
-        using var command = connection.CreateCommand(
-            "UPDATE devices SET revoked_at = $revokedAt WHERE id = $id AND revoked_at IS NULL RETURNING secret_hash");
-        command.Parameters.AddWithValue("$revokedAt", Timestamps.Format(time.GetUtcNow()));
-        command.Parameters.AddWithValue("$id", deviceId);
-        return command.ExecuteScalar() as byte[];
+        lock (_pairedLock)
+        {
+            using var connection = database.OpenConnection();
+            using var command = connection.CreateCommand(
+                "UPDATE devices SET revoked_at = $revokedAt WHERE id = $id AND revoked_at IS NULL RETURNING secret_hash");
+            command.Parameters.AddWithValue("$revokedAt", Timestamps.Format(time.GetUtcNow()));
+            command.Parameters.AddWithValue("$id", deviceId);
+            var secretHash = command.ExecuteScalar() as byte[];
+            if (secretHash is not null)
+            {
+                _paired?.Remove(Convert.ToHexString(secretHash));
+            }
+
+            return secretHash;
+        }
+    }
+
+    // Called under _pairedLock. Loaded on first use rather than at construction, since the
+    // database may not be migrated yet when the store is created.
+    private HashSet<string> Paired()
+    {
+        if (_paired is null)
+        {
+            var paired = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var device in ListPaired())
+            {
+                paired.Add(Convert.ToHexString(device.SecretHash));
+            }
+
+            _paired = paired;
+        }
+
+        return _paired;
     }
 }
