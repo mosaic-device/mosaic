@@ -17,6 +17,13 @@ const offline = { id: 5, pairedAt: '2026-11-14T20:12:00Z', connected: false }
 const list = (...devices: object[]) => jsonResponse({ devices })
 const LOADED_AT = Date.parse('2026-11-14T21:00:00Z')
 
+// Headers arrive, then the body never ends. Aborting the request doesn't end
+// it either, as can happen when the body is already being read.
+const stalled = () =>
+  new Response(new ReadableStream({ start() {} }), {
+    headers: { 'Content-Type': 'application/json' },
+  })
+
 function setVisibility(state: DocumentVisibilityState) {
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(state)
   document.dispatchEvent(new Event('visibilitychange'))
@@ -146,10 +153,6 @@ describe('useDeviceList', () => {
   })
 
   it('gives up on a check whose body stalls', async () => {
-    const stalled = () =>
-      new Response(new ReadableStream({ start() {} }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
     const { calls } = stubFetch(stalled, list(online))
     const { result } = renderList()
 
@@ -162,14 +165,46 @@ describe('useDeviceList', () => {
   })
 
   it('stays quiet when a hidden tab cancels a slow check', async () => {
-    stubFetch(() => new Promise<Response>(() => {}))
+    for (const slow of [() => new Promise<Response>(() => {}), stalled]) {
+      const { calls } = stubFetch(slow)
+      const { result, unmount } = renderList()
+
+      await wait(REFRESH_MS)
+      setVisibility('hidden')
+      await wait(CHECK_TIMEOUT_MS + REFRESH_MS)
+
+      expect(result.current.refreshError).toBeNull()
+      expect(calls).toHaveLength(1)
+      unmount()
+      vi.restoreAllMocks()
+    }
+  })
+
+  it('keeps a newer answer when an older check stalls past its deadline', async () => {
+    const { calls } = stubFetch(stalled, list(online))
     const { result } = renderList()
 
     await wait(REFRESH_MS)
-    setVisibility('hidden')
-    await wait(CHECK_TIMEOUT_MS + REFRESH_MS)
+    act(() => result.current.refresh())
+    await wait(0)
+    expect(result.current.devices).toEqual([online])
 
+    // The older check's deadline would have passed by now.
+    await wait(CHECK_TIMEOUT_MS)
     expect(result.current.refreshError).toBeNull()
+    expect(result.current.devices).toEqual([online])
+    expect(calls).toHaveLength(2)
+  })
+
+  it('checks no more after leaving the page during a stalled check', async () => {
+    const { calls } = stubFetch(stalled)
+    const { unmount } = renderList()
+
+    await wait(REFRESH_MS)
+    unmount()
+    await wait(CHECK_TIMEOUT_MS + REFRESH_MS * 2)
+
+    expect(calls).toHaveLength(1)
   })
 
   it('hands an ended session to the caller', async () => {

@@ -79,11 +79,17 @@ export function useDeviceList(
       controller?.abort()
       const current = new AbortController()
       controller = current
-      // Racing the deadline, rather than only aborting, also ends a check
-      // whose body stalls in a way the abort doesn't reach.
+      // The request races its deadline and its own cancellation, so it ends
+      // either way even if its body stalls in a way the abort doesn't reach.
+      // Whichever comes first wins: a cancelled check never times out later.
       let deadline: ReturnType<typeof setTimeout> | undefined
       let expired = false
-      const timedOut = new Promise<never>((_, reject) => {
+      const ended = new Promise<never>((_, reject) => {
+        current.signal.addEventListener(
+          'abort',
+          () => reject(current.signal.reason),
+          { once: true },
+        )
         deadline = setTimeout(() => {
           expired = true
           reject(new ApiError({ kind: 'unavailable' }))
@@ -93,7 +99,7 @@ export function useDeviceList(
       try {
         const { devices } = await Promise.race([
           listDevices(current.signal),
-          timedOut,
+          ended,
         ])
         // An answer that lands just as the check is cancelled is dropped.
         if (current.signal.aborted) return
