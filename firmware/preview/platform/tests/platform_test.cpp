@@ -302,6 +302,8 @@ void nvs_damaged(const char* path, std::string_view damage) {
         bytes += entry("flag", 1, 0, "");
     else if (damage == "unknown-type")
         bytes += entry("flag", 7, 1, "x");
+    else if (damage == "too-large")
+        bytes += entry("big", 2, 70000, std::string(70000, 'x')); // Well formed, but over 64 KiB.
     else if (damage == "cut-header")
         bytes += entry("flag", 1, 1, "x").substr(0, 13);
     else

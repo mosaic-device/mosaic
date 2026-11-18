@@ -27,7 +27,7 @@ with tempfile.TemporaryDirectory(prefix="mosaic-preview-platform-") as work:
     subprocess.run([str(exe), "write", str(nvs)], check=True, env=env, timeout=60)
     subprocess.run([str(exe), "read", str(nvs)], check=True, env=env, timeout=60)
     # Each damaged state file gets a fresh process, since NVS loads once per run.
-    for damage in ("truncated", "oversized", "empty-u8", "unknown-type", "cut-header"):
+    for damage in ("truncated", "oversized", "too-large", "empty-u8", "unknown-type", "cut-header"):
         damaged = Path(work) / f"damaged-{damage}.bin"
         subprocess.run([str(exe), "damaged", str(damaged), damage], check=True, env=env, timeout=60)
     print("Preview platform tests passed", flush=True)

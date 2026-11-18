@@ -8,7 +8,6 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
-#include <iterator>
 #include <map>
 #include <mutex>
 #include <string>
@@ -28,6 +27,9 @@ struct Handle {
 };
 // NVS limits namespace and key names to 15 characters.
 constexpr size_t kMaxName = 15;
+// The largest state file the preview loads. The device's NVS partition is 24 KiB (0x6000 in
+// partitions.csv), so a real state file is far smaller; anything over this is damaged.
+constexpr std::streamsize kMaxFileBytes = 64 * 1024;
 
 std::mutex g_lock;
 std::map<std::string, Namespace> g_store;
@@ -149,9 +151,13 @@ esp_err_t nvs_flash_init() {
     std::ifstream in(g_file, std::ios::binary);
     if (!in)
         return ESP_OK; // Erased flash.
-    const std::vector<unsigned char> data { std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>() };
+    // Read at most one byte past the limit, so a huge or sparse file is never read whole.
+    std::vector<unsigned char> data(static_cast<size_t>(kMaxFileBytes) + 1);
+    in.read(reinterpret_cast<char*>(data.data()), kMaxFileBytes + 1);
+    const std::streamsize count = in.gcount();
+    data.resize(static_cast<size_t>(count));
     std::map<std::string, Namespace> loaded;
-    if (!in.bad() && parse(data, loaded))
+    if (!in.bad() && count <= kMaxFileBytes && parse(data, loaded))
         g_store = std::move(loaded);
     else
         std::fprintf(stderr, "Preview NVS file %s is damaged; starting erased\n", g_file.string().c_str());
