@@ -48,7 +48,8 @@ class FirmwareLockTests(unittest.TestCase):
                 child = (
                     "import pathlib,sys; "
                     "p=pathlib.Path('dependencies.lock'); t=p.read_text(); "
-                    "assert str(pathlib.Path.cwd() / 'components/esp_lcd_hx8394') in t; "
+                    # The wrapper writes forward slashes on every platform.
+                    "assert (pathlib.Path.cwd() / 'components/esp_lcd_hx8394').as_posix() in t; "
                     "assert '${MOSAIC_FIRMWARE_DIR}' not in t; "
                     "p.write_text(t.replace('version: 1.0.0', 'version: 1.0.1')); "
                     f"sys.exit({status})"
