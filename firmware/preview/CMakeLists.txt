@@ -22,6 +22,10 @@ target_compile_definitions(preview_lvgl PUBLIC LV_CONF_INCLUDE_SIMPLE)
 target_include_directories(preview_lvgl PUBLIC "${LVGL_DIR}" "${CMAKE_CURRENT_LIST_DIR}")
 
 set(MAIN "${CMAKE_CURRENT_LIST_DIR}/../main")
+
+# Generate main/ui/generated/design_tokens.h from the token sources, as the device build does,
+# so the preview never compiles a header left over from an earlier token change.
+include("${CMAKE_CURRENT_LIST_DIR}/../tokens.cmake")
 file(GLOB ASSETS "${MAIN}/ui/generated/assets/*.c")
 add_library(preview_assets STATIC ${ASSETS})
 target_link_libraries(preview_assets PRIVATE preview_lvgl)

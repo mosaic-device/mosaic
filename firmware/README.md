@@ -6,7 +6,7 @@ Run every command from the repository root. [Setup](../docs/setup.md) lists the 
 
 ## Preview
 
-The preview runs the firmware itself in a window on your computer: `app_main()`, every feature, provisioning, the event bus and the screens are the code the board runs. Only the hardware and radio adapters are replaced, by simulated ones in `preview/adapters/`, and `preview/platform/` stands in for the ESP-IDF and FreeRTOS APIs. It needs Python, a C++23 compiler, CMake and SDL2, not ESP-IDF.
+The preview runs the firmware itself in a window on your computer: `app_main()`, every feature, provisioning, the event bus and the screens are the code the board runs. Only the hardware and radio adapters are replaced, by simulated ones in `preview/adapters/`, and `preview/platform/` stands in for the ESP-IDF and FreeRTOS APIs. It needs Node, Python, a C++23 compiler, CMake and SDL2, not ESP-IDF. Node generates the design tokens at build time and needs no `pnpm install`.
 
 ```sh
 pnpm fw:preview                    # build and start
