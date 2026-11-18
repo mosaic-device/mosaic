@@ -204,6 +204,10 @@ jobs:
         run: |
           "$VCPKG_INSTALLATION_ROOT/vcpkg" install sdl2:x64-windows
           echo "CMAKE_TOOLCHAIN_FILE=$VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" >> "$GITHUB_ENV"
+      # The Firmware host checks job runs these on Linux; Windows removes files differently.
+      - name: Firmware wrapper tests (Windows)
+        if: runner.os == 'Windows'
+        run: python scripts/firmware_test.py
       - name: Build firmware preview
         run: python firmware/preview/run.py --build-only
 

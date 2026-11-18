@@ -1,7 +1,11 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api/errors'
-import { REFRESH_MS, useDeviceList } from '@/lib/use-device-list'
+import {
+  CHECK_TIMEOUT_MS,
+  REFRESH_MS,
+  useDeviceList,
+} from '@/lib/use-device-list'
 import {
   jsonResponse,
   stubFetch,
@@ -12,6 +16,13 @@ const online = { id: 3, pairedAt: '2026-11-06T18:30:00Z', connected: true }
 const offline = { id: 5, pairedAt: '2026-11-14T20:12:00Z', connected: false }
 const list = (...devices: object[]) => jsonResponse({ devices })
 const LOADED_AT = Date.parse('2026-11-14T21:00:00Z')
+
+// Headers arrive, then the body never ends. Aborting the request doesn't end
+// it either, as can happen when the body is already being read.
+const stalled = () =>
+  new Response(new ReadableStream({ start() {} }), {
+    headers: { 'Content-Type': 'application/json' },
+  })
 
 function setVisibility(state: DocumentVisibilityState) {
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue(state)
@@ -118,6 +129,82 @@ describe('useDeviceList', () => {
     await wait(REFRESH_MS)
     expect(result.current.refreshError).toBeNull()
     expect(result.current.devices).toEqual([online])
+  })
+
+  it('gives up on a check that never answers, then keeps checking', async () => {
+    const { calls } = stubFetch(
+      () => new Promise<Response>(() => {}),
+      list(online),
+    )
+    const { result } = renderList()
+
+    await wait(REFRESH_MS + CHECK_TIMEOUT_MS - 1)
+    expect(result.current.refreshError).toBeNull()
+    await wait(1)
+    expect(result.current.refreshError).toBeInstanceOf(ApiError)
+    expect((result.current.refreshError as ApiError).kind).toBe('unavailable')
+    expect(calls[0]?.init.signal?.aborted).toBe(true)
+    expect(result.current.devices).toEqual([online, offline])
+
+    await wait(REFRESH_MS)
+    expect(calls).toHaveLength(2)
+    expect(result.current.refreshError).toBeNull()
+    expect(result.current.devices).toEqual([online])
+  })
+
+  it('gives up on a check whose body stalls', async () => {
+    const { calls } = stubFetch(stalled, list(online))
+    const { result } = renderList()
+
+    await wait(REFRESH_MS + CHECK_TIMEOUT_MS)
+    expect(result.current.refreshError).toBeInstanceOf(ApiError)
+
+    await wait(REFRESH_MS)
+    expect(calls).toHaveLength(2)
+    expect(result.current.refreshError).toBeNull()
+  })
+
+  it('stays quiet when a hidden tab cancels a slow check', async () => {
+    for (const slow of [() => new Promise<Response>(() => {}), stalled]) {
+      const { calls } = stubFetch(slow)
+      const { result, unmount } = renderList()
+
+      await wait(REFRESH_MS)
+      setVisibility('hidden')
+      await wait(CHECK_TIMEOUT_MS + REFRESH_MS)
+
+      expect(result.current.refreshError).toBeNull()
+      expect(calls).toHaveLength(1)
+      unmount()
+      vi.restoreAllMocks()
+    }
+  })
+
+  it('keeps a newer answer when an older check stalls past its deadline', async () => {
+    const { calls } = stubFetch(stalled, list(online))
+    const { result } = renderList()
+
+    await wait(REFRESH_MS)
+    act(() => result.current.refresh())
+    await wait(0)
+    expect(result.current.devices).toEqual([online])
+
+    // The older check's deadline would have passed by now.
+    await wait(CHECK_TIMEOUT_MS)
+    expect(result.current.refreshError).toBeNull()
+    expect(result.current.devices).toEqual([online])
+    expect(calls).toHaveLength(2)
+  })
+
+  it('checks no more after leaving the page during a stalled check', async () => {
+    const { calls } = stubFetch(stalled)
+    const { unmount } = renderList()
+
+    await wait(REFRESH_MS)
+    unmount()
+    await wait(CHECK_TIMEOUT_MS + REFRESH_MS * 2)
+
+    expect(calls).toHaveLength(1)
   })
 
   it('hands an ended session to the caller', async () => {
