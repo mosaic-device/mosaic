@@ -4,6 +4,8 @@ namespace mosaic::features::connection {
 
 Action Policy::wifi_up(uint64_t now_ms) {
     wifi_ = true;
+    // A failure without Wi-Fi says nothing about the server; try it again first.
+    failed_ = false;
     // Wi-Fi coming back is worth trying straight away, without waiting out the backoff.
     if (phase_ == Phase::waiting)
         return start_attempt(now_ms);
@@ -53,6 +55,9 @@ Action Policy::closed(uint64_t now_ms, uint32_t random) {
     rejection_.reset();
     if (!rejection) {
         // A network failure: keeps the credential and retries with backoff (protocol section 5).
+        // Without Wi-Fi it is Wi-Fi's failure, not the server's.
+        if (wifi_)
+            failed_ = true;
         fail(now_ms, random);
         state_ = backoff_.failures() >= kOfflineAfter ? State::offline : State::reconnecting;
         return Action::none;
@@ -103,6 +108,9 @@ Action Policy::received(uint64_t, Frame frame, Reject reason) {
     }
     backoff_.reset();
     state_ = State::online;
+    reached_ = true;
+    failed_ = false;
+    answered_ = phase_ == Phase::paired ? events::Status::connected : events::Status::pairing;
     return Action::none;
 }
 
@@ -135,6 +143,27 @@ Action Policy::tick(uint64_t now_ms, uint32_t random) {
 
 State Policy::state() const {
     return state_;
+}
+
+events::Status Policy::status() const {
+    switch (phase_) {
+    case Phase::stopped:
+        return events::Status::update_required;
+    case Phase::paired:
+        return events::Status::connected;
+    case Phase::pending:
+        return events::Status::pairing;
+    case Phase::waiting:
+    case Phase::opening:
+    case Phase::replying:
+    case Phase::closing:
+        break;
+    }
+    if (state_ == State::server_error)
+        return events::Status::error;
+    if (reached_)
+        return state_ == State::offline ? events::Status::error : answered_;
+    return failed_ ? events::Status::error : events::Status::disconnected;
 }
 
 std::optional<uint64_t> Policy::next_deadline_ms() const {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backoff.hpp"
+#include "../../events/status.hpp"
 
 #include <cstdint>
 #include <optional>
@@ -60,6 +61,12 @@ public:
     Action tick(uint64_t now_ms, uint32_t random);
 
     State state() const;
+    // What the device shows about the server. Until the server first answers, the owner is
+    // still setting up: `disconnected` while reaching it, and `error` once an attempt fails
+    // with Wi-Fi up, so a wrong address or a TLS failure shows at once. After that, a lost
+    // connection keeps showing `connected` or `pairing` while it reconnects, and `error`
+    // only once offline. A rejection shows `error`, or `update_required` for the version.
+    events::Status status() const;
     // When tick() next has something to do, or nothing if it is waiting on an event.
     std::optional<uint64_t> next_deadline_ms() const;
     // Whether application frames such as notifications may be sent and received: only once
@@ -89,6 +96,12 @@ private:
     uint64_t deadline_ms_ = 0;
     // The rejection received on this connection, acted on once it closes.
     std::optional<Reject> rejection_;
+    // The server has answered with paired or pairing_pending since boot.
+    bool reached_ = false;
+    // What the last answer showed: `connected` or `pairing`.
+    events::Status answered_ = events::Status::pairing;
+    // An attempt failed with Wi-Fi up since Wi-Fi last came up or the server last answered.
+    bool failed_ = false;
 };
 
 } // namespace mosaic::features::connection

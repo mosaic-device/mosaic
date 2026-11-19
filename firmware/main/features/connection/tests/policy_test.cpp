@@ -6,6 +6,7 @@
 #include <initializer_list>
 
 using namespace mosaic::features::connection;
+using mosaic::events::Status;
 
 namespace {
 // Gives each backoff wait exactly: 1 s, 2 s, 4 s...
@@ -190,6 +191,79 @@ void a_rejection_counts_once_when_the_close_follows() {
     assert(policy.state() == State::server_error);
     assert(*policy.next_deadline_ms() == 200 + kFirstDelayMs);
 }
+
+void reaching_the_server_for_the_first_time() {
+    Policy policy;
+    assert(policy.status() == Status::disconnected);
+    policy.wifi_up(0);
+    policy.opened(100);
+    assert(policy.status() == Status::disconnected);
+    // An unreachable server, a bad address and a TLS failure all end the attempt: show the
+    // error at once, and keep showing it through the retries.
+    policy.closed(200, kExact);
+    assert(policy.status() == Status::error);
+    assert(policy.tick(*policy.next_deadline_ms(), kExact) == Action::open);
+    assert(policy.status() == Status::error);
+    // Until the server answers.
+    policy.opened(2'000);
+    policy.received(2'100, Frame::pairing_pending);
+    assert(policy.status() == Status::pairing);
+    policy.received(3'000, Frame::paired);
+    assert(policy.status() == Status::connected);
+}
+
+void losing_wifi_is_not_a_server_error() {
+    Policy policy;
+    policy.wifi_up(0);
+    assert(policy.wifi_down(100) == Action::close);
+    policy.closed(100, kExact);
+    assert(policy.status() == Status::disconnected);
+    // A server failure, then Wi-Fi drops and returns: try the server again before blaming it.
+    policy.wifi_up(200);
+    policy.closed(300, kExact);
+    assert(policy.status() == Status::error);
+    policy.wifi_down(400);
+    assert(policy.wifi_up(500) == Action::open);
+    assert(policy.status() == Status::disconnected);
+}
+
+void a_lost_connection_shows_its_last_answer_until_offline() {
+    for (const Frame answer : { Frame::paired, Frame::pairing_pending }) {
+        const Status shown = answer == Frame::paired ? Status::connected : Status::pairing;
+        Policy policy = connecting();
+        policy.received(100, answer);
+        uint64_t now = 1'000;
+        for (uint32_t failures = 1; failures < kOfflineAfter; ++failures) {
+            now = fail_and_retry(policy, now);
+            assert(policy.status() == shown);
+        }
+        assert(policy.status() == shown);
+        policy.closed(now, kExact);
+        assert(policy.state() == State::offline);
+        assert(policy.status() == Status::error);
+        // Answered again: back to normal.
+        policy.tick(*policy.next_deadline_ms(), kExact);
+        policy.opened(now + 20'000);
+        policy.received(now + 20'100, answer);
+        assert(policy.status() == shown);
+    }
+}
+
+void rejections_show_an_error_or_an_update() {
+    Policy busy = connecting();
+    busy.received(100, Frame::paired);
+    busy.received(200, Frame::rejected, Reject::server_busy);
+    busy.closed(300, kExact);
+    assert(busy.status() == Status::error);
+    // Still an error while it retries.
+    assert(busy.tick(*busy.next_deadline_ms(), kExact) == Action::open);
+    assert(busy.status() == Status::error);
+
+    Policy old = connecting();
+    old.received(100, Frame::rejected, Reject::unsupported_version);
+    old.closed(200, kExact);
+    assert(old.status() == Status::update_required);
+}
 } // namespace
 
 int main() {
@@ -205,5 +279,9 @@ int main() {
     unsupported_version_stops_retrying();
     a_revoked_credential_reconnects_without_backoff();
     a_rejection_counts_once_when_the_close_follows();
+    reaching_the_server_for_the_first_time();
+    losing_wifi_is_not_a_server_error();
+    a_lost_connection_shows_its_last_answer_until_offline();
+    rejections_show_an_error_or_an_update();
     std::puts("Policy tests passed");
 }
