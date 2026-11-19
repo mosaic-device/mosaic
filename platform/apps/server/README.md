@@ -88,6 +88,11 @@ The server is public while the command runs. Ctrl+C stops both the server and Fu
 and if either stops on its own, the other stops too. Keep the laptop awake while a
 device depends on it.
 
+The command binds the server to exactly `127.0.0.1:5000`, the address Funnel forwards
+to, and starts Funnel only once the server reports it is listening there. If another
+program already holds that address, the server fails to start and Funnel is never
+started, so that program is never made public.
+
 On macOS, AirPlay Receiver also listens on port 5000. The server still gets requests
 to `localhost:5000`, but if you see `403` from `AirTunes`, the server isn't running yet.
 
@@ -203,6 +208,16 @@ Frames are limited to 512 bytes from the device (larger ones close with 1009) an
 messages so a field added later still reaches the decoder; a test checks that every
 generated message fits.
 
+Connections that haven't finished their handshake are limited to
+`Devices:MaxHandshakes` at once; past that, upgrades get `503` before the WebSocket
+opens, and a device retries with backoff. A connection gives its place back once it
+has its `paired` or `pairing_pending` reply, or when it ends for any reason. A paired
+device can send its secret as 64 hex digits in a `Mosaic-Device-Credential` upgrade
+header: if that secret is paired, the device has a seat of its own, one handshake at a
+time, and gets in while anonymous clients fill the limit. Its `connect` must then carry
+the same secret, or it is rejected with `MALFORMED_REQUEST`. A malformed header gets
+`400`; an unknown or revoked one waits with everyone else.
+
 The `devices` table stores only the SHA-256 of each device's 32-byte secret.
 Secrets and pairing codes are never logged. Requests with an `Origin` header get 403,
 so a web page cannot open device connections. The server pings every 15 seconds and
@@ -218,7 +233,9 @@ under `Devices`:
 | `Devices:HandshakeTimeout` | `00:00:10` | Time allowed for the first `connect` |
 | `Devices:KeepAliveInterval` | `00:00:15` | Ping interval |
 | `Devices:KeepAliveTimeout` | `00:00:15` | Pong timeout before the connection is dropped |
+| `Devices:WriteTimeout` | `00:00:10` | Longest a single write to a device, including the close frame, may take before the connection is dropped |
 | `Devices:MaxPendingPairings` | `32` | Live pairing codes at once; more unpaired devices get `SERVER_BUSY` |
+| `Devices:MaxHandshakes` | `64` | Connections, from anyone, still waiting to finish their handshake; more get `503` at the upgrade |
 | `Devices:ClaimAttemptsPerMinute` | `10` | Signed-in claim attempts per client per minute |
 
 ## Claiming a device

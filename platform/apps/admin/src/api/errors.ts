@@ -5,8 +5,12 @@ export const API_ERROR_CODES = [
   'unauthenticated',
   'invalid_setup_code',
   'forbidden_origin',
+  'invalid_pairing_code',
+  'device_not_found',
   'setup_already_completed',
   'setup_required',
+  'pairing_code_used',
+  'pairing_code_expired',
   'too_many_requests',
   'internal_error',
 ] as const

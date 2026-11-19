@@ -2,6 +2,7 @@ import { fireEvent, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
   jsonResponse,
+  noDevicesResponse,
   problemResponse,
   sessionResponse,
   stubFetch,
@@ -62,6 +63,7 @@ describe('login page', () => {
       '/login?redirect=/devices',
       loginOk(),
       sessionResponse(),
+      noDevicesResponse(),
     )
 
     fill('Username', 'bridger')
@@ -77,6 +79,7 @@ describe('login page', () => {
       '/login?redirect=//evil.example',
       loginOk(),
       sessionResponse(),
+      noDevicesResponse(),
     )
     expect(router.state.matches.at(-1)?.search).toEqual({})
 
@@ -97,7 +100,12 @@ describe('login page', () => {
   })
 
   it('sends a signed-in visitor to Home', async () => {
-    stubFetch(adminExists(), sessionResponse(), sessionResponse())
+    stubFetch(
+      adminExists(),
+      sessionResponse(),
+      sessionResponse(),
+      noDevicesResponse(),
+    )
     const router = await renderAppAt('/login')
 
     await screen.findByRole('heading', { level: 1, name: 'Welcome' })
@@ -126,6 +134,7 @@ describe('login page', () => {
     const { calls, router } = await openLogin(
       jsonResponse({ admin: { username: 'bridger' } }),
       sessionResponse(),
+      noDevicesResponse(),
     )
 
     fill('Username', 'Bridger ')
@@ -145,6 +154,7 @@ describe('login page', () => {
     const { calls } = await openLogin(
       jsonResponse({ admin: { username: 'bridger' } }),
       sessionResponse(),
+      noDevicesResponse(),
     )
 
     screen.getByLabelText<HTMLInputElement>('Username').value = 'bridger'

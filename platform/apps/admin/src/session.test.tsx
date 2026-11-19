@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   emptyResponse,
   jsonResponse,
+  noDevicesResponse,
   sessionResponse,
   stubFetch,
   unauthenticatedResponse,
@@ -22,7 +23,7 @@ const loggedOut = () => [
 
 describe('session check', () => {
   it('restores a session on a direct load', async () => {
-    const { calls } = stubFetch(sessionResponse())
+    const { calls } = stubFetch(sessionResponse(), noDevicesResponse())
     await renderAppAt('/devices')
 
     expect(
@@ -50,7 +51,11 @@ describe('session check', () => {
   })
 
   it('checks again on every move between pages', async () => {
-    const { calls } = stubFetch(sessionResponse(), sessionResponse())
+    const { calls } = stubFetch(
+      sessionResponse(),
+      noDevicesResponse(),
+      sessionResponse(),
+    )
     const router = await renderAppAt('/')
 
     await act(() => router.navigate({ to: '/settings' }))
@@ -60,12 +65,13 @@ describe('session check', () => {
     ).toBeTruthy()
     expect(calls.map((call) => call.url)).toEqual([
       '/api/auth/session',
+      '/api/devices',
       '/api/auth/session',
     ])
   })
 
   it('marks a session that ended while signed in', async () => {
-    stubFetch(sessionResponse(), ...loggedOut())
+    stubFetch(sessionResponse(), noDevicesResponse(), ...loggedOut())
     const router = await renderAppAt('/')
 
     await act(() => router.navigate({ to: '/settings' }))
@@ -116,7 +122,7 @@ function logOut() {
 
 describe('account and logout', () => {
   it('shows who is signed in', async () => {
-    stubFetch(sessionResponse('bridger'))
+    stubFetch(sessionResponse('bridger'), noDevicesResponse())
     await renderAppAt('/')
 
     expect(screen.getByText('Signed in as bridger')).toBeTruthy()
@@ -134,6 +140,7 @@ describe('account and logout', () => {
   it('logs out and opens a plain login page', async () => {
     const { calls } = stubFetch(
       sessionResponse(),
+      noDevicesResponse(),
       emptyResponse(204),
       adminExists(),
       unauthenticatedResponse(),
@@ -143,8 +150,8 @@ describe('account and logout', () => {
     logOut()
 
     await screen.findByRole('heading', { level: 1, name: 'Log in' })
-    expect(calls[1]?.url).toBe('/api/auth/logout')
-    expect(calls[1]?.init.method).toBe('POST')
+    expect(calls[2]?.url).toBe('/api/auth/logout')
+    expect(calls[2]?.init.method).toBe('POST')
     expect(router.state.location.search).toEqual({})
     expect(screen.queryByText(ENDED)).toBeNull()
   })
@@ -153,6 +160,7 @@ describe('account and logout', () => {
     stubFetch(
       sessionResponse(),
       sessionResponse(),
+      noDevicesResponse(),
       emptyResponse(204),
       adminExists(),
       unauthenticatedResponse(),
@@ -177,6 +185,7 @@ describe('account and logout', () => {
     const logoutAnswer = deferred()
     stubFetch(
       sessionResponse(),
+      noDevicesResponse(),
       logoutAnswer.answer,
       ...loggedOut(),
       adminExists(),
@@ -197,6 +206,7 @@ describe('account and logout', () => {
     const logoutAnswer = deferred()
     stubFetch(
       sessionResponse(),
+      noDevicesResponse(),
       logoutAnswer.answer,
       adminExists(),
       unauthenticatedResponse(),
@@ -216,7 +226,7 @@ describe('account and logout', () => {
   })
 
   it('stays signed in when logout fails', async () => {
-    stubFetch(sessionResponse(), emptyResponse(502))
+    stubFetch(sessionResponse(), noDevicesResponse(), emptyResponse(502))
     const router = await renderAppAt('/')
 
     logOut()
@@ -233,30 +243,31 @@ describe('account and logout', () => {
 describe('coming back to the tab', () => {
   it('opens login with the note when the session ended', async () => {
     stubFetch(sessionResponse(), unauthenticatedResponse(), ...loggedOut())
-    const router = await renderAppAt('/devices')
+    const router = await renderAppAt('/settings')
 
     showTab()
 
     await screen.findByRole('heading', { level: 1, name: 'Log in' })
     expect(router.state.location.search).toEqual({
-      redirect: '/devices',
+      redirect: '/settings',
       session: 'ended',
     })
     expect(screen.getByText(ENDED)).toBeTruthy()
   })
 
   it('leaves the page alone when the check fails', async () => {
+    // Settings, since Home and Devices also check their devices then.
     const { calls } = stubFetch(sessionResponse(), emptyResponse(502))
-    const router = await renderAppAt('/')
+    const router = await renderAppAt('/settings')
 
     showTab()
 
     await waitFor(() => expect(calls).toHaveLength(2))
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Welcome' }),
+      screen.getByRole('heading', { level: 1, name: 'Settings' }),
     ).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
-    expect(router.state.location.pathname).toBe('/')
+    expect(router.state.location.pathname).toBe('/settings')
   })
 })

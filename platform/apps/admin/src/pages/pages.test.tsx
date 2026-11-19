@@ -17,12 +17,17 @@ describe('page content', () => {
     expect(within(main).queryAllByRole('button')).toHaveLength(0)
   })
 
-  it('Devices shows the empty state without a pair action', async () => {
+  it('Devices shows the empty state and a way to pair', async () => {
     await renderSignedInAt('/devices')
     const main = screen.getByRole('main')
     expect(
       within(main).getByRole('heading', { level: 2, name: 'No devices yet' }),
     ).toBeTruthy()
+    expect(
+      within(main)
+        .getByRole('link', { name: 'Pair a device' })
+        .getAttribute('href'),
+    ).toBe('/devices/pair')
     expect(within(main).queryAllByRole('button')).toHaveLength(0)
   })
 

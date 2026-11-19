@@ -31,9 +31,14 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
     private readonly string _directory;
     private readonly bool _ownsDirectory;
     private readonly Dictionary<string, string?> _settings;
+    private readonly Action<IServiceCollection>? _services;
 
-    public DeviceApiFactory(Action<Dictionary<string, string?>>? configure = null, string? directory = null)
+    public DeviceApiFactory(
+        Action<Dictionary<string, string?>>? configure = null,
+        string? directory = null,
+        Action<IServiceCollection>? services = null)
     {
+        _services = services;
         _ownsDirectory = directory is null;
         _directory = directory ?? Path.Combine(Path.GetTempPath(), "mosaic-tests", Guid.NewGuid().ToString("N"));
         _settings = new()
@@ -74,11 +79,37 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
 
     public Uri DeviceUri => new UriBuilder(BaseAddress) { Scheme = "ws", Path = DeviceEndpoint.Path }.Uri;
 
-    public async Task<FakeDevice> ConnectAsync(TestDevice? device = null)
+    public HandshakeBudget Handshakes => Services.GetRequiredService<HandshakeBudget>();
+
+    /// <summary>Opens a device connection, with the secret in the upgrade header when <paramref name="presentCredential"/> is set.</summary>
+    public async Task<FakeDevice> ConnectAsync(TestDevice? device = null, bool presentCredential = false)
     {
+        device ??= TestDevice.Create();
         var socket = new ClientWebSocket();
+        if (presentCredential)
+        {
+            socket.Options.SetRequestHeader(DeviceEndpoint.CredentialHeader, Convert.ToHexStringLower(device.Secret));
+        }
+
         await socket.ConnectAsync(DeviceUri, TestContext.Current.CancellationToken);
-        return new FakeDevice(socket, device ?? TestDevice.Create());
+        return new FakeDevice(socket, device);
+    }
+
+    /// <summary>
+    /// Tries an upgrade that the server is expected to refuse, with <paramref name="credential"/>
+    /// as the upgrade header unless it is null, and returns the HTTP status it got.
+    /// </summary>
+    public async Task<HttpStatusCode> RefusedUpgradeAsync(string? credential = null)
+    {
+        using var socket = new ClientWebSocket();
+        socket.Options.CollectHttpResponseDetails = true;
+        if (credential is not null)
+        {
+            socket.Options.SetRequestHeader(DeviceEndpoint.CredentialHeader, credential);
+        }
+
+        await Assert.ThrowsAsync<WebSocketException>(() => socket.ConnectAsync(DeviceUri, TestContext.Current.CancellationToken));
+        return socket.HttpStatusCode;
     }
 
     /// <summary>Records <paramref name="device"/> as paired, as a completed claim would.</summary>
@@ -141,6 +172,7 @@ public sealed class DeviceApiFactory : WebApplicationFactory<Program>
             services.AddSingleton<TimeProvider>(Time);
             services.AddSingleton<IStartupFilter, PeerAddressFilter>();
             services.AddLogging(logging => logging.AddProvider(new CaptureLoggerProvider(Logs)));
+            _services?.Invoke(services);
         });
     }
 

@@ -7,6 +7,7 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router'
 import { getSession, getSetupStatus } from '@/api/auth'
+import { listDevices } from '@/api/devices'
 import { isUnauthenticated } from '@/api/errors'
 import { PageError } from '@/components/PageError'
 import { PageLoading } from '@/components/PageLoading'
@@ -18,11 +19,13 @@ import {
   SessionCheckLoading,
 } from '@/components/shell/SessionCheck'
 import { DevPreview } from '@/DevPreview'
+import type { LoadedDevices } from '@/lib/use-device-list'
 import { returnPathFor, safeReturnPath } from '@/lib/return-path'
 import { DevicesPage } from '@/pages/DevicesPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { PairDevicePage } from '@/pages/PairDevicePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { SetupPage } from '@/pages/SetupPage'
 
@@ -54,6 +57,19 @@ type RouterContext = { auth: SignInMemory }
  * - `session: 'ended'`: this tab was signed in and the session is gone.
  */
 type LoginSearch = { setup?: 'complete'; redirect?: string; session?: 'ended' }
+
+/**
+ * Sends a visitor without a session to login, with a way back to `href`.
+ * Login says the session ended when this tab had been signed in.
+ */
+function loginRedirect(auth: SignInMemory, href: string) {
+  const search: LoginSearch = {}
+  const returnPath = returnPathFor(href)
+  if (returnPath) search.redirect = returnPath
+  if (auth.wasSignedIn) search.session = 'ended'
+  auth.signedOut()
+  return redirect({ to: '/login', search })
+}
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: Outlet,
@@ -121,27 +137,57 @@ const appRoute = createRoute({
       return { session }
     } catch (error) {
       if (!isUnauthenticated(error)) throw error
-      const search: LoginSearch = {}
-      const returnPath = returnPathFor(location.href)
-      if (returnPath) search.redirect = returnPath
-      if (context.auth.wasSignedIn) search.session = 'ended'
-      context.auth.signedOut()
-      throw redirect({ to: '/login', search })
+      throw loginRedirect(context.auth, location.href)
     }
   },
   pendingComponent: SessionCheckLoading,
   errorComponent: SessionCheckError,
   component: AppShell,
 })
+/**
+ * The paired devices for Home and Devices. A `401` goes to login with a way
+ * back, like the guard; any other failure shows the error page.
+ */
+async function loadDevices({
+  abortController,
+  context,
+  location,
+}: {
+  abortController: AbortController
+  context: RouterContext
+  location: { href: string }
+}): Promise<LoadedDevices> {
+  try {
+    const { devices } = await listDevices(abortController.signal)
+    return { devices, loadedAt: Date.now() }
+  } catch (error) {
+    if (isUnauthenticated(error)) {
+      throw loginRedirect(context.auth, location.href)
+    }
+    throw error
+  }
+}
+
 const homeRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/',
+  loader: loadDevices,
+  gcTime: 0,
   component: HomePage,
 })
 const devicesRoute = createRoute({
   getParentRoute: () => appRoute,
   path: 'devices',
+  loader: loadDevices,
+  // Each visit loads a fresh list, so a device removed on an earlier visit
+  // can't flash back from the cache.
+  gcTime: 0,
   component: DevicesPage,
+})
+const pairDeviceRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: 'devices/pair',
+  component: PairDevicePage,
 })
 const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
@@ -166,7 +212,13 @@ const previewRoutes = import.meta.env.DEV
 
 const routeTree = rootRoute.addChildren([
   publicRoute.addChildren([setupRoute, loginRoute]),
-  appRoute.addChildren([homeRoute, devicesRoute, settingsRoute, notFoundRoute]),
+  appRoute.addChildren([
+    homeRoute,
+    devicesRoute,
+    pairDeviceRoute,
+    settingsRoute,
+    notFoundRoute,
+  ]),
   ...previewRoutes,
 ])
 

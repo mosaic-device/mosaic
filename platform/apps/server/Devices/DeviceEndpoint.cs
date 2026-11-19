@@ -1,5 +1,9 @@
+using System.Buffers;
 using System.Net.WebSockets;
+using System.Security.Cryptography;
 using Google.Protobuf;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using Mosaic.Device.V1;
 
 namespace Mosaic.Server.Devices;
@@ -12,6 +16,13 @@ namespace Mosaic.Server.Devices;
 public static class DeviceEndpoint
 {
     public const string Path = "/ws/device";
+
+    /// <summary>
+    /// Optional upgrade header with the device's saved secret as 64 hex digits, so a paired device
+    /// can be recognized before its first frame (Device Connection Protocol, section 1). When
+    /// present, the <c>connect</c> frame must carry the same secret.
+    /// </summary>
+    public const string CredentialHeader = "Mosaic-Device-Credential";
 
     // Fixed frame limits, part of protocol version 1 (Device Connection Protocol, section 1). They
     // leave room above the generated nanopb sizes, so a field added later still reaches the
@@ -27,6 +38,8 @@ public static class DeviceEndpoint
     {
         var options = app.Services.GetRequiredService<DeviceConnectionOptions>();
         var handler = app.Services.GetRequiredService<DeviceConnectionHandler>();
+        var devices = app.Services.GetRequiredService<DeviceStore>();
+        var budget = app.Services.GetRequiredService<HandshakeBudget>();
         app.Map(Path, async context =>
         {
             // A browser always sends Origin; the device never does. This stops a web page from
@@ -43,14 +56,64 @@ public static class DeviceEndpoint
                 return;
             }
 
+            if (!TryReadCredential(context.Request.Headers[CredentialHeader], out var presented))
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
+            // Only a paired credential gets a seat of its own. Any other, unknown or revoked, waits
+            // with everyone else, so made-up secrets can't take places held for devices. Checked
+            // in memory: this runs for anyone, before the budget, so it does no database work.
+            var paired = presented is not null && devices.IsPaired(presented) ? presented : null;
+            using var slot = budget.TryEnter(paired, out var firstRefusal);
+            if (slot is null)
+            {
+                if (firstRefusal)
+                {
+                    handler.LogHandshakesFull(options.MaxHandshakes);
+                }
+
+                // Before the upgrade, so the device sees a failed connection and retries with backoff.
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                return;
+            }
+
             using var socket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
             {
                 DangerousEnableCompression = false,
                 KeepAliveInterval = options.KeepAliveInterval,
                 KeepAliveTimeout = options.KeepAliveTimeout,
             });
-            await handler.RunAsync(socket);
+            await handler.RunAsync(socket, presented, slot);
         });
+    }
+
+    /// <summary>
+    /// Reads <see cref="CredentialHeader"/> into the secret's hash. True with null when it is
+    /// absent; false when it is repeated or isn't exactly 32 bytes as hex.
+    /// </summary>
+    internal static bool TryReadCredential(StringValues header, out byte[]? secretHash)
+    {
+        secretHash = null;
+        if (header.Count == 0)
+        {
+            return true;
+        }
+
+        Span<byte> secret = stackalloc byte[DeviceSecret.SecretSize];
+        var ok = header.Count == 1
+            && header[0] is { Length: DeviceSecret.SecretSize * 2 } value
+            && Convert.FromHexString(value, secret, out _, out var written) == OperationStatus.Done
+            && written == DeviceSecret.SecretSize
+            && DeviceSecret.TryHash(secret, out secretHash);
+        CryptographicOperations.ZeroMemory(secret);
+        if (!ok)
+        {
+            secretHash = null;
+        }
+
+        return ok;
     }
 }
 
@@ -62,17 +125,40 @@ public sealed partial class DeviceConnectionHandler(
     DeviceConnections connections,
     TimeProvider time,
     IHostApplicationLifetime lifetime,
+    IOptions<HostOptions> host,
     ILogger<DeviceConnectionHandler> logger)
 {
     // How long to wait for the device's close reply after the server closes. Real time, so a
     // test clock cannot hold a socket open.
     private static readonly TimeSpan CloseGrace = TimeSpan.FromSeconds(1);
 
+    // Left of the host's shutdown limit for handlers to return and the host to finish stopping.
+    private static readonly TimeSpan ShutdownMargin = TimeSpan.FromSeconds(1);
+
     private static readonly Task<DeviceSignal> NoSignal = new TaskCompletionSource<DeviceSignal>().Task;
 
     // Completes when the server starts shutting down. One for every connection: a wait made per
     // connection would stay registered on the shutdown token after its connection ended.
     private readonly Task _stopping = Task.Delay(Timeout.Infinite, lifetime.ApplicationStopping);
+
+    // Cancelled once shutdown has used all but ShutdownMargin of the host's limit. Every write and
+    // close drain ends by then, even one already under way when shutdown began, so a write
+    // timeout that is long next to the shutdown limit can't make the host force connections shut.
+    // Never disposed: disposing would cancel its timer, and the host can dispose this handler
+    // while a connection is still writing.
+    private readonly CancellationToken _shutdownDeadline = ShutdownDeadline(lifetime, host.Value);
+
+    private static CancellationToken ShutdownDeadline(IHostApplicationLifetime lifetime, HostOptions host)
+    {
+        var source = new CancellationTokenSource();
+        if (host.ShutdownTimeout != Timeout.InfiniteTimeSpan)
+        {
+            var budget = host.ShutdownTimeout - ShutdownMargin;
+            lifetime.ApplicationStopping.Register(() => source.CancelAfter(budget > TimeSpan.Zero ? budget : TimeSpan.Zero));
+        }
+
+        return source.Token;
+    }
 
     private enum FrameKind
     {
@@ -84,27 +170,80 @@ public sealed partial class DeviceConnectionHandler(
 
     private readonly record struct Frame(FrameKind Kind, byte[] Bytes);
 
-    /// <summary>The socket and its one outstanding receive, which every step waits on together.</summary>
-    private sealed class Link(WebSocket socket)
+    /// <summary>
+    /// The socket and its one outstanding receive, which every step waits on together. Every
+    /// write goes through <see cref="WriteAsync"/>, one at a time from the connection's loop.
+    /// </summary>
+    private sealed class Link(WebSocket socket, TimeSpan writeTimeout, CancellationToken shutdownDeadline)
     {
         public WebSocket Socket { get; } = socket;
 
         public Task<Frame> Receive { get; private set; } = ReceiveAsync(socket);
 
+        /// <summary>Cancelled when shutdown's time for device connections runs out.</summary>
+        public CancellationToken ShutdownDeadline { get; } = shutdownDeadline;
+
+        /// <summary>A write ran out of time and the socket was aborted.</summary>
+        public bool Stalled { get; private set; }
+
         /// <summary>Starts reading the next frame once the current one has been handled.</summary>
         public void ReceiveNext() => Receive = ReceiveAsync(Socket);
+
+        /// <summary>
+        /// Runs one write within the write timeout, or until the shutdown deadline if that comes
+        /// first. Past it the socket is aborted, which ends the write, and this throws
+        /// <see cref="WebSocketException"/> as if the device had gone, so nothing else is written
+        /// to it.
+        /// </summary>
+        public async Task WriteAsync(Func<WebSocket, CancellationToken, Task> write)
+        {
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ShutdownDeadline);
+            deadline.CancelAfter(writeTimeout);
+
+            // Cancelling a WebSocket write aborts the socket, but a write still waiting its turn
+            // behind a keep-alive ping may only stop waiting. Aborting here ends both.
+            var abort = deadline.Token.Register(static socket => ((WebSocket)socket!).Abort(), Socket);
+            try
+            {
+                await write(Socket, deadline.Token);
+            }
+            catch (OperationCanceledException) when (deadline.IsCancellationRequested)
+            {
+                // Handled below.
+            }
+            finally
+            {
+                await abort.DisposeAsync();
+            }
+
+            // An abort can also let the write finish as if it succeeded. Abort again here: the
+            // write may have ended on the cancellation before the registered abort ran, and
+            // disposing the registration then drops it.
+            if (deadline.IsCancellationRequested)
+            {
+                Socket.Abort();
+                Stalled = true;
+                throw new WebSocketException(WebSocketError.ConnectionClosedPrematurely, "The device stopped reading.");
+            }
+        }
     }
 
-    public async Task RunAsync(WebSocket socket)
+    public Task RunAsync(WebSocket socket) => RunAsync(socket, null, null);
+
+    /// <summary>
+    /// Runs the connection. <paramref name="presented"/> is the hash of the secret from the
+    /// upgrade header, if any; <paramref name="slot"/> is released once the handshake completes.
+    /// </summary>
+    public async Task RunAsync(WebSocket socket, byte[]? presented, HandshakeSlot? slot)
     {
-        var link = new Link(socket);
+        var link = new Link(socket, options.WriteTimeout, _shutdownDeadline);
         try
         {
-            await RunAsync(link, _stopping);
+            await RunAsync(link, _stopping, presented, slot);
         }
         catch (WebSocketException)
         {
-            // The device went away, or missed its pongs and the socket was aborted.
+            // The device went away, missed its pongs, or stopped reading, and the socket was aborted.
         }
         catch (Exception exception)
         {
@@ -113,12 +252,23 @@ public sealed partial class DeviceConnectionHandler(
         }
         finally
         {
+            if (link.Stalled && link.ShutdownDeadline.IsCancellationRequested)
+            {
+                LogStalledAtShutdown();
+            }
+            else if (link.Stalled)
+            {
+                LogStalled(options.WriteTimeout);
+            }
+
+            slot?.Dispose();
+
             // Observe the last receive so its failure after close is never unobserved.
             _ = link.Receive.ContinueWith(static task => _ = task.Exception, TaskScheduler.Default);
         }
     }
 
-    private async Task RunAsync(Link link, Task stopping)
+    private async Task RunAsync(Link link, Task stopping, byte[]? presented, HandshakeSlot? slot)
     {
         using var handshake = new CancellationTokenSource();
         var deadline = Task.Delay(options.HandshakeTimeout, time, handshake.Token);
@@ -162,6 +312,15 @@ public sealed partial class DeviceConnectionHandler(
             return;
         }
 
+        // The upgrade and the first frame must name the same credential, or a seat taken with one
+        // secret could carry another.
+        if (presented is not null && !CryptographicOperations.FixedTimeEquals(presented, connect.SecretHash))
+        {
+            LogCredentialMismatch();
+            await RejectAsync(link, ConnectionRejectReason.MalformedRequest);
+            return;
+        }
+
         // Version and fields are checked; now the credential (section 5). The connection is
         // registered first, so a claim that commits after the credential is read can reach it.
         var connection = connections.Register(connect.SecretHash);
@@ -181,6 +340,7 @@ public sealed partial class DeviceConnectionHandler(
             {
                 LogPaired(credential.DeviceId!.Value);
                 await SendPairedAsync(link, connection);
+                slot?.Dispose();
             }
             else
             {
@@ -193,6 +353,9 @@ public sealed partial class DeviceConnectionHandler(
 
                 LogPending();
                 await SendAsync(link, Pending(code));
+
+                // From here the pairing limit bounds it, not the handshake budget.
+                slot?.Dispose();
             }
 
             await ConnectedAsync(link, stopping, connection, connect, code);
@@ -376,9 +539,15 @@ public sealed partial class DeviceConnectionHandler(
             throw new InvalidOperationException($"A server frame of {bytes.Length} bytes exceeds the device's limit.");
         }
 
-        await link.Socket.SendAsync(bytes, WebSocketMessageType.Binary, endOfMessage: true, CancellationToken.None);
+        await link.WriteAsync((socket, token) =>
+            socket.SendAsync((ReadOnlyMemory<byte>)bytes, WebSocketMessageType.Binary, endOfMessage: true, token).AsTask());
     }
 
+    /// <summary>
+    /// Sends the close frame and waits briefly for the device's reply. Takes at most the write
+    /// timeout plus <see cref="CloseGrace"/> from start to finish, and never past the shutdown
+    /// deadline.
+    /// </summary>
     private static async Task CloseAsync(Link link, WebSocketCloseStatus status)
     {
         if (link.Socket.State is not (WebSocketState.Open or WebSocketState.CloseReceived))
@@ -388,14 +557,15 @@ public sealed partial class DeviceConnectionHandler(
 
         try
         {
-            await link.Socket.CloseOutputAsync(status, null, CancellationToken.None);
+            await link.WriteAsync((socket, token) => socket.CloseOutputAsync(status, null, token));
 
             // Give the device a moment to answer, so the close frame isn't lost to an abort. Frames
             // it sent before seeing the close are read and dropped until its close arrives: closing
             // with unread data resets the connection, which can discard what was just sent to it.
             // The deadline is checked before each frame, since WhenAny would favour a frame that is
             // already waiting and a device that never stops sending would hold the socket open.
-            var grace = Task.Delay(CloseGrace);
+            // Cancelling ends the delay, which ends the drain.
+            var grace = Task.Delay(CloseGrace, link.ShutdownDeadline);
             while (true)
             {
                 await Task.WhenAny(link.Receive, grace);
@@ -409,7 +579,7 @@ public sealed partial class DeviceConnectionHandler(
         }
         catch (WebSocketException)
         {
-            // Already gone.
+            // Already gone, or stopped reading before the close frame could be written.
         }
     }
 
@@ -466,6 +636,19 @@ public sealed partial class DeviceConnectionHandler(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Rejected an unpaired device: {Limit} pairing codes are already live")]
     private partial void LogPendingLimit(int limit);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rejected a device connection: its upgrade header and connect frame named different credentials")]
+    private partial void LogCredentialMismatch();
+
+    /// <summary>Logged once each time the budget fills, not for every refusal, so a flood can't flood the log.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Refusing device connections: {Limit} are already waiting to finish their handshake")]
+    internal partial void LogHandshakesFull(int limit);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Dropped a device connection that stopped reading: a write took over {Timeout}")]
+    private partial void LogStalled(TimeSpan timeout);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Dropped a device connection at shutdown: a write was still waiting when shutdown's time ran out")]
+    private partial void LogStalledAtShutdown();
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Device connection failed unexpectedly")]
     private partial void LogUnexpectedFailure(Exception exception);

@@ -23,6 +23,7 @@ builder.Services.AddSingleton(services => DeviceConnectionOptions.FromConfigurat
 builder.Services.AddSingleton<DeviceStore>();
 builder.Services.AddSingleton<PairingCodes>();
 builder.Services.AddSingleton<DeviceConnections>();
+builder.Services.AddSingleton<HandshakeBudget>();
 builder.Services.AddSingleton<DevicePairing>();
 builder.Services.AddSingleton<NotificationDelivery>();
 builder.Services.AddDeviceApi();
@@ -36,6 +37,7 @@ var rateLimits = app.Services.GetRequiredService<AuthRateLimitOptions>();
 var trustedProxies = app.Services.GetRequiredService<TrustedProxies>();
 var deviceOptions = app.Services.GetRequiredService<DeviceConnectionOptions>();
 var appliedMigrations = database.Migrate();
+app.Services.GetRequiredService<DeviceStore>().LoadPaired();
 app.Logger.LogInformation(
     "Database {Path} at schema version {Version}; applied {Applied} migration(s) at startup",
     database.Path,
@@ -48,8 +50,9 @@ app.Logger.LogInformation(
     rateLimits.ConcurrentPasswordChecks,
     rateLimits.QueuedPasswordChecks);
 app.Logger.LogInformation(
-    "Devices connect at {Path}; at most {Limit} pairing codes live at once; {Claims} claim attempts per client per minute",
+    "Devices connect at {Path}; at most {Handshakes} open handshakes and {Limit} pairing codes live at once; {Claims} claim attempts per client per minute",
     DeviceEndpoint.Path,
+    deviceOptions.MaxHandshakes,
     deviceOptions.MaxPendingPairings,
     deviceOptions.ClaimAttemptsPerMinute);
 if (trustedProxies.Addresses.Count == 0)

@@ -13,6 +13,7 @@ Run every command from the repository root. Install the tools for the pieces you
 | [Companion](platform/apps/companion/README.md) | Tauri desktop app                                                            | Node, Rust/Tauri    | `pnpm companion:dev`                          |
 | [Device preview](firmware/README.md#preview)   | The real firmware running in a window on your computer                       | Python, CMake, SDL2 | `pnpm fw:preview`                             |
 | [Firmware](firmware/README.md#build-and-flash) | ESP32-P4 firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5               | ESP-IDF             | `pnpm fw:build`, then `pnpm fw:flash monitor` |
+| [Carrier PCB](hardware/pcb/README.md)          | Board that connects the encoder, light sensor and LEDs to the header         | KiCad 10            | `pnpm pcb:export`                             |
 
 The admin app expects the server on port 5000, so start `pnpm server:dev` in another terminal first. On first start the server logs a setup code; enter it on the admin app's setup page. Open the URL Vite prints.
 
@@ -28,6 +29,7 @@ Pull requests run these checks; [CI](docs/ci.md) has the full list and how to re
 | Server    | `pnpm server:format`    | `pnpm server:format:check`, `pnpm server:build`, `pnpm server:test` |
 | Companion | `pnpm companion:format` | `pnpm companion:check`                                              |
 | Firmware  | `pnpm fw:format`        | `pnpm fw:format:check`, `pnpm fw:test`, `pnpm fw:build`             |
+| PCB       |                         | `pnpm pcb:check`                                                    |
 
 `pnpm fw:test` runs every firmware host test on your computer, without ESP-IDF or a board. Pass part of a path to run only some: `pnpm fw:test provisioning clock`.
 

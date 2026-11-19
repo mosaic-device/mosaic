@@ -93,10 +93,10 @@ def run(firmware, args, executable="idf.py"):
     firmware = pathlib.Path(firmware).resolve()
     lock = firmware / "dependencies.lock"
     guard = firmware / ".mosaic-idf.lock"
-    # Refuse concurrent wrappers: each invocation temporarily edits the same lockfile.
-    # Close the guard before running, because Windows can't delete an open file.
-    with guard.open("x"):
-        pass
+    # Refuse concurrent wrappers: each invocation temporarily edits the same lockfile. The
+    # guard's existence is the lock, so its handle is closed straight away: Windows can't delete
+    # a file that is still open. A refused invocation raises here and never removes it.
+    guard.open("x").close()
     try:
         absolute = str(firmware / "components" / "esp_lcd_hx8394")
         original = read_lock(lock)

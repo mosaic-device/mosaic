@@ -95,9 +95,14 @@ export function unauthenticatedResponse(): Response {
   })
 }
 
+/** The device list with nothing paired yet. */
+export function noDevicesResponse(): Response {
+  return jsonResponse({ devices: [] })
+}
+
 /**
- * Answers every session check as signed in, for tests about the signed-in
- * pages. Any other request fails the test.
+ * Answers every session check as signed in, and the device list as empty,
+ * for tests about the signed-in pages. Any other request fails the test.
  */
 export function stubSignedIn(username = 'bridger'): { calls: FetchCall[] } {
   const calls: FetchCall[] = []
@@ -107,6 +112,7 @@ export function stubSignedIn(username = 'bridger'): { calls: FetchCall[] } {
       const call = { url: String(input), init }
       calls.push(call)
       if (call.url === '/api/auth/session') return sessionResponse(username)
+      if (call.url === '/api/devices') return noDevicesResponse()
       throw new Error(`Unexpected fetch: ${call.url}`)
     },
   )

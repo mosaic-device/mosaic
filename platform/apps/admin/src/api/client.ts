@@ -13,7 +13,7 @@ import {
 export type ApiPath = `/api/${string}`
 
 type RequestOptions = {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'DELETE'
   body?: unknown
   signal?: AbortSignal
 }
