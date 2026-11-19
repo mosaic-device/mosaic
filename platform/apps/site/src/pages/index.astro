@@ -3,6 +3,8 @@ import Home from '../layouts/Home.astro'
 import Hero from '../components/home/Hero.astro'
 import Waits from '../components/home/Waits.astro'
 import Calm from '../components/home/Calm.astro'
+import WorksWith from '../components/home/WorksWith.astro'
+import Server from '../components/home/Server.astro'
 ---
 
 <Home
@@ -13,5 +15,9 @@ import Calm from '../components/home/Calm.astro'
   <main>
     <Waits />
     <Calm />
+    <div class="pause" aria-hidden="true"></div>
+    <WorksWith />
+    <div class="pause" aria-hidden="true"></div>
+    <Server />
   </main>
 </Home>

@@ -177,3 +177,10 @@ ul {
     font-size: 17px;
   }
 }
+
+/* The design's breathing room either side of the works-with pause. */
+@media (min-width: 900px) {
+  .pause {
+    height: min(120px, 8.333vw);
+  }
+}
