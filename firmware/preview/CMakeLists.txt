@@ -84,6 +84,7 @@ add_executable(mosaic-preview
   adapters/bh1750.cpp
   adapters/captive_portal.cpp
   adapters/clock_sync.cpp
+  adapters/connection.cpp
   adapters/console.cpp
   adapters/display.cpp
   adapters/encoder.cpp
