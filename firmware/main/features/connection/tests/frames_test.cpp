@@ -13,6 +13,7 @@
 #include <vector>
 
 using namespace mosaic::features::connection;
+namespace notifications = mosaic::features::notifications;
 
 namespace {
 struct Golden {
@@ -65,11 +66,56 @@ void connect_needs_room() {
     assert(encode_connect(test_secret(), small) == 0);
 }
 
+// The golden frames' notifications.
+notifications::Notification test_notification() {
+    notifications::Notification n;
+    notifications::copy_text(n.id, "n-0001");
+    notifications::copy_text(n.source, "Mosaic");
+    notifications::copy_text(n.title, "Test notification");
+    n.occurred_at = 1'793'903'400;
+    return n;
+}
+notifications::Notification full_notification() {
+    notifications::Notification n;
+    notifications::copy_text(n.id, std::string(63, 'I'));
+    n.priority = notifications::Priority::high;
+    notifications::copy_text(n.source, std::string(31, 'S'));
+    std::string title;
+    for (int i = 0; i < 63; ++i)
+        title += "\xC3\xA9";
+    notifications::copy_text(n.title, title + "!");
+    notifications::copy_text(n.text, std::string(1023, 'T'));
+    n.occurred_at = 1'793'903'400;
+    return n;
+}
+
+void receipts_match_the_golden_frames(const std::map<std::string, Golden>& golden) {
+    const std::pair<const char*, notifications::Receipt> receipts[] = {
+        { "d2s receipt_stored", notifications::Receipt::stored },
+        { "d2s receipt_duplicate", notifications::Receipt::duplicate },
+        { "d2s receipt_invalid", notifications::Receipt::invalid },
+    };
+    for (const auto& [name, receipt] : receipts) {
+        std::array<uint8_t, kSendLimit> out { };
+        const size_t length = encode_receipt("n-0001", receipt, out);
+        assert(std::vector<uint8_t>(out.begin(), out.begin() + length) == golden.at(name).bytes);
+    }
+    // An ID over its limit can't be confirmed.
+    std::array<uint8_t, kSendLimit> out { };
+    assert(encode_receipt(std::string(64, 'I'), notifications::Receipt::stored, out) == 0);
+}
+
 bool same(Reply actual, Reply expected) {
     if (actual.frame != expected.frame)
         return false;
     if (actual.frame == Frame::pairing_pending)
         return actual.code == expected.code && actual.expires_in_s == expected.expires_in_s;
+    if (actual.frame == Frame::notification) {
+        const auto& a = actual.notification;
+        const auto& e = expected.notification;
+        return a.id_view() == e.id_view() && a.priority == e.priority && a.source_view() == e.source_view()
+            && a.title_view() == e.title_view() && a.text_view() == e.text_view() && a.occurred_at == e.occurred_at;
+    }
     return actual.frame != Frame::rejected || actual.reason == expected.reason;
 }
 
@@ -86,6 +132,9 @@ void every_server_frame_decodes_as_expected(const std::map<std::string, Golden>&
         { "b2d rejected_unsupported_version", { .frame = Frame::rejected, .reason = Reject::unsupported_version } },
         { "b2d rejected_credential_revoked", { .frame = Frame::rejected, .reason = Reject::credential_revoked } },
         { "b2d rejected_server_busy", { .frame = Frame::rejected, .reason = Reject::server_busy } },
+        { "b2d notification", { .frame = Frame::notification, .notification = test_notification() } },
+        { "b2d notification_no_priority", { .frame = Frame::notification, .notification = test_notification() } },
+        { "b2d notification_full", { .frame = Frame::notification, .notification = full_notification() } },
     };
     size_t checked = 0;
     for (const auto& [name, frame] : golden) {
@@ -131,6 +180,7 @@ int main(int argc, char** argv) {
     connect_matches_the_golden_frame(golden);
     connect_needs_room();
     every_server_frame_decodes_as_expected(golden);
+    receipts_match_the_golden_frames(golden);
     unknown_and_unspecified_reasons_count_as_busy();
     empty_and_oversized_frames_are_other();
     std::puts("Frames tests passed");

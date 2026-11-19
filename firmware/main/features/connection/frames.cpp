@@ -44,6 +44,28 @@ size_t encode_connect(std::span<const uint8_t, kSecretSize> secret, std::span<ui
     return ok ? stream.bytes_written : 0;
 }
 
+size_t encode_receipt(std::string_view id, notifications::Receipt receipt, std::span<uint8_t> out) {
+    mosaic_device_v1_DeviceToBackendEnvelope envelope = mosaic_device_v1_DeviceToBackendEnvelope_init_zero;
+    auto& to = envelope.payload.notification_receipt;
+    if (id.size() >= sizeof(to.notification_id))
+        return 0;
+    envelope.which_payload = mosaic_device_v1_DeviceToBackendEnvelope_notification_receipt_tag;
+    std::ranges::copy(id, to.notification_id);
+    switch (receipt) {
+    case notifications::Receipt::stored:
+        to.status = mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_STORED;
+        break;
+    case notifications::Receipt::duplicate:
+        to.status = mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_DUPLICATE;
+        break;
+    case notifications::Receipt::invalid:
+        to.status = mosaic_device_v1_NotificationReceiptStatus_NOTIFICATION_RECEIPT_STATUS_INVALID;
+        break;
+    }
+    pb_ostream_t stream = pb_ostream_from_buffer(out.data(), out.size());
+    return pb_encode(&stream, mosaic_device_v1_DeviceToBackendEnvelope_fields, &envelope) ? stream.bytes_written : 0;
+}
+
 Reply decode_reply(std::span<const uint8_t> frame) {
     if (frame.size() > kReceiveLimit)
         return { };
@@ -67,8 +89,23 @@ Reply decode_reply(std::span<const uint8_t> frame) {
     }
     case mosaic_device_v1_BackendToDeviceEnvelope_rejected_tag:
         return { .frame = Frame::rejected, .reason = reject_reason(envelope.payload.rejected.reason) };
+    case mosaic_device_v1_BackendToDeviceEnvelope_notification_tag: {
+        Reply reply { .frame = Frame::notification };
+        const auto& from = envelope.payload.notification;
+        auto& to = reply.notification;
+        notifications::copy_text(to.id, from.id);
+        notifications::copy_text(to.source, from.source);
+        notifications::copy_text(to.title, from.title);
+        notifications::copy_text(to.text, from.text);
+        // UNSPECIFIED and values newer than this firmware count as NORMAL.
+        to.priority = from.priority == mosaic_device_v1_NotificationPriority_NOTIFICATION_PRIORITY_HIGH
+            ? notifications::Priority::high
+            : notifications::Priority::normal;
+        to.occurred_at = from.occurred_at;
+        return reply;
+    }
     default:
-        // Notifications (#112), and payloads this firmware doesn't know.
+        // Payloads this firmware doesn't know.
         return { };
     }
 }

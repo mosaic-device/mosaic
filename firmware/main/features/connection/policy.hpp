@@ -32,8 +32,8 @@ inline constexpr uint64_t kReplyTimeoutMs = 10'000;
 // stalling retries for good.
 inline constexpr uint64_t kOpenTimeoutMs = 30'000;
 
-// The server's reply frames, decoded. Anything else, including an empty envelope, is `other`.
-enum class Frame : uint8_t { paired, pairing_pending, rejected, other };
+// The server's frames, decoded. Anything else, including an empty envelope, is `other`.
+enum class Frame : uint8_t { paired, pairing_pending, rejected, notification, other };
 
 // Why the server rejected the device. The decoder maps an unspecified or unknown reason to
 // server_busy, as protocol section 4 requires.

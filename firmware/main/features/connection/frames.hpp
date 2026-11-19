@@ -1,11 +1,13 @@
 #pragma once
 
 #include "policy.hpp"
+#include "../notifications/notification.hpp"
 
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <string_view>
 
 namespace mosaic::features::connection {
 
@@ -18,19 +20,25 @@ inline constexpr size_t kSendLimit = 512;
 inline constexpr size_t kReceiveLimit = 4'096;
 
 // A server frame, as far as the connection needs to know. `reason` matters only for
-// Frame::rejected, and `code` and `expires_in_s` only for Frame::pairing_pending. The code is
-// as the server sent it, never logged.
+// Frame::rejected, `code` and `expires_in_s` only for Frame::pairing_pending, and
+// `notification` only for Frame::notification, unchecked: the inbox applies the field rules.
+// The code is as the server sent it, never logged.
 struct Reply {
     Frame frame = Frame::other;
     Reject reason = Reject::server_busy;
     std::array<char, 9> code { };
     uint32_t expires_in_s = 0;
+    notifications::Notification notification { };
 };
 
 // Writes a connect envelope with kProtocolVersion and `secret` to `out`, which needs room
 // for kSendLimit bytes. Returns the length, or 0 if it doesn't fit. Where the secret comes
 // from, and keeping it, is the caller's job. Never log `secret` or the encoded frame.
 size_t encode_connect(std::span<const uint8_t, kSecretSize> secret, std::span<uint8_t> out);
+
+// Writes a notification_receipt envelope for `id` to `out`, which needs room for kSendLimit
+// bytes. Returns the length, or 0 if it doesn't fit or `id` is over its limit.
+size_t encode_receipt(std::string_view id, notifications::Receipt receipt, std::span<uint8_t> out);
 
 // Reads one server envelope. Anything that isn't a handshake reply comes back as
 // Frame::other: application frames such as notifications, an empty or unknown payload,

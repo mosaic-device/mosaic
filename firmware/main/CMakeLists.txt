@@ -50,6 +50,8 @@ idf_component_register(
          "features/connection/adapters/websocket.cpp"
          "features/connection/adapters/service.cpp"
          "features/home/screen.cpp"
+         "features/notifications/inbox.cpp"
+         "features/notifications/notification.cpp"
          "features/settings/screen.cpp"
          "features/settings/service.cpp"
          "features/settings/settings.cpp"
