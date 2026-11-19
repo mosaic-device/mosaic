@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cstdio>
 
+#include "../../events/bus.hpp"
 #include "../../support/secure_erase.hpp"
 #include "../../ui/runtime.hpp"
 #include "../../drivers/display.hpp"
@@ -229,7 +230,8 @@ namespace {
             ++setup_session;
         action_context.store(snapshot.action_context);
         published_status.store(snapshot.portal_status);
-        publish_view(present(snapshot, setup_session));
+        // Every tick too, so the online screen follows the server connection.
+        publish_view(present(snapshot, setup_session, events::status()));
         for (size_t i = 0; i < effects.count; ++i)
             execute(model, effects.effects[i]);
         // StateMachine effects can contain copies of credentials; erase even unused slots.

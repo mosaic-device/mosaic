@@ -13,7 +13,7 @@ ViewState present(StartupView startup, uint32_t session) {
         view.heading = "Offline";
     return view;
 }
-ViewState present(const Snapshot& s, uint32_t session) {
+ViewState present(const Snapshot& s, uint32_t session, events::Status server) {
     ViewState v = present(StartupView::starting);
     v.session = session;
     v.starting = false;
@@ -44,9 +44,28 @@ ViewState present(const Snapshot& s, uint32_t session) {
         return v;
     case Phase::online:
         v.heading = "Wi-Fi connected";
-        v.message = "Waiting for device pairing.";
         v.online = true;
         v.recovery_visible = true;
+        switch (server) {
+        case events::Status::disconnected:
+            v.message = "Connecting to the server...";
+            break;
+        case events::Status::pairing:
+        case events::Status::connected:
+            v.message = "Waiting for device pairing.";
+            break;
+        case events::Status::error:
+            // Setup recovery is how the owner corrects a wrong address.
+            v.heading = "Can't reach the server";
+            v.message = "Retrying. You can change the address in setup.";
+            break;
+        case events::Status::update_required:
+            // A new address won't help, so there is nothing to press.
+            v.heading = "Update required";
+            v.message = "The server needs newer firmware on this device.";
+            v.recovery_visible = false;
+            break;
+        }
         break;
     case Phase::starting_saved:
     case Phase::saved_sta:
