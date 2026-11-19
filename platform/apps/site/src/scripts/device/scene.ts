@@ -345,7 +345,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
   /** S5's pose for the device at section progress `p`. */
   function serverPose(p: number, still: boolean): Pose {
     const scale = placeDiorama()
-    const land = still ? 1 : range(p, 0, 0.25)
+    const land = still ? 1 : range(p, 0, 0.2)
     const local = diorama.mosaic
       .clone()
       .add(new Vector3(0, (1 - land) * 0.35, 0))
@@ -353,7 +353,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       .multiplyScalar(scale)
       .applyQuaternion(qIso)
       .add(diorama.root.position)
-    const ring = still ? 1 : range(p, 0.68, 0.75)
+    const ring = still ? 1 : range(p, 0.6, 0.66)
     return {
       position,
       quaternion: qIso.clone(),
@@ -499,6 +499,13 @@ export async function mountScene(canvas: HTMLCanvasElement) {
   // Screen and ring ease towards their targets over time, like the real device.
   const shown = { screen: 1, ring: 1 }
 
+  // S2's loop changes the step on a timer, not on scroll.
+  if (sections.waits)
+    new MutationObserver(() => request()).observe(sections.waits, {
+      attributes: true,
+      attributeFilter: ['data-step'],
+    })
+
   const poses = {
     hero: () => fit(rectOf(slots.hero), qHero, whole, true),
     waits: () => {
@@ -515,7 +522,8 @@ export async function mountScene(canvas: HTMLCanvasElement) {
     },
     layers: (still: boolean) => {
       const p = fit(rectOf(slots.layers), qFlat, apart)
-      p.explode = still ? 1 : range(progressOf(sections.layers), 0, 0.65)
+      // Fully apart by the time it arrives; the move itself opens it.
+      p.explode = 1
       p.screen = 0
       return p
     },
@@ -542,17 +550,22 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       const top = (el: HTMLElement | null) =>
         el ? el.getBoundingClientRect().top + y : 0
       const waitsStart = top(sections.waits)
+      // S2 holds for the first third of its pin; the rest zooms in on the knob.
       const waitsEnd =
-        waitsStart + ((sections.waits?.offsetHeight ?? 0) - innerHeight) * 0.75
+        waitsStart + ((sections.waits?.offsetHeight ?? 0) - innerHeight) * 0.35
       const calmStart = top(sections.calm)
       const serverStart = top(sections.server)
       const serverEnd =
         serverStart + (sections.server?.offsetHeight ?? 0) - innerHeight
       const layersStart = top(sections.layers)
+      // S5 plays from when its section is half way up the screen, so the
+      // device has landed and the scene has risen soon after it pins.
+      const entry = serverStart - innerHeight * 0.5
+      const p5 = clamp((y - entry) / Math.max(1, serverEnd - entry))
 
-      const p5 = progressOf(sections.server)
       let pose: Pose
       let presence = 0
+      let move = 0
       if (y <= waitsStart) {
         pose = mixPose(
           poses.hero(),
@@ -565,7 +578,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
         const t = smooth((y - waitsEnd) / (calmStart - waitsEnd))
         pose = mixPose(poses.waits(), poses.knob(), t)
         pose.solo = range(t, 0.45, 0.95)
-      } else if (y < serverStart) {
+      } else if (y < entry) {
         // The knob scrolls away with its section; the device leaves with it,
         // and the diorama's plate is already waiting as S5 comes up.
         pose = poses.knob()
@@ -574,14 +587,17 @@ export async function mountScene(canvas: HTMLCanvasElement) {
         pose = serverPose(p5, false)
         presence = 1
       } else {
-        const t = smooth((y - serverEnd) / Math.max(1, layersStart - serverEnd))
-        pose = mixPose(serverPose(1, false), poses.layers(false), t)
-        presence = 1 - t
+        move = smooth((y - serverEnd) / Math.max(1, layersStart - serverEnd))
+        pose = mixPose(serverPose(1, false), poses.layers(false), move)
+        // It comes apart on the way, finishing just before it arrives.
+        // (Device.apply eases it, so this stays linear.)
+        pose.explode = clamp(move / 0.8)
+        presence = 1 - move
       }
-      if (y >= serverStart || presence) placeDiorama()
-      const rise = y < serverStart ? 0 : range(p5, 0.1, 0.35)
+      if (y >= entry || presence) placeDiorama()
+      const rise = y < entry ? 0 : range(p5, 0.08, 0.28)
       const pillAt =
-        y >= serverStart && p5 > 0.4 && p5 < 0.72 ? range(p5, 0.42, 0.7) : null
+        y >= entry && p5 > 0.3 && p5 < 0.66 ? range(p5, 0.32, 0.62) : null
       devices.travel.apply(pose)
       setDiorama(rise, presence, pillAt)
 
@@ -595,17 +611,14 @@ export async function mountScene(canvas: HTMLCanvasElement) {
         request()
       devices.travel.apply({ ...pose, screen: shown.screen, ring: shown.ring })
 
-      const p6 = progressOf(sections.layers)
       updateLabels(
         () => devices.travel,
         (section) =>
           section === 'server'
-            ? y >= serverStart
-              ? range(p5, 0.3, 0.4) * presence
+            ? y >= entry
+              ? range(p5, 0.22, 0.32) * (1 - range(move, 0, 0.25))
               : 0
-            : y >= layersStart
-              ? range(p6 * 1.55, 0.6, 0.9)
-              : 0,
+            : range(move, 0.85, 1) * (y > serverEnd ? 1 : 0),
       )
     } else {
       devices.travel.root.visible = false
