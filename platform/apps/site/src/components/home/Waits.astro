@@ -58,36 +58,44 @@ import Device from './Device.astro'
 </section>
 
 <script>
-  // Steps the section through its three callouts as it scrolls past. Only on
-  // desktop with motion allowed; otherwise the still frame stays.
+  // Plays the notification's life on a loop while the section is on screen:
+  // it arrives, you glance, you decide, then the next one arrives. Without
+  // motion all three callouts show at once.
   const section = document.querySelector<HTMLElement>('.waits')
-  const motion = matchMedia(
-    '(min-width: 900px) and (prefers-reduced-motion: no-preference)',
-  )
+  const still = matchMedia('(prefers-reduced-motion: reduce)')
+  const STEP_MS = 3200
   if (section) {
     const device = section.querySelector<HTMLElement>('.device')
     const screen = section.querySelector<HTMLElement>('.screen')
-    const update = () => {
-      if (!motion.matches) {
-        section.dataset.step = 'all'
-        device?.setAttribute('data-ring', 'blue')
-        screen?.setAttribute('data-variant', 'review')
-        return
-      }
-      const { top, height } = section.getBoundingClientRect()
-      // The steps use the first three quarters; the rest zooms in on the knob.
-      const progress = -top / Math.max(1, height - innerHeight) / 0.75
-      const step = progress < 1 / 3 ? '1' : progress < 2 / 3 ? '2' : '3'
-      if (section.dataset.step === step) return
+    const show = (step: string) => {
       section.dataset.step = step
       // Deciding moves the screen on to the next item and the ring goes dark.
       device?.setAttribute('data-ring', step === '3' ? 'dark' : 'blue')
       screen?.setAttribute('data-variant', step === '3' ? 'calendar' : 'review')
     }
-    addEventListener('scroll', update, { passive: true })
-    addEventListener('resize', update)
-    motion.addEventListener('change', update)
-    update()
+    let timer: number | undefined
+    let visible = false
+    const stop = () => {
+      clearInterval(timer)
+      timer = undefined
+    }
+    const start = () => {
+      stop()
+      if (still.matches || !visible) {
+        show(still.matches ? 'all' : '1')
+        return
+      }
+      show('1')
+      timer = window.setInterval(() => {
+        show(String((Number(section.dataset.step) % 3) + 1))
+      }, STEP_MS)
+    }
+    new IntersectionObserver(([entry]) => {
+      visible = entry?.isIntersecting ?? false
+      start()
+    }).observe(section)
+    still.addEventListener('change', start)
+    start()
   }
 </script>
 
@@ -185,7 +193,7 @@ import Device from './Device.astro'
 
   @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
     .waits {
-      height: 350vh;
+      height: 200vh;
     }
     .pin {
       position: sticky;
