@@ -1,3 +1,4 @@
+#include "../flow.hpp"
 #include "../inbox.hpp"
 #include "../store.hpp"
 
@@ -83,6 +84,51 @@ void the_store_shares_the_newest() {
     assert(store::accept(make("s-1")) == Receipt::duplicate);
     assert(store::latest(out, arrivals) && arrivals == 1 && out.id_view() == "s-1");
 }
+
+void incoming_then_detail_or_dismissed() {
+    using View = Flow::View;
+    Flow flow;
+    assert(flow.view() == View::none && !flow.open_detail());
+    flow.arrived(1'000);
+    assert(flow.view() == View::incoming);
+    // View opens the detail, which stays however long it's open.
+    assert(flow.open_detail() && flow.view() == View::detail);
+    assert(!flow.open_detail());
+    assert(!flow.tick(1'000 + 10 * Flow::kIncomingMs) && flow.view() == View::detail);
+    // Back from the detail.
+    flow.dismiss();
+    assert(flow.view() == View::none);
+    // Not now.
+    flow.arrived(2'000);
+    flow.dismiss();
+    assert(flow.view() == View::none && !flow.tick(1'000'000));
+}
+
+void an_untouched_notification_times_out() {
+    Flow flow;
+    flow.arrived(5'000);
+    assert(!flow.tick(5'000 + Flow::kIncomingMs - 1));
+    assert(flow.tick(5'000 + Flow::kIncomingMs) && flow.view() == Flow::View::none);
+    // Only once.
+    assert(!flow.tick(5'000 + Flow::kIncomingMs + 1));
+    // Across the clock wrapping around.
+    flow.arrived(0xFFFF'F000);
+    assert(!flow.tick(0x0000'0100));
+    assert(flow.tick(0xFFFF'F000 + Flow::kIncomingMs));
+}
+
+void the_newest_replaces_what_is_open() {
+    Flow flow;
+    flow.arrived(0);
+    flow.open_detail();
+    // Another arrives while reading: it shows, and gets its own full time.
+    flow.arrived(20'000);
+    assert(flow.view() == Flow::View::incoming);
+    assert(!flow.tick(20'000 + Flow::kIncomingMs - 1));
+    flow.arrived(40'000);
+    assert(!flow.tick(20'000 + Flow::kIncomingMs));
+    assert(flow.tick(40'000 + Flow::kIncomingMs));
+}
 } // namespace
 
 int main() {
@@ -91,5 +137,8 @@ int main() {
     the_inbox_keeps_new_ones_and_spots_resends();
     a_full_inbox_forgets_the_oldest();
     the_store_shares_the_newest();
+    incoming_then_detail_or_dismissed();
+    an_untouched_notification_times_out();
+    the_newest_replaces_what_is_open();
     std::puts("Notification tests passed");
 }
