@@ -1,8 +1,8 @@
 # ESP-IDF 5.5.4; Waveshare ESP32-P4-WIFI6-Touch-LCD-5 (32 MB flash).
 CONFIG_IDF_TARGET="esp32p4"
-# The tested board is P4 rev v3.2; pre-v3 and v3+ firmware are incompatible.
-# CONFIG_ESP32P4_SELECTS_REV_LESS_V3 is not set
-CONFIG_ESP32P4_REV_MIN_301=y
+# The tested board is P4 rev v1.x; pre-v3 and v3+ firmware are incompatible.
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+CONFIG_ESP32P4_REV_MIN_1=y
 CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
 CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
