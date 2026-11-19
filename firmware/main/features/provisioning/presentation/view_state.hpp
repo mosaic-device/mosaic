@@ -41,6 +41,9 @@ struct ViewState {
     ViewText<32> heading;
     ViewText<192> message;
     ViewText<64> recovery_prompt;
+    // The pairing code as XXXX-XXXX, shown large between the heading and the message. Empty
+    // when there's no code to show.
+    ViewText<9> code;
     bool recovery_visible = false;
     bool recovery_enabled = true;
     ViewText<192> setup_failure;

@@ -1,4 +1,6 @@
 #include "presenter.hpp"
+#include <array>
+#include <cstdio>
 namespace mosaic::features::provisioning {
 ViewState present(StartupView startup, uint32_t session) {
     ViewState view;
@@ -13,7 +15,45 @@ ViewState present(StartupView startup, uint32_t session) {
         view.heading = "Offline";
     return view;
 }
-ViewState present(const Snapshot& s, uint32_t session, events::Status server) {
+std::string_view server_host(std::string_view url) {
+    constexpr std::string_view kScheme = "wss://";
+    if (!url.starts_with(kScheme))
+        return { };
+    url.remove_prefix(kScheme.size());
+    return url.substr(0, url.find_first_of("/?#"));
+}
+
+namespace {
+    // The pairing screen: the code large, where to enter it, and how long it lasts. A code
+    // that runs out is replaced by the server once it can reach the device; until then the
+    // screen says the old one no longer works.
+    void show_pairing(ViewState& v, const Pairing& pairing) {
+        v.heading = "Pair this Mosaic";
+        const std::string_view host = server_host(pairing.server_url);
+        const events::PairingCode& code = pairing.code;
+        if (code.empty()) {
+            v.message = "Getting a pairing code...";
+            return;
+        }
+        if (pairing.now_ms >= code.expires_at_ms) {
+            v.message = "That code expired. Waiting for a new one...";
+            return;
+        }
+        std::array<char, 10> shown { };
+        std::string_view text = code.view();
+        std::snprintf(shown.data(), shown.size(), "%.4s-%.4s", text.data(), text.data() + 4);
+        v.code = shown.data();
+        // Whole seconds left, rounded up, so it never shows 0:00 while the code still works.
+        const uint64_t left_s = (code.expires_at_ms - pairing.now_ms + 999) / 1'000;
+        std::array<char, 192> message { };
+        std::snprintf(message.data(), message.size(), "Enter it in Mosaic at %.*s.\nExpires in %u:%02u.",
+            static_cast<int>(host.size()), host.data(), static_cast<unsigned>(left_s / 60),
+            static_cast<unsigned>(left_s % 60));
+        v.message = message.data();
+    }
+} // namespace
+
+ViewState present(const Snapshot& s, uint32_t session, events::Status server, const Pairing& pairing) {
     ViewState v = present(StartupView::starting);
     v.session = session;
     v.starting = false;
@@ -56,6 +96,8 @@ ViewState present(const Snapshot& s, uint32_t session, events::Status server) {
             v.message = "Connecting to the server...";
             break;
         case events::Status::pairing:
+            show_pairing(v, pairing);
+            break;
         case events::Status::connected:
             v.message = "Waiting for device pairing.";
             break;

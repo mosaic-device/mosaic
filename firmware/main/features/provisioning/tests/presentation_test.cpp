@@ -18,6 +18,12 @@ int main() {
     assert(text_a == text_b); // stale array tails/padding are not presentation semantics
     static_assert(sizeof(ViewState) <= 512);
 
+    // Where the owner enters the code: the server's host, with its port if it has one.
+    assert(server_host("wss://mosaic.example.ts.net/ws/device") == "mosaic.example.ts.net");
+    assert(server_host("wss://192.168.1.20:8443/ws/device?x=1") == "192.168.1.20:8443");
+    assert(server_host("wss://host") == "host");
+    assert(server_host("ws://host/ws/device").empty() && server_host("").empty());
+
     assert(!present(StartupView::unavailable).recovery_visible);
     StateMachine s;
     assert(present(s.snapshot()) == present(StartupView::starting));
@@ -39,7 +45,31 @@ int main() {
         using mosaic::events::Status;
         const auto reaching = present(s.snapshot(), 0, Status::disconnected);
         assert(reaching.message == "Connecting to the server..." && reaching.recovery_visible);
-        assert(present(s.snapshot(), 0, Status::pairing).message == "Waiting for device pairing.");
+        // Waiting to be claimed: the code, where to enter it and how long it lasts.
+        const Pairing pairing {
+            .code = mosaic::events::make_pairing_code("K7QF2M9X", 600, 1'000),
+            .now_ms = 1'000,
+            .server_url = "wss://mosaic.example.ts.net/ws/device",
+        };
+        const auto waiting = present(s.snapshot(), 0, Status::pairing, pairing);
+        assert(waiting.heading == "Pair this Mosaic" && waiting.code == "K7QF-2M9X");
+        assert(waiting.message == "Enter it in Mosaic at mosaic.example.ts.net.\nExpires in 10:00.");
+        // Setup recovery stays, to change the server.
+        assert(waiting.recovery_visible && waiting.online && !waiting.setup);
+        // The time counts down in whole seconds, rounded up.
+        Pairing later = pairing;
+        later.now_ms = 1'000 + 600'000 - 61'500;
+        assert(present(s.snapshot(), 0, Status::pairing, later).message.view().ends_with("Expires in 1:02."));
+        later.now_ms = 1'000 + 600'000 - 1;
+        assert(present(s.snapshot(), 0, Status::pairing, later).message.view().ends_with("Expires in 0:01."));
+        // Run out: the old code goes away until the server sends a new one.
+        later.now_ms = 1'000 + 600'000;
+        const auto expired = present(s.snapshot(), 0, Status::pairing, later);
+        assert(expired.code.empty() && expired.message == "That code expired. Waiting for a new one...");
+        // No code yet.
+        const auto none = present(s.snapshot(), 0, Status::pairing);
+        assert(none.code.empty() && none.message == "Getting a pairing code...");
+        assert(present(s.snapshot(), 0, Status::error, pairing).code.empty());
         // Unreachable, a bad address or a TLS failure: point to setup recovery.
         const auto error = present(s.snapshot(), 0, Status::error);
         assert(error.heading == "Can't reach the server");

@@ -14,6 +14,7 @@ struct StatusScreen {
     lv_obj_t* boot = nullptr;
     lv_obj_t* content = nullptr;
     lv_obj_t* heading = nullptr;
+    lv_obj_t* code = nullptr;
     lv_obj_t* description = nullptr;
     lv_obj_t* recovery_button = nullptr;
     lv_obj_t* recovery_label = nullptr;
