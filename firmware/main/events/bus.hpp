@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pairing_code.hpp"
 #include "status.hpp"
 
 #include "esp_err.h"
@@ -30,7 +31,16 @@ esp_err_t set_status(Status status);
 esp_err_t post_notification();
 // The last status that was successfully posted. Initially disconnected.
 Status status();
-// Whether the statuses posted so far leave the device paired; see paired_after().
+// Whether the statuses posted so far leave the device paired; see paired_after(). Starts from
+// restore_paired().
 bool paired();
+// What the device saved last time: call once at boot, before any status is set, so a paired
+// device starts paired while it reconnects. Posts nothing.
+void restore_paired(bool paired);
+
+// The code the device shows while it waits to be claimed, or an empty one. Any task; no event:
+// the pairing screen reads it every tick. Never log it.
+void set_pairing_code(const PairingCode& code);
+PairingCode pairing_code();
 
 } // namespace mosaic::events

@@ -5,6 +5,7 @@
 #include "freertos/semphr.h"
 
 #include <atomic>
+#include <mutex>
 
 ESP_EVENT_DEFINE_BASE(MOSAIC_EVENT);
 
@@ -19,6 +20,8 @@ namespace {
     SemaphoreHandle_t status_lock = nullptr;
     std::atomic<Status> current = Status::disconnected;
     std::atomic_bool is_paired = false;
+    std::mutex code_lock;
+    PairingCode code;
 } // namespace
 
 esp_err_t start() {
@@ -96,6 +99,20 @@ Status status() {
 
 bool paired() {
     return is_paired.load();
+}
+
+void restore_paired(bool paired) {
+    is_paired = paired;
+}
+
+void set_pairing_code(const PairingCode& value) {
+    const std::lock_guard lock(code_lock);
+    code = value;
+}
+
+PairingCode pairing_code() {
+    const std::lock_guard lock(code_lock);
+    return code;
 }
 
 } // namespace mosaic::events
