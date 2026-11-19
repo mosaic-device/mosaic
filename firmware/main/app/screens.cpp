@@ -12,8 +12,8 @@ namespace {
     ui::navigation::Conditions conditions(void*) {
         return {
             .starting = provisioning::starting(),
-            .online = provisioning::online(),
-            // Until M3 stores the pairing itself, connecting proves it.
+            .setup = provisioning::setup_open(),
+            // Saved with the device credential, and changed only by the server.
             .paired = events::paired(),
         };
     }

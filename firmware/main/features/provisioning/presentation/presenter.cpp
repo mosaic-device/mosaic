@@ -26,13 +26,16 @@ ViewState present(const Snapshot& s, uint32_t session, events::Status server) {
     case Phase::portal:
     case Phase::saving:
         v.screen = ScreenKind::setup;
+        v.setup = true;
         if (s.portal_status == PortalStatus::storage_error)
             v.setup_failure = "Saving settings failed. Please try again.";
         return v;
     case Phase::saved_visible:
         v.message = "Settings saved. Restarting to connect to Wi-Fi...";
+        v.setup = true;
         return v;
     case Phase::requesting_setup:
+        v.setup = true;
         v.heading = "Offline";
         v.message = "Opening setup...";
         v.recovery_visible = true;
@@ -41,6 +44,7 @@ ViewState present(const Snapshot& s, uint32_t session, events::Status server) {
         return v;
     case Phase::rebooting:
         v.message = "Restarting...";
+        v.setup = true;
         return v;
     case Phase::online:
         v.heading = "Wi-Fi connected";

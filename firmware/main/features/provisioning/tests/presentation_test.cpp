@@ -32,6 +32,8 @@ int main() {
     (void)s.dispatch(GotIp { }, 4);
     assert(present(s.snapshot()).heading == "Wi-Fi connected");
     assert(present(s.snapshot()).online && !present(s.snapshot()).starting);
+    // Online is not setup: a paired device stays on Home.
+    assert(!present(s.snapshot()).setup);
     {
         // Online, the screen follows the server connection.
         using mosaic::events::Status;
@@ -146,6 +148,8 @@ int main() {
     StateMachine setup;
     (void)setup.dispatch(Start { false }, 0);
     assert(present(setup.snapshot(), 1).screen == ScreenKind::setup);
+    // Setup takes the screen from the moment it opens until the restart after saving.
+    assert(present(setup.snapshot(), 1).setup);
     (void)setup.dispatch(StartupCompleted { true }, 1);
     form::Settings settings { };
     (void)setup.dispatch(Submit { settings }, 2);
@@ -155,9 +159,11 @@ int main() {
     (void)setup.dispatch(Submit { settings }, 4);
     (void)setup.dispatch(Saved { true }, 5);
     assert(present(setup.snapshot(), 1).message.view().find("Settings saved") == 0);
+    assert(present(setup.snapshot(), 1).setup);
     auto saved = present(setup.snapshot(), 1);
     (void)setup.dispatch(Tick { }, 6);
     assert(present(setup.snapshot(), 1) == saved);
     (void)setup.dispatch(Tick { }, 6'000'005);
     assert(present(setup.snapshot(), 1).message == "Restarting...");
+    assert(present(setup.snapshot(), 1).setup);
 }

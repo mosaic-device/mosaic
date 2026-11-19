@@ -5,7 +5,7 @@ namespace {
     Screen base(Conditions conditions) {
         if (conditions.starting)
             return Screen::boot;
-        if (!conditions.online || !conditions.paired)
+        if (conditions.setup || !conditions.paired)
             return Screen::setup;
         return Screen::home;
     }
