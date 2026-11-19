@@ -12,4 +12,6 @@ esp_err_t start();
 std::string_view now_text(std::span<char, kTextSize> buffer);
 // Any task. Today's date for under the clock, or empty until synced.
 std::string_view today_text(std::span<char, kDateSize> buffer);
+// Any task. How long ago `then` (Unix seconds) was, or empty until synced; see ago().
+std::string_view ago_text(std::time_t then, std::span<char, kAgoSize> buffer);
 }

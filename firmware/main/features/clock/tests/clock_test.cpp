@@ -69,6 +69,27 @@ void the_date_follows_the_local_day() {
     const std::string_view longest = date(true, september_30, buffer);
     assert(longest == "Wednesday, September 30" && longest.size() < kDateSize);
 }
+
+void ages_read_naturally() {
+    const std::time_t now = 1'795'000'000;
+    std::array<char, kAgoSize> buffer { };
+    assert(ago(true, now, now, buffer) == "just now");
+    assert(ago(true, now, now - 59, buffer) == "just now");
+    // A producer's clock a little ahead of ours.
+    assert(ago(true, now, now + 30, buffer) == "just now");
+    assert(ago(true, now, now - 60, buffer) == "1 min ago");
+    assert(ago(true, now, now - 59 * 60 - 59, buffer) == "59 min ago");
+    assert(ago(true, now, now - 3'600, buffer) == "1 h ago");
+    assert(ago(true, now, now - 23 * 3'600 - 3'599, buffer) == "23 h ago");
+    assert(ago(true, now, now - 86'400, buffer) == "1 day ago");
+    assert(ago(true, now, now - 3 * 86'400, buffer) == "3 days ago");
+    const std::string_view longest = ago(true, now, now - 5'000 * 86'400, buffer);
+    assert(longest == "999 days ago" && longest.size() < kAgoSize);
+    // Never a wrong age: not synced, a clock that was never set, or no time given.
+    assert(ago(false, now, now - 60, buffer).empty());
+    assert(ago(true, kEarliestValid - 1, kEarliestValid - 61, buffer).empty());
+    assert(ago(true, now, 0, buffer).empty());
+}
 } // namespace
 
 int main() {
@@ -80,4 +101,5 @@ int main() {
     arizona_has_no_daylight_saving();
     fits_the_buffer();
     the_date_follows_the_local_day();
+    ages_read_naturally();
 }
