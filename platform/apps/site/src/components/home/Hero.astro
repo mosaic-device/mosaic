@@ -1,0 +1,211 @@
+---
+// Hero, direction 3c: the device on a desk, warm light pooling under it, its
+// ring blue because something is waiting.
+import Device from './Device.astro'
+import { links } from './links'
+---
+
+<section class="stage hero" aria-labelledby="hero-title">
+  <div class="desk desktop-only" aria-hidden="true"></div>
+  <div class="desk-edge desktop-only" aria-hidden="true"></div>
+  <div class="pool" aria-hidden="true"></div>
+
+  <nav class="nav" aria-label="Main">
+    <a class="wordmark" href="/">MOSAIC</a>
+    <div class="links">
+      <a class="desktop-only" href="#features">Features</a>
+      <a class="desktop-only" href="#integrations">Integrations</a>
+      <a class="desktop-only" href="#hardware">Hardware</a>
+      <a href={links.docs}>Docs</a>
+      <a class="github" href={links.github}>GitHub</a>
+    </div>
+  </nav>
+
+  <div class="copy at" style="--x: 96; --y: 291; --w: 470">
+    <h1 id="hero-title" class="display" style="--size: 60">
+      Everything that<br />needs you,<br />in one view.
+    </h1>
+    <p class="lede">
+      A 5-inch desk display for GitHub, Slack, Jira, Discord and your calendar.
+      Glance, dismiss or act without leaving your editor.
+    </p>
+    <div class="actions">
+      <a class="button primary" href={links.build}>Build your own</a>
+      <a class="button" href={links.github}>View on GitHub</a>
+    </div>
+  </div>
+
+  <div class="scene at" style="--x: 620; --y: 302; --w: 724">
+    <Device
+      screen="calendar"
+      ring="blue"
+      label="Mosaic display on a desk showing Firmware standup in 4 minutes, its knob ring lit blue because a notification is waiting, warm light pooling on the desk"
+    />
+    <div class="contact" aria-hidden="true"></div>
+    <div class="reflection" aria-hidden="true"></div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    overflow: clip;
+  }
+  .nav {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 88px;
+    padding: 0 max(24px, calc(96 * var(--u)));
+  }
+  .wordmark {
+    font-family: var(--font-family-brand);
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.34em;
+  }
+  .links {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    font-size: 14px;
+  }
+  .links a {
+    color: var(--color-muted-foreground);
+  }
+  .links a:hover {
+    color: var(--color-foreground);
+  }
+  .links .github {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    height: 40px;
+    padding: 0 16px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-foreground);
+    font-weight: 500;
+  }
+
+  .copy {
+    z-index: 3;
+  }
+  .lede {
+    max-width: 420px;
+    margin-top: 24px;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 36px;
+  }
+
+  /* The desk: a surface that starts below the device and fades in from the left. */
+  .desk {
+    position: absolute;
+    inset: calc(590 * var(--u)) 0 0;
+    background: linear-gradient(180deg, #131415 0%, #0d0e0e 45%, #090a0a 100%);
+    mask-image: linear-gradient(
+      90deg,
+      transparent calc(520 * var(--u)),
+      #000 calc(820 * var(--u))
+    );
+  }
+  .desk-edge {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(590 * var(--u));
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent calc(560 * var(--u)),
+      rgb(255 255 255 / 0.09) calc(860 * var(--u)),
+      rgb(255 255 255 / 0.06) 100%
+    );
+  }
+  .pool {
+    position: absolute;
+    left: calc(640 * var(--u));
+    top: calc(590 * var(--u));
+    width: calc(690 * var(--u));
+    height: calc(200 * var(--u));
+    border-radius: 50%;
+    background: rgb(var(--warm) / 0.16);
+    filter: blur(calc(60 * var(--u)));
+  }
+
+  .scene {
+    z-index: 2;
+  }
+  .scene :global(.device) {
+    position: relative;
+    z-index: 2;
+  }
+  /* The shadow where the device meets the desk, and its faint reflection. */
+  .contact {
+    position: absolute;
+    left: 2.8%;
+    right: 2.8%;
+    top: calc(100% - 4px);
+    height: 14px;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 0.95);
+    filter: blur(6px);
+    z-index: 1;
+  }
+  .reflection {
+    position: absolute;
+    left: 2.3%;
+    width: 79%;
+    top: 100%;
+    aspect-ratio: 572 / 120;
+    background: linear-gradient(
+      180deg,
+      rgb(242 242 239 / 0.035) 0%,
+      transparent 100%
+    );
+    z-index: 1;
+  }
+
+  @media (min-width: 900px) {
+    .nav {
+      position: absolute;
+    }
+  }
+
+  @media (max-width: 899.98px) {
+    .hero {
+      padding-top: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .nav {
+      position: relative;
+      padding: 0;
+      height: 72px;
+      margin-bottom: 48px;
+    }
+    .links {
+      gap: 20px;
+    }
+    .scene {
+      position: relative;
+      margin-top: 64px;
+      padding-bottom: 48px;
+    }
+    .pool {
+      left: 0;
+      right: 0;
+      top: auto;
+      bottom: 0;
+      width: auto;
+      height: 160px;
+      filter: blur(48px);
+    }
+  }
+</style>

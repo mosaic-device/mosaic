@@ -1,0 +1,87 @@
+---
+// The device seen from the front: bezel, screen and knob. Drawn on a 724 × 358
+// frame and scaled to the width it is given. A stand-in for the product render.
+import DeviceScreen from './DeviceScreen.astro'
+
+interface Props {
+  screen: 'review' | 'calendar'
+  ring: 'blue' | 'dark'
+  label: string
+  class?: string
+}
+const { screen, ring, label, class: className } = Astro.props
+---
+
+<div
+  class:list={['device', className]}
+  role="img"
+  aria-label={label}
+  data-ring={ring}
+>
+  <div class="body">
+    <div class="glass">
+      <DeviceScreen variant={screen} />
+    </div>
+    <div class="knob" aria-hidden="true"><span></span></div>
+  </div>
+</div>
+
+<style>
+  .device {
+    container-type: inline-size;
+    aspect-ratio: 724 / 358;
+  }
+  .body {
+    --d: calc(100cqw / 724);
+    position: relative;
+    box-sizing: border-box;
+    height: 100%;
+    border: 1px solid var(--device-edge);
+    border-radius: calc(24 * var(--d));
+    background: linear-gradient(
+      180deg,
+      var(--device-top) 0%,
+      var(--device-bottom) 100%
+    );
+    box-shadow:
+      0 calc(30 * var(--d)) calc(60 * var(--d)) rgb(0 0 0 / 0.55),
+      inset 0 1px 0 rgb(255 255 255 / 0.07);
+  }
+  .glass {
+    position: absolute;
+    left: calc(17 * var(--d));
+    top: calc(17 * var(--d));
+    width: calc(572 * var(--d));
+    height: calc(322 * var(--d));
+    border-radius: calc(9 * var(--d));
+    overflow: hidden;
+    box-shadow: 0 0 0 1px #000;
+  }
+  .knob {
+    position: absolute;
+    left: calc(606 * var(--d));
+    top: 0;
+    width: calc(116 * var(--d));
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .knob span {
+    width: calc(58 * var(--d));
+    height: calc(58 * var(--d));
+    border-radius: 50%;
+    background: radial-gradient(circle at 36% 30%, #45484b 0%, #1c1d1f 68%);
+    box-shadow:
+      0 0 0 calc(6 * var(--d)) #121314,
+      0 0 0 calc(8 * var(--d)) #1a1b1d,
+      0 0 calc(24 * var(--d)) calc(8 * var(--d)) rgb(var(--ring-blue) / 0);
+    transition: box-shadow 600ms ease;
+  }
+  .device[data-ring='blue'] .knob span {
+    box-shadow:
+      0 0 0 calc(6 * var(--d)) #121314,
+      0 0 0 calc(8 * var(--d)) rgb(var(--ring-blue) / 0.7),
+      0 0 calc(24 * var(--d)) calc(8 * var(--d)) rgb(var(--ring-blue) / 0.25);
+  }
+</style>

@@ -1,0 +1,179 @@
+/*
+ * The homepage is drawn on a 1440 × 900 canon. Each section is a "stage" that keeps
+ * that canon's proportions: --u is one canon pixel at the current width, so a
+ * section looks the same at any desktop width. Below 900px the stages turn into
+ * ordinary stacked flow.
+ */
+@import '@mosaic/assets/fonts.css';
+@import '@mosaic/tokens/css/dark.css';
+
+:root {
+  color-scheme: dark;
+  /* Colours the design uses beyond the tokens: the device and the light. */
+  --device-top: #1d1e20;
+  --device-bottom: #131415;
+  --device-edge: #2e3133;
+  --hairline: #1b1c1e;
+  --ring-blue: 30 100 255;
+  --warm: 255 160 80;
+}
+
+html {
+  background: var(--color-background);
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-family-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-foreground);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--color-focus);
+}
+a:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+  border-radius: var(--radius-sm);
+}
+::selection {
+  background: var(--color-selected-border);
+}
+
+h1,
+h2,
+h3,
+p,
+ul {
+  margin: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Buttons and links shared by every section. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 0 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-foreground);
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 150ms ease;
+}
+.button:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-foreground);
+}
+.button.primary {
+  padding: 0 24px;
+  border-color: transparent;
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+.button.primary:hover {
+  background: var(--color-primary-hover);
+}
+.arrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+}
+.arrow-link svg {
+  transition: transform 150ms ease;
+}
+.arrow-link:hover svg {
+  transform: translateX(3px);
+}
+
+/* ---------------------------------------------------------------- stages */
+.stage {
+  position: relative;
+  container-type: inline-size;
+  width: min(100%, 1440px);
+  margin: 0 auto;
+}
+.stage > * {
+  --u: calc(100cqw / 1440);
+}
+
+@media (min-width: 900px) {
+  .stage {
+    aspect-ratio: 1440 / var(--h, 900);
+  }
+  /* Place a child on the canon: --x, --y, --w (and optionally --r, --b). */
+  .at {
+    position: absolute;
+    left: calc(var(--x, 0) * var(--u));
+    top: calc(var(--y, 0) * var(--u));
+    width: calc(var(--w) * var(--u));
+  }
+}
+
+@media (max-width: 899.98px) {
+  .stage {
+    padding: 72px 24px;
+    box-sizing: border-box;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* Headings scale with the canon on desktop and settle at phone sizes below. */
+.display {
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+.lede {
+  color: var(--color-muted-foreground);
+  line-height: 1.6;
+}
+@media (min-width: 900px) {
+  .display {
+    font-size: calc(var(--size, 48) * var(--u));
+  }
+  .lede {
+    font-size: max(15px, calc(17 * var(--u)));
+  }
+}
+@media (max-width: 899.98px) {
+  .display {
+    font-size: clamp(34px, 9vw, 44px);
+  }
+  .lede {
+    font-size: 17px;
+  }
+}
