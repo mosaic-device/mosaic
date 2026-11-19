@@ -46,6 +46,7 @@ idf_component_register(
          "features/connection/frames.cpp"
          "features/connection/policy.cpp"
          "features/connection/adapters/websocket.cpp"
+         "features/connection/adapters/service.cpp"
          "features/home/screen.cpp"
          "features/settings/screen.cpp"
          "features/settings/service.cpp"
