@@ -3,9 +3,15 @@
 namespace mosaic::features::connection {
 
 Action Policy::wifi_up(uint64_t now_ms) {
+    // Only when Wi-Fi was down: a renewed address reports Wi-Fi up again, and must not wipe
+    // out real server failures.
+    if (!wifi_) {
+        // Failures without Wi-Fi say nothing about the server: if it fails once Wi-Fi is
+        // back, retry after a second, and show "Connecting" until it does.
+        backoff_.reset();
+        failed_ = false;
+    }
     wifi_ = true;
-    // A failure without Wi-Fi says nothing about the server; try it again first.
-    failed_ = false;
     // Wi-Fi coming back is worth trying straight away, without waiting out the backoff.
     if (phase_ == Phase::waiting)
         return start_attempt(now_ms);

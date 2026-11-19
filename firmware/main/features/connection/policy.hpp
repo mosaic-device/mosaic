@@ -47,6 +47,7 @@ enum class Action : uint8_t { none, open, send_connect, close };
 // calls tick() at next_deadline_ms().
 class Policy {
 public:
+    // Wi-Fi has an address. Coming back from down, the backoff starts over.
     Action wifi_up(uint64_t now_ms);
     Action wifi_down(uint64_t now_ms);
     // The secure WebSocket is open: send connect and start the reply deadline.

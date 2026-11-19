@@ -264,6 +264,34 @@ void rejections_show_an_error_or_an_update() {
     old.closed(200, kExact);
     assert(old.status() == Status::update_required);
 }
+
+void time_without_wifi_does_not_slow_the_first_retry() {
+    // Boot: Wi-Fi takes a while, and each due retry without it counts as a failure.
+    Policy policy;
+    uint64_t now = 0;
+    for (uint32_t failures = 0; failures < kOfflineAfter; ++failures) {
+        now = *policy.next_deadline_ms();
+        assert(policy.tick(now, kExact) == Action::none);
+    }
+    assert(policy.state() == State::offline);
+    // Wi-Fi comes up and the first real attempt fails: the next waits a second, not a minute.
+    assert(policy.wifi_up(now) == Action::open);
+    assert(policy.closed(now + 100, kExact) == Action::none);
+    assert(*policy.next_deadline_ms() == now + 100 + kFirstDelayMs);
+    assert(policy.state() == State::reconnecting);
+}
+
+void a_renewed_address_keeps_the_backoff() {
+    Policy policy;
+    policy.wifi_up(0);
+    uint64_t now = fail_and_retry(policy, 0);
+    now = fail_and_retry(policy, now);
+    // Wi-Fi was never down: "Wi-Fi up" again changes nothing.
+    assert(policy.wifi_up(now) == Action::none);
+    assert(policy.closed(now, kExact) == Action::none);
+    assert(*policy.next_deadline_ms() == now + 4'000);
+    assert(policy.status() == Status::error);
+}
 } // namespace
 
 int main() {
@@ -283,5 +311,7 @@ int main() {
     losing_wifi_is_not_a_server_error();
     a_lost_connection_shows_its_last_answer_until_offline();
     rejections_show_an_error_or_an_update();
+    time_without_wifi_does_not_slow_the_first_retry();
+    a_renewed_address_keeps_the_backoff();
     std::puts("Policy tests passed");
 }
