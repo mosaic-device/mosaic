@@ -1,0 +1,37 @@
+/* Starlight's theme, mapped onto the Mosaic tokens. */
+:root,
+:root[data-theme='dark'] {
+  --sl-font: var(--font-family-sans);
+  --sl-font-mono: var(--font-family-mono);
+
+  --sl-color-white: var(--color-foreground);
+  --sl-color-gray-1: color-mix(
+    in srgb,
+    var(--color-foreground) 85%,
+    var(--color-muted-foreground)
+  );
+  --sl-color-gray-2: color-mix(
+    in srgb,
+    var(--color-foreground) 50%,
+    var(--color-muted-foreground)
+  );
+  --sl-color-gray-3: var(--color-muted-foreground);
+  --sl-color-gray-4: var(--color-low-emphasis);
+  --sl-color-gray-5: var(--color-border);
+  --sl-color-gray-6: var(--color-surface);
+  --sl-color-black: var(--color-background);
+
+  --sl-color-accent-low: color-mix(
+    in srgb,
+    var(--color-primary) 25%,
+    var(--color-background)
+  );
+  --sl-color-accent: var(--color-primary);
+  --sl-color-accent-high: var(--color-focus);
+}
+
+/* The wordmark is wide and thin; size it like the homepage header. */
+.site-title img {
+  height: 14px;
+  width: auto;
+}

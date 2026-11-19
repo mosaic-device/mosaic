@@ -1,6 +1,7 @@
 packages:
   - 'platform/apps/admin'
   - 'platform/apps/companion'
+  - 'platform/apps/site'
   - 'platform/packages/*'
 allowBuilds:
   '@bufbuild/buf': true

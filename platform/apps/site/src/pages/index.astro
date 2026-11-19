@@ -1,0 +1,139 @@
+---
+// Stand-in homepage until the design is done. Copy is from
+// docs/marketing-site.md.
+import '@mosaic/assets/fonts.css'
+import '@mosaic/tokens/css/dark.css'
+import wordmark from '@mosaic/assets/web/mosaic-wordmark.svg?raw'
+
+const github = 'https://github.com/mosaic-device/mosaic'
+---
+
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mosaic</title>
+    <meta
+      name="description"
+      content="A 5-inch desk display with a knob that brings your GitHub, Slack, Jira, Discord and Calendar activity together."
+    />
+  </head>
+  <body>
+    <header>
+      <a class="wordmark" href="/" aria-label="Mosaic" set:html={wordmark} />
+      <nav>
+        <a href="/docs/">Docs</a>
+        <a href="/build/">Build guide</a>
+        <a href={github}>GitHub</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Everything that needs you, in one view.</h1>
+      <p>
+        Mosaic is a 5-inch display with a knob that brings your GitHub, Slack,
+        Jira, Discord and Calendar activity together on your desk, and lets you
+        act on it without switching windows.
+      </p>
+      <div class="actions">
+        <a class="button primary" href="/build/">Build your own</a>
+        <a class="button" href={github}>View on GitHub</a>
+      </div>
+    </main>
+  </body>
+</html>
+
+<style>
+  :global(html) {
+    color-scheme: dark;
+  }
+  :global(body) {
+    margin: 0;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-family-sans);
+    font-size: var(--typography-body);
+    line-height: var(--line-height-normal);
+  }
+  header,
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 var(--space-4);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .wordmark {
+    display: flex;
+    color: var(--color-foreground);
+  }
+  .wordmark :global(svg) {
+    height: 14px;
+    width: auto;
+  }
+  nav {
+    display: flex;
+    gap: var(--space-6);
+  }
+  nav a {
+    color: var(--color-muted-foreground);
+    text-decoration: none;
+    font-size: var(--typography-label);
+  }
+  nav a:hover {
+    color: var(--color-foreground);
+  }
+  main {
+    padding-top: 20vh;
+    padding-bottom: var(--space-12);
+  }
+  h1 {
+    margin: 0;
+    max-width: 14em;
+    font-size: clamp(2.25rem, 6vw, 4rem);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-tight);
+    letter-spacing: -0.02em;
+  }
+  p {
+    max-width: 36em;
+    margin: var(--space-6) 0 0;
+    color: var(--color-muted-foreground);
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+  }
+  .button {
+    display: inline-flex;
+    align-items: center;
+    height: var(--control-lg);
+    padding: 0 var(--space-5);
+    border: var(--border-width-default) solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-foreground);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
+  }
+  .button.primary {
+    border-color: transparent;
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+  .button.primary:hover {
+    background: var(--color-primary-hover);
+  }
+  .button:not(.primary):hover {
+    background: var(--color-surface-raised);
+  }
+  @media (max-width: 480px) {
+    nav a:not(:first-child) {
+      display: none;
+    }
+  }
+</style>

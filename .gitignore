@@ -34,3 +34,6 @@ hardware/pcb/build/
 fp-info-cache
 _autosave-*
 ~*.lck
+
+# Astro
+.astro/

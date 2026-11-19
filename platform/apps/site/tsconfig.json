@@ -1,0 +1,5 @@
+{
+  "extends": ["astro/tsconfigs/strict", "@mosaic/typescript-config/base.json"],
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"]
+}

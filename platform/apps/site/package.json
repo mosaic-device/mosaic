@@ -1,0 +1,26 @@
+{
+  "name": "@mosaic/site",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "typecheck": "astro check",
+    "preview": "astro preview",
+    "predev": "node ../../packages/tokens/build.mjs",
+    "prebuild": "node ../../packages/tokens/build.mjs",
+    "pretypecheck": "node ../../packages/tokens/build.mjs"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.43.1",
+    "@mosaic/assets": "workspace:*",
+    "@mosaic/tokens": "workspace:*",
+    "astro": "7.4.13"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@mosaic/typescript-config": "workspace:*",
+    "typescript": "~6.0.2"
+  }
+}

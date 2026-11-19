@@ -9,6 +9,7 @@
   "scripts": {
     "admin:dev": "pnpm --filter @mosaic/admin dev",
     "companion:dev": "pnpm --filter @mosaic/companion tauri dev",
+    "site:dev": "pnpm --filter @mosaic/site dev",
     "web:format": "prettier --write .",
     "web:format:check": "prettier --check .",
     "web:check": "turbo run lint typecheck build",
