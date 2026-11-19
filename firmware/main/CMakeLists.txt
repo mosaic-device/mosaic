@@ -53,6 +53,7 @@ idf_component_register(
          "features/notifications/inbox.cpp"
          "features/notifications/notification.cpp"
          "features/notifications/store.cpp"
+         "features/notifications/ui/screen.cpp"
          "features/settings/screen.cpp"
          "features/settings/service.cpp"
          "features/settings/settings.cpp"

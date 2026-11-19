@@ -28,6 +28,8 @@ lv_obj_t* back_button(lv_obj_t* header, Action back);
 lv_obj_t* wordmark(lv_obj_t* parent, bool large = false);
 // Fills the rest of a page's height, for content between the header and the bottom.
 lv_obj_t* fill(lv_obj_t* page);
+// Lets the focus rings of object's children draw outside it, for a layout row of controls.
+void allow_focus_overflow(lv_obj_t* object);
 
 // A full-width row with a label on the left and a switch on the right. The row is the
 // control: focus and taps go to it, and it requests Request::toggle. Show the value

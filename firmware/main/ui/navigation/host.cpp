@@ -160,4 +160,7 @@ bool back() {
     show_active();
     return true;
 }
+Screen active() {
+    return s_navigator.active();
+}
 }
