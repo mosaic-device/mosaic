@@ -79,6 +79,17 @@ const labels = [
         </g>
       </svg>
 
+      <ul class="parts" aria-label="Parts">
+        {
+          labels.map((l) => (
+            <li>
+              <span class="name">{l.name}</span>{' '}
+              <span class="note">{l.note}</span>
+            </li>
+          ))
+        }
+      </ul>
+
       <div class="model desktop-only" aria-hidden="true">
         <canvas class="at" style="--x: 470; --y: 40; --w: 720"></canvas>
         <svg class="leaders">
@@ -254,6 +265,25 @@ const labels = [
     .drawing {
       order: -1;
       margin-bottom: 40px;
+    }
+    /* At phone width the drawing's labels are too small to read; list the
+       parts under it instead. */
+    .drawing text,
+    .drawing [stroke-dasharray] {
+      display: none;
+    }
+    .parts {
+      display: grid;
+      gap: 12px;
+      margin: 0 0 48px;
+      padding: 0;
+      list-style: none;
+      order: -1;
+    }
+  }
+  @media (min-width: 900px) {
+    .parts {
+      display: none;
     }
   }
 </style>
