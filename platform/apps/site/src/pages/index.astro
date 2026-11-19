@@ -1,6 +1,8 @@
 ---
 import Home from '../layouts/Home.astro'
 import Hero from '../components/home/Hero.astro'
+import Waits from '../components/home/Waits.astro'
+import Calm from '../components/home/Calm.astro'
 ---
 
 <Home
@@ -8,4 +10,8 @@ import Hero from '../components/home/Hero.astro'
   description="A 5-inch desk display for GitHub, Slack, Jira, Discord and your calendar. Glance, dismiss or act without leaving your editor. Open source and self-hosted."
 >
   <Hero />
+  <main>
+    <Waits />
+    <Calm />
+  </main>
 </Home>

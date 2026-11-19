@@ -1,0 +1,126 @@
+---
+// S3: the knob up close, its ring dark and a warm glow around it.
+---
+
+<section class="stage calm" aria-labelledby="calm-title">
+  <div class="warmth" aria-hidden="true"></div>
+  <div
+    class="knob at"
+    style="--x: 610; --y: 190; --w: 220"
+    role="img"
+    aria-label="Close-up of the Mosaic knob, its LED ring dark, a warm glow around it"
+  >
+  </div>
+
+  <div class="copy">
+    <h2 id="calm-title" class="display" style="--size: 64">
+      Calm, until it matters.
+    </h2>
+    <p class="lede">
+      When nothing needs you, all you see is a warm glow behind the device.
+    </p>
+  </div>
+
+  <ul class="promises" aria-label="What Mosaic doesn't do">
+    <li><strong>Nothing blinks or spins.</strong> Every change fades.</li>
+    <li><strong>Quiet hours.</strong> What can wait, waits.</li>
+    <li><strong>Dims with the room.</strong> A light sensor follows it.</li>
+    <li><strong>Amber only when wrong.</strong> Your server is out of reach.</li>
+  </ul>
+</section>
+
+<style>
+  .warmth {
+    position: absolute;
+    left: calc(370 * var(--u));
+    top: calc(100 * var(--u));
+    width: calc(700 * var(--u));
+    height: calc(420 * var(--u));
+    border-radius: 50%;
+    background: rgb(var(--warm) / 0.1);
+    filter: blur(calc(90 * var(--u)));
+  }
+  .knob {
+    --k: calc(var(--w) * var(--u) / 220);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle at 36% 30%,
+      #4a4d50 0%,
+      #232426 55%,
+      #161718 100%
+    );
+    box-shadow:
+      0 0 0 calc(24 * var(--k)) #111213,
+      0 0 0 calc(25 * var(--k)) #222426,
+      0 0 0 calc(29 * var(--k)) #1a1b1d,
+      0 calc(40 * var(--k)) calc(80 * var(--k)) rgb(0 0 0 / 0.7);
+  }
+  .copy {
+    text-align: center;
+  }
+  .lede {
+    max-width: 640px;
+    margin: 20px auto 0;
+  }
+  .promises {
+    padding: 22px 0 0;
+    list-style: none;
+    border-top: 1px solid var(--hairline);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--color-muted-foreground);
+  }
+  .promises strong {
+    color: var(--color-foreground);
+    font-weight: 500;
+  }
+
+  @media (min-width: 900px) {
+    .copy {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(618 * var(--u));
+    }
+    .lede {
+      font-size: max(16px, calc(18 * var(--u)));
+    }
+    .promises {
+      position: absolute;
+      left: calc(160 * var(--u));
+      right: calc(160 * var(--u));
+      top: calc(790 * var(--u));
+      display: flex;
+      justify-content: space-between;
+      gap: 32px;
+    }
+  }
+
+  @media (max-width: 899.98px) {
+    .calm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .warmth {
+      left: 10%;
+      top: 40px;
+      width: 80%;
+      height: 260px;
+      filter: blur(60px);
+    }
+    .knob {
+      position: relative;
+      width: 150px;
+      --k: calc(150px / 220);
+      margin: 40px 0 72px;
+    }
+    .promises {
+      display: grid;
+      gap: 14px;
+      margin-top: 48px;
+      align-self: stretch;
+    }
+  }
+</style>

@@ -1,0 +1,211 @@
+---
+// S2: one notification's life. On desktop the section pins while you scroll and
+// the three callouts light up in turn: it arrives, you glance, you decide.
+// Phones and reduced motion get one still frame with all three callouts.
+import Device from './Device.astro'
+---
+
+<section id="features" class="waits" data-step="1" aria-labelledby="waits-title">
+  <div class="pin">
+    <div class="stage">
+      <h2 id="waits-title" class="display at" style="--x: 160; --y: 96; --w: 700">
+        <span class="quiet">Your laptop interrupts.</span><br />Mosaic waits.
+      </h2>
+
+      <div class="glow desktop-only" aria-hidden="true"></div>
+      <div class="scene at" style="--x: 400; --y: 290; --w: 859">
+        <Device
+          screen="review"
+          ring="blue"
+          label="Mosaic display showing a GitHub review request: Avery requested your review on #194. Its knob ring is lit blue."
+        />
+      </div>
+
+      <ol class="callouts">
+        <li class="callout at" data-for="1" style="--x: 1080; --y: 132; --w: 280">
+          <h3>It arrives</h3>
+          <p>
+            The ring turns blue and the glow behind the device swells once.
+            Nothing pops up on your laptop.
+          </p>
+        </li>
+        <li class="callout at" data-for="2" style="--x: 160; --y: 388; --w: 210">
+          <h3>You glance</h3>
+          <p>From your chair: Avery wants your review on #194, two minutes ago.</p>
+        </li>
+        <li class="callout at" data-for="3" style="--x: 160; --y: 596; --w: 210">
+          <h3>You decide</h3>
+          <p>Approve it here, press the knob to dismiss, or send it to your laptop.</p>
+        </li>
+      </ol>
+
+      <!-- Leaders from each callout to the part it describes. -->
+      <div class="leader desktop-only" data-for="1" aria-hidden="true">
+        <i class="line" style="--x: 1188; --y: 262; --w: 1; --h: 196"></i>
+        <i class="dot" style="--x: 1184; --y: 456"></i>
+      </div>
+      <div class="leader desktop-only" data-for="2" aria-hidden="true">
+        <i class="line" style="--x: 380; --y: 440; --w: 64; --h: 1"></i>
+        <i class="dot" style="--x: 442; --y: 436"></i>
+      </div>
+      <div class="leader desktop-only" data-for="3" aria-hidden="true">
+        <i class="line" style="--x: 380; --y: 649; --w: 56; --h: 1"></i>
+        <i class="dot" style="--x: 434; --y: 645"></i>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Steps the section through its three callouts as it scrolls past. Only on
+  // desktop with motion allowed; otherwise the still frame stays.
+  const section = document.querySelector<HTMLElement>('.waits')
+  const motion = matchMedia(
+    '(min-width: 900px) and (prefers-reduced-motion: no-preference)',
+  )
+  if (section) {
+    const device = section.querySelector<HTMLElement>('.device')
+    const screen = section.querySelector<HTMLElement>('.screen')
+    const update = () => {
+      if (!motion.matches) {
+        section.dataset.step = 'all'
+        device?.setAttribute('data-ring', 'blue')
+        screen?.setAttribute('data-variant', 'review')
+        return
+      }
+      const { top, height } = section.getBoundingClientRect()
+      const progress = -top / Math.max(1, height - innerHeight)
+      const step = progress < 1 / 3 ? '1' : progress < 2 / 3 ? '2' : '3'
+      if (section.dataset.step === step) return
+      section.dataset.step = step
+      // Deciding moves the screen on to the next item and the ring goes dark.
+      device?.setAttribute('data-ring', step === '3' ? 'dark' : 'blue')
+      screen?.setAttribute('data-variant', step === '3' ? 'calendar' : 'review')
+    }
+    addEventListener('scroll', update, { passive: true })
+    addEventListener('resize', update)
+    motion.addEventListener('change', update)
+    update()
+  }
+</script>
+
+<style>
+  .quiet {
+    color: var(--color-low-emphasis);
+  }
+
+  .glow {
+    position: absolute;
+    left: calc(470 * var(--u));
+    top: calc(660 * var(--u));
+    width: calc(720 * var(--u));
+    height: calc(120 * var(--u));
+    border-radius: 50%;
+    background: rgb(var(--ring-blue) / 0.16);
+    filter: blur(calc(60 * var(--u)));
+    transition: opacity 800ms ease;
+  }
+  .waits[data-step='1'] .glow {
+    animation: swell 1600ms ease-out;
+  }
+  .waits[data-step='3'] .glow {
+    opacity: 0;
+  }
+  @keyframes swell {
+    40% {
+      background: rgb(var(--ring-blue) / 0.34);
+      transform: scale(1.12);
+    }
+  }
+
+  .scene :global(.body) {
+    box-shadow:
+      0 40px 80px rgb(0 0 0 / 0.6),
+      inset 0 1px 0 rgb(255 255 255 / 0.07);
+  }
+
+  .callouts {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .callout h3 {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--color-muted-foreground);
+    transition: color 400ms ease;
+  }
+  .callout p {
+    margin-top: 8px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--color-muted-foreground);
+  }
+
+  .leader i {
+    position: absolute;
+    left: calc(var(--x) * var(--u));
+    top: calc(var(--y) * var(--u));
+    transition: background-color 400ms ease;
+  }
+  .leader .line {
+    width: max(1px, calc(var(--w) * var(--u)));
+    height: max(1px, calc(var(--h) * var(--u)));
+    background: var(--color-border);
+  }
+  .leader .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #3a3d40;
+  }
+
+  /* The lit callout and its leader. */
+  .waits[data-step='1'] [data-for='1'] h3,
+  .waits[data-step='2'] [data-for='2'] h3,
+  .waits[data-step='3'] [data-for='3'] h3,
+  .waits[data-step='all'] .callout h3 {
+    color: var(--color-foreground);
+  }
+  .waits[data-step='1'] .leader[data-for='1'] .line,
+  .waits[data-step='2'] .leader[data-for='2'] .line,
+  .waits[data-step='3'] .leader[data-for='3'] .line,
+  .waits[data-step='all'] .leader .line {
+    background: var(--color-muted-foreground);
+  }
+  .waits[data-step='1'] .leader[data-for='1'] .dot,
+  .waits[data-step='2'] .leader[data-for='2'] .dot,
+  .waits[data-step='3'] .leader[data-for='3'] .dot,
+  .waits[data-step='all'] .leader .dot {
+    background: var(--color-foreground);
+  }
+
+  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
+    .waits {
+      height: 300vh;
+    }
+    .pin {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+    /* Fit the whole canon in the viewport while pinned. */
+    .pin .stage {
+      width: min(100%, 1440px, 160vh);
+    }
+  }
+
+  @media (max-width: 899.98px) {
+    .scene {
+      margin-top: 40px;
+    }
+    .callouts {
+      display: grid;
+      gap: 28px;
+      margin-top: 48px;
+    }
+  }
+</style>
