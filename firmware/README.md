@@ -1,6 +1,6 @@
 # Firmware
 
-Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5, with Wi-Fi through its ESP32-C6. It doesn't connect to the server yet; use [debug triggers](#debug-triggers) to put the device in connection states. Board results are in [M2 board verification](../docs/hardware/m2-board-verification.md).
+Firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-5, with Wi-Fi through its ESP32-C6. Once on Wi-Fi it connects to the saved server and keeps retrying while the server is out of reach; [debug triggers](#debug-triggers) put the device in connection states without one. Board results are in [M2 board verification](../docs/hardware/m2-board-verification.md).
 
 Run every command from the repository root. [Setup](../docs/setup.md) lists the tools each command needs.
 
@@ -88,10 +88,10 @@ The normal firmware contains no trigger code; CI checks this.
 
 1. Scan the Wi-Fi QR code on the screen, or join `Mosaic-XXXXXX` with the password shown.
 2. If the setup page doesn't open, visit the **HTTP** address shown, normally `http://192.168.4.1/`.
-3. Enter the home network name, its password and the `wss://` server URL, then tap **Save and reboot**. The password must be empty for an open network or 8–63 characters.
+3. Enter the home network name, its password and the server URL, `wss://<host>/ws/device`, then tap **Save and reboot**. The password must be empty for an open network or 8–63 characters.
 4. The device shows success for about six seconds, reboots and joins the network.
 
-Setup doesn't test the network or contact the server, so wrong details are saved too and the device keeps retrying. To change them, tap **Enter setup mode** twice within ten seconds and submit new ones. Networks that need a browser sign-in aren't supported. Design constraints are in the [provisioning guide](main/features/provisioning/README.md) and the [provisioning decision](../docs/adr/0001-softap-provisioning.md).
+Setup doesn't test the network or contact the server, so wrong details are saved too and the device keeps retrying. If the server can't be reached, through a wrong address, a certificate it can't verify or the server being down, the screen says so. To change the details, tap **Enter setup mode** twice within ten seconds and submit new ones. Networks that need a browser sign-in aren't supported. Design constraints are in the [provisioning guide](main/features/provisioning/README.md) and the [provisioning decision](../docs/adr/0001-softap-provisioning.md).
 
 ## Tests and tooling
 
