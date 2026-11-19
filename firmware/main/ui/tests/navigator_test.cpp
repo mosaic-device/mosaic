@@ -1,4 +1,5 @@
 #include "../navigation/navigator.hpp"
+#include "../navigation/paired_hold.hpp"
 
 #include <cassert>
 #include <initializer_list>
@@ -129,9 +130,34 @@ void every_reachable_screen_has_a_way_back() {
         }
     }
 }
+
+void pairing_holds_home_back_briefly() {
+    // Paired at boot: Home at once.
+    PairedHold restored;
+    assert(restored.paired(true, 0) && !restored.holding());
+    // Paired while waiting: the pairing screen says so first.
+    PairedHold hold;
+    assert(!hold.paired(false, 0));
+    assert(!hold.paired(true, 1'000) && hold.holding());
+    assert(!hold.paired(true, 1'000 + PairedHold::kHoldMs - 1));
+    assert(hold.paired(true, 1'000 + PairedHold::kHoldMs) && !hold.holding());
+    assert(hold.paired(true, 50'000));
+    // Unpaired during the hold: nothing to celebrate.
+    PairedHold removed;
+    removed.paired(false, 0);
+    removed.paired(true, 100);
+    assert(!removed.paired(false, 200) && !removed.holding());
+    // The clock wrapping around doesn't cut it short.
+    PairedHold wrapping;
+    wrapping.paired(false, 0xFFFF'FF00);
+    assert(!wrapping.paired(true, 0xFFFF'FF00));
+    assert(!wrapping.paired(true, 0x0000'0100));
+    assert(wrapping.paired(true, 0xFFFF'FF00 + PairedHold::kHoldMs));
+}
 } // namespace
 
 int main() {
+    pairing_holds_home_back_briefly();
     conditions_choose_the_base_screen();
     settings_opens_from_home_and_back_returns();
     back_does_nothing_on_base_screens();

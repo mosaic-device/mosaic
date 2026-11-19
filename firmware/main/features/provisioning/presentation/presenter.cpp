@@ -99,7 +99,10 @@ ViewState present(const Snapshot& s, uint32_t session, events::Status server, co
             show_pairing(v, pairing);
             break;
         case events::Status::connected:
-            v.message = "Waiting for device pairing.";
+            // Shown for a moment after pairing, before Home.
+            v.heading = "Paired";
+            v.message = "Opening Home...";
+            v.recovery_visible = false;
             break;
         case events::Status::error:
             // Setup recovery is how the owner corrects a wrong address.

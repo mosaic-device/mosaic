@@ -70,6 +70,9 @@ int main() {
         const auto none = present(s.snapshot(), 0, Status::pairing);
         assert(none.code.empty() && none.message == "Getting a pairing code...");
         assert(present(s.snapshot(), 0, Status::error, pairing).code.empty());
+        // Just paired: says so, briefly, before Home.
+        const auto paired = present(s.snapshot(), 0, Status::connected, pairing);
+        assert(paired.heading == "Paired" && paired.code.empty() && !paired.recovery_visible);
         // Unreachable, a bad address or a TLS failure: point to setup recovery.
         const auto error = present(s.snapshot(), 0, Status::error);
         assert(error.heading == "Can't reach the server");
