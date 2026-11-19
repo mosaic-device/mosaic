@@ -15,7 +15,13 @@ using mosaic::events::Status;
 namespace {
 constexpr Color kOff { };
 constexpr Color kRed { .red = 200, .green = 0, .blue = 0 };
-constexpr std::array kStatuses { Status::disconnected, Status::pairing, Status::connected, Status::error };
+constexpr std::array kStatuses {
+    Status::disconnected,
+    Status::pairing,
+    Status::connected,
+    Status::error,
+    Status::update_required,
+};
 
 // Matches the hardware: an 8-LED ring and a 12-LED strip.
 using Ring = std::array<Color, 8>;
@@ -92,6 +98,8 @@ void each_status_means_one_thing() {
     assert(trouble.strip == idle.strip);
     assert(pattern(Status::error, false).ring == trouble.ring);
     assert(pattern(Status::error, false).strip.effect == Effect::off);
+    // A server that needs newer firmware is out of reach too.
+    assert(pattern(Status::update_required, true) == trouble);
     // Trouble, pairing and a notification each use their own ring color.
     const std::array colors {
         trouble.ring.color,

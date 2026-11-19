@@ -314,7 +314,8 @@ void DeviceView::draw_panel() {
     x = kControlsX;
     const auto current = events::status();
     for (const auto status_choice :
-        { events::Status::pairing, events::Status::connected, events::Status::disconnected, events::Status::error }) {
+        { events::Status::pairing, events::Status::connected, events::Status::disconnected, events::Status::error,
+            events::Status::update_required }) {
         const std::string name = events::name(status_choice);
         x = button(x, kServerRow, title_case(name), current == status_choice, true, [name] {
             run_in_background("trigger " + name);

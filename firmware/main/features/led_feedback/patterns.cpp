@@ -69,6 +69,7 @@ Pattern pattern(Status status, bool paired) {
     case Status::pairing:
         return { .ring = kPairing, .strip = kOff };
     case Status::error:
+    case Status::update_required:
         return { .ring = kTrouble, .strip = strip };
     case Status::disconnected:
         break;
