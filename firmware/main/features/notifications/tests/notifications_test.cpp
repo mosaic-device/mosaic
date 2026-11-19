@@ -1,0 +1,85 @@
+#include "../inbox.hpp"
+
+#include <cassert>
+#include <cstdio>
+#include <string>
+
+using namespace mosaic::features::notifications;
+
+namespace {
+Notification make(std::string_view id, std::string_view title = "Build failed on main") {
+    Notification n;
+    copy_text(n.id, id);
+    copy_text(n.source, "GitHub");
+    copy_text(n.title, title);
+    n.occurred_at = 1'795'000'000;
+    return n;
+}
+
+void the_field_rules() {
+    assert(valid(make("n-0001")));
+    // No text is fine.
+    assert(make("n-0001").text_view().empty());
+    // Empty or unprintable IDs, an empty source or title, and no time are not.
+    assert(!valid(make("")));
+    assert(!valid(make("tab\tid")));
+    assert(!valid(make("caf\xC3\xA9")));
+    Notification no_source = make("n-1");
+    no_source.source = { };
+    assert(!valid(no_source));
+    assert(!valid(make("n-1", "")));
+    Notification no_time = make("n-1");
+    no_time.occurred_at = 0;
+    assert(!valid(no_time));
+    // A field that doesn't end within its array.
+    Notification unterminated = make("n-1");
+    unterminated.source.fill('x');
+    assert(!valid(unterminated));
+    // The longest ID: 63 characters.
+    assert(valid(make(std::string(63, 'a'))));
+}
+
+void long_text_is_cut_at_a_character() {
+    Notification n;
+    // "é" is two bytes; a cut through it backs off to before it.
+    copy_text(n.source, std::string(30, 'a') + "\xC3\xA9");
+    assert(n.source_view() == std::string(30, 'a'));
+    copy_text(n.source, std::string(40, 'b'));
+    assert(n.source_view() == std::string(31, 'b'));
+}
+
+void the_inbox_keeps_new_ones_and_spots_resends() {
+    Inbox inbox;
+    assert(!inbox.latest() && inbox.arrivals() == 0);
+    assert(inbox.accept(make("n-1")) == Receipt::stored);
+    assert(inbox.latest()->id_view() == "n-1" && inbox.arrivals() == 1);
+    // A resend after a reconnect changes nothing.
+    assert(inbox.accept(make("n-1", "Changed")) == Receipt::duplicate);
+    assert(inbox.latest()->title_view() == "Build failed on main" && inbox.arrivals() == 1);
+    // Invalid ones are never kept.
+    assert(inbox.accept(make("")) == Receipt::invalid);
+    assert(inbox.arrivals() == 1);
+    assert(inbox.accept(make("n-2")) == Receipt::stored);
+    assert(inbox.latest()->id_view() == "n-2" && inbox.arrivals() == 2);
+}
+
+void a_full_inbox_forgets_the_oldest() {
+    Inbox inbox;
+    for (size_t i = 0; i < Inbox::kCapacity; ++i)
+        assert(inbox.accept(make("n-" + std::to_string(i))) == Receipt::stored);
+    assert(inbox.accept(make("n-0")) == Receipt::duplicate);
+    assert(inbox.accept(make("n-new")) == Receipt::stored);
+    // n-0 made room, so it counts as new again; the rest are still known.
+    assert(inbox.accept(make("n-1")) == Receipt::duplicate);
+    assert(inbox.accept(make("n-0")) == Receipt::stored);
+    assert(inbox.latest()->id_view() == "n-0");
+}
+} // namespace
+
+int main() {
+    the_field_rules();
+    long_text_is_cut_at_a_character();
+    the_inbox_keeps_new_ones_and_spots_resends();
+    a_full_inbox_forgets_the_oldest();
+    std::puts("Notification tests passed");
+}
