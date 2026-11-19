@@ -68,6 +68,8 @@ void connect_needs_room() {
 bool same(Reply actual, Reply expected) {
     if (actual.frame != expected.frame)
         return false;
+    if (actual.frame == Frame::pairing_pending)
+        return actual.code == expected.code && actual.expires_in_s == expected.expires_in_s;
     return actual.frame != Frame::rejected || actual.reason == expected.reason;
 }
 
@@ -76,7 +78,10 @@ void every_server_frame_decodes_as_expected(const std::map<std::string, Golden>&
     // so a frame added later for another feature needs no change here.
     const std::map<std::string, Reply> replies = {
         { "b2d paired", { .frame = Frame::paired } },
-        { "b2d pairing_pending", { .frame = Frame::pairing_pending } },
+        { "b2d pairing_pending",
+            { .frame = Frame::pairing_pending,
+                .code = { 'K', '7', 'Q', 'F', '2', 'M', '9', 'X' },
+                .expires_in_s = 600 } },
         { "b2d rejected_malformed_request", { .frame = Frame::rejected, .reason = Reject::malformed_request } },
         { "b2d rejected_unsupported_version", { .frame = Frame::rejected, .reason = Reject::unsupported_version } },
         { "b2d rejected_credential_revoked", { .frame = Frame::rejected, .reason = Reject::credential_revoked } },

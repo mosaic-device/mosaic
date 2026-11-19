@@ -55,9 +55,16 @@ Reply decode_reply(std::span<const uint8_t> frame) {
     switch (envelope.which_payload) {
     case mosaic_device_v1_BackendToDeviceEnvelope_paired_tag:
         return { .frame = Frame::paired };
-    case mosaic_device_v1_BackendToDeviceEnvelope_pairing_pending_tag:
-        // The code and its time left are for the pairing screen (#111).
-        return { .frame = Frame::pairing_pending };
+    case mosaic_device_v1_BackendToDeviceEnvelope_pairing_pending_tag: {
+        Reply reply { .frame = Frame::pairing_pending };
+        const auto& pending = envelope.payload.pairing_pending;
+        static_assert(sizeof(pending.code) == sizeof(reply.code));
+        std::ranges::copy(pending.code, reply.code.begin());
+        // nanopb ends the string within its limit; make sure of it.
+        reply.code.back() = '\0';
+        reply.expires_in_s = pending.expires_in_seconds;
+        return reply;
+    }
     case mosaic_device_v1_BackendToDeviceEnvelope_rejected_tag:
         return { .frame = Frame::rejected, .reason = reject_reason(envelope.payload.rejected.reason) };
     default:

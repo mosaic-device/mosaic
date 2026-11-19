@@ -2,6 +2,7 @@
 
 #include "policy.hpp"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <span>
@@ -17,10 +18,13 @@ inline constexpr size_t kSendLimit = 512;
 inline constexpr size_t kReceiveLimit = 4'096;
 
 // A server frame, as far as the connection needs to know. `reason` matters only for
-// Frame::rejected.
+// Frame::rejected, and `code` and `expires_in_s` only for Frame::pairing_pending. The code is
+// as the server sent it, never logged.
 struct Reply {
     Frame frame = Frame::other;
     Reject reason = Reject::server_busy;
+    std::array<char, 9> code { };
+    uint32_t expires_in_s = 0;
 };
 
 // Writes a connect envelope with kProtocolVersion and `secret` to `out`, which needs room
