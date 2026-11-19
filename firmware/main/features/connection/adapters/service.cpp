@@ -3,6 +3,7 @@
 #include "../frames.hpp"
 #include "../policy.hpp"
 #include "../../provisioning/adapters/settings_store.hpp"
+#include "../../../events/bus.hpp"
 #include "../../../support/secure_erase.hpp"
 
 #include <algorithm>
@@ -109,10 +110,19 @@ namespace {
                     shown = policy_.state();
                     ESP_LOGI(kTag, "Server connection: %s", name(shown));
                 }
+                publish();
             }
         }
 
     private:
+        // Only on a change, so a debug trigger's status holds until the connection moves on.
+        // A post that fails is tried again on the next wake.
+        void publish() {
+            const events::Status status = policy_.status();
+            if (status != published_ && events::set_status(status) == ESP_OK)
+                published_ = status;
+        }
+
         TickType_t wait() const {
             const uint64_t now = now_ms();
             uint64_t ms = kMaxWaitMs;
@@ -197,6 +207,8 @@ namespace {
 
         Policy policy_;
         uint32_t attempt_ = 0;
+        // What the bus starts with.
+        events::Status published_ = events::Status::disconnected;
     };
 
     void run(void*) {
