@@ -1,4 +1,5 @@
 #include "../inbox.hpp"
+#include "../store.hpp"
 
 #include <cassert>
 #include <cstdio>
@@ -74,6 +75,14 @@ void a_full_inbox_forgets_the_oldest() {
     assert(inbox.accept(make("n-0")) == Receipt::stored);
     assert(inbox.latest()->id_view() == "n-0");
 }
+void the_store_shares_the_newest() {
+    Notification out;
+    uint32_t arrivals = 99;
+    assert(!store::latest(out, arrivals) && arrivals == 0);
+    assert(store::accept(make("s-1")) == Receipt::stored);
+    assert(store::accept(make("s-1")) == Receipt::duplicate);
+    assert(store::latest(out, arrivals) && arrivals == 1 && out.id_view() == "s-1");
+}
 } // namespace
 
 int main() {
@@ -81,5 +90,6 @@ int main() {
     long_text_is_cut_at_a_character();
     the_inbox_keeps_new_ones_and_spots_resends();
     a_full_inbox_forgets_the_oldest();
+    the_store_shares_the_newest();
     std::puts("Notification tests passed");
 }

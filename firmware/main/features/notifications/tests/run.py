@@ -9,7 +9,12 @@ from pathlib import Path
 
 feature = Path(__file__).resolve().parents[1]
 compiler = shlex.split(os.environ.get("CXX", "c++"))
-sources = [feature / "notification.cpp", feature / "inbox.cpp", feature / "tests/notifications_test.cpp"]
+sources = [
+    feature / "notification.cpp",
+    feature / "inbox.cpp",
+    feature / "store.cpp",
+    feature / "tests/notifications_test.cpp",
+]
 
 with tempfile.TemporaryDirectory(prefix="mosaic-notifications-") as work:
     env = {**os.environ, "TMPDIR": work, "TMP": work, "TEMP": work}
