@@ -14,10 +14,11 @@ namespace {
     lv_obj_t* s_time = nullptr;
     lv_obj_t* s_date = nullptr;
     lv_obj_t* s_trouble = nullptr;
+    lv_obj_t* s_trouble_text = nullptr;
     std::time_t s_checked = -1; // The last second the clock text was checked.
     std::string s_shown_time;
     std::string s_shown_date;
-    bool s_shown_trouble = false;
+    events::Status s_shown_status = events::Status::connected;
 
     void open_settings(components::Request, void*) {
         ui::navigation::open(ui::navigation::Screen::settings);
@@ -34,6 +35,20 @@ namespace {
         show_text(s_time, s_shown_time, clock::now_text(time));
         show_text(s_date, s_shown_date, clock::today_text(date));
     }
+    // What the trouble line says for a status, or nothing when all is well.
+    const char* trouble_text(events::Status status) {
+        switch (status) {
+        case events::Status::error:
+            return "Can't reach the server. Retrying.";
+        case events::Status::update_required:
+            return "The server needs newer firmware on this device.";
+        case events::Status::disconnected:
+        case events::Status::pairing:
+        case events::Status::connected:
+            break;
+        }
+        return nullptr;
+    }
     // Shown while the server is out of reach; the ring is amber for the same reason.
     lv_obj_t* trouble_line(lv_obj_t* parent) {
         auto* row = lv_obj_create(parent);
@@ -48,8 +63,8 @@ namespace {
         lv_obj_set_style_radius(dot, TOKEN_RADIUS_FULL, 0);
         lv_obj_set_style_bg_color(dot, lv_color_hex(TOKEN_COLOR_WARNING_DARK), 0);
         lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
-        auto* label = components::text(row, "Can't reach the server. Retrying.", styles::Text::body, true);
-        lv_obj_set_width(label, LV_SIZE_CONTENT);
+        s_trouble_text = components::text(row, "", styles::Text::body, true);
+        lv_obj_set_width(s_trouble_text, LV_SIZE_CONTENT);
         lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
         return row;
     }
@@ -68,17 +83,19 @@ namespace {
         // The only control, so the encoder starts on it.
         auto* settings = components::icon_button(header, { .callback = open_settings });
         show_time();
-        return s_time && s_date && s_trouble && settings;
+        return s_time && s_date && s_trouble && s_trouble_text && settings;
     }
     // Every UI tick; checks the clock once a second and redraws only what changed.
     void update(void*) {
-        const bool trouble = events::status() == events::Status::error;
-        if (trouble != s_shown_trouble) {
-            s_shown_trouble = trouble;
-            if (trouble)
+        const events::Status status = events::status();
+        if (status != s_shown_status) {
+            s_shown_status = status;
+            if (const char* text = trouble_text(status)) {
+                lv_label_set_text(s_trouble_text, text);
                 lv_obj_remove_flag(s_trouble, LV_OBJ_FLAG_HIDDEN);
-            else
+            } else {
                 lv_obj_add_flag(s_trouble, LV_OBJ_FLAG_HIDDEN);
+            }
         }
         const std::time_t now = std::time(nullptr);
         if (now == s_checked)
