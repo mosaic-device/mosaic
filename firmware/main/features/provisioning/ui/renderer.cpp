@@ -134,7 +134,7 @@ Recovery recovery() {
     if (!has_rendered || credential_session)
         return { };
     return { .prompt = rendered.recovery_prompt.view(),
-        .available = rendered.recovery_visible && rendered.recovery_enabled };
+        .available = rendered.recovery_allowed && rendered.recovery_enabled };
 }
 void request_setup() {
     if (status.action_callback)

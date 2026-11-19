@@ -46,6 +46,9 @@ struct ViewState {
     ViewText<9> code;
     bool recovery_visible = false;
     bool recovery_enabled = true;
+    // Setup recovery can be asked for now, even where this screen hides its button: Settings
+    // offers it to a paired device.
+    bool recovery_allowed = false;
     ViewText<192> setup_failure;
     uint32_t session = 0;
     // For navigation: startup has not reported a state yet, or Wi-Fi is joined with

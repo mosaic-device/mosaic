@@ -14,7 +14,7 @@ bool online();
 bool setup_open();
 // Setup recovery as the status screen offers it, for Settings on a paired device. LVGL
 // context. `prompt` is the status screen's current prompt, kEnterSetup when nothing is in
-// progress; `available` is false where the screen hides or disables it.
+// progress; `available` is false while setup can't be asked for, or the button is disabled.
 struct Recovery {
     std::string_view prompt;
     bool available = false;

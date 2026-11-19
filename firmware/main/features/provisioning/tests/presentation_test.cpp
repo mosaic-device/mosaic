@@ -73,6 +73,8 @@ int main() {
         // Just paired: says so, briefly, before Home.
         const auto paired = present(s.snapshot(), 0, Status::connected, pairing);
         assert(paired.heading == "Paired" && paired.code.empty() && !paired.recovery_visible);
+        // Hidden on that screen, but Settings still offers setup to the paired device.
+        assert(paired.recovery_allowed && paired.recovery_enabled);
         // Unreachable, a bad address or a TLS failure: point to setup recovery.
         const auto error = present(s.snapshot(), 0, Status::error);
         assert(error.heading == "Can't reach the server");
@@ -81,6 +83,7 @@ int main() {
         // A new address won't fix an old firmware, so nothing is offered.
         const auto update = present(s.snapshot(), 0, Status::update_required);
         assert(update.heading == "Update required" && !update.recovery_visible && update.online);
+        assert(update.recovery_allowed);
     }
     (void)s.dispatch(SetupTapped { 2 }, 10);
     assert(s.snapshot().recovery == RecoveryState::confirming);
