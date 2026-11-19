@@ -9,14 +9,30 @@ import sys
 
 PLACEHOLDER = "${MOSAIC_FIRMWARE_DIR}/components/esp_lcd_hx8394"
 ENTRY = re.compile(
-    r"(^  esp_lcd_hx8394:\n(?:(?!^  \S)[\s\S])*?^      path: )([^\n]+)",
+    r"(^  esp_lcd_hx8394:\r?\n(?:(?!^  \S)[\s\S])*?^      path: )([^\r\n]+)",
     re.MULTILINE,
 )
 
 
+def same_path(found, expected):
+    # IDF may write the path back in its own spelling, such as with backslashes on Windows.
+    return found == expected or pathlib.Path(found) == pathlib.Path(expected)
+
+
+def read_lock(lock):
+    # Keep the lockfile's own line endings: text mode would turn LF into CRLF on Windows.
+    with lock.open(newline="") as file:
+        return file.read()
+
+
+def write_lock(lock, text):
+    with lock.open("w", newline="") as file:
+        file.write(text)
+
+
 def replace_path(text, expected, replacement):
     matches = list(ENTRY.finditer(text))
-    if len(matches) != 1 or matches[0][2] != expected:
+    if len(matches) != 1 or not same_path(matches[0][2], expected):
         raise RuntimeError(
             "Unexpected esp_lcd_hx8394 lock path; refusing to rewrite it"
         )
@@ -82,10 +98,10 @@ def run(firmware, args, executable="idf.py"):
     with guard.open("x"):
         pass
     try:
-        absolute = (firmware / "components/esp_lcd_hx8394").as_posix()
-        original = lock.read_text()
+        absolute = str(firmware / "components" / "esp_lcd_hx8394")
+        original = read_lock(lock)
         expanded = replace_path(original, PLACEHOLDER, absolute)
-        lock.write_text(expanded)
+        write_lock(lock, expanded)
         try:
             result = subprocess.run(
                 [*command(executable), *args], cwd=firmware
@@ -95,8 +111,8 @@ def run(firmware, args, executable="idf.py"):
             return result
         finally:
             # Keep IDF's other edits, including real dependency version changes.
-            current = lock.read_text()
-            lock.write_text(replace_path(current, absolute, PLACEHOLDER))
+            current = read_lock(lock)
+            write_lock(lock, replace_path(current, absolute, PLACEHOLDER))
     finally:
         guard.unlink()
 

@@ -60,6 +60,29 @@ class FirmwareLockTests(unittest.TestCase):
                 )
                 self.assertFalse((firmware / ".mosaic-idf.lock").exists())
 
+    def test_path_respelled_by_idf_is_restored_with_line_endings_kept(self):
+        with tempfile.TemporaryDirectory() as directory:
+            firmware = pathlib.Path(directory)
+            lock = firmware / "dependencies.lock"
+            original = (
+                "dependencies:\r\n"
+                "  esp_lcd_hx8394:\r\n"
+                "    source:\r\n"
+                f"      path: {PLACEHOLDER}\r\n"
+                "      type: local\r\n"
+            ).encode()
+            lock.write_bytes(original)
+            # Rewrites the path with forward slashes, as IDF may when it saves the lockfile.
+            child = (
+                "import pathlib; "
+                "p=pathlib.Path('dependencies.lock'); "
+                "a=str(pathlib.Path.cwd() / 'components' / 'esp_lcd_hx8394'); "
+                "t=p.read_bytes().decode(); assert a in t; "
+                "p.write_bytes(t.replace(a, pathlib.Path(a).as_posix()).encode())"
+            )
+            self.assertEqual(run(firmware, ["-c", child], sys.executable), 0)
+            self.assertEqual(lock.read_bytes(), original)
+
     def test_missing_executable_restores_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             firmware = pathlib.Path(directory)
