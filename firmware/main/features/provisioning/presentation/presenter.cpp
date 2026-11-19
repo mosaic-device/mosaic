@@ -48,6 +48,7 @@ ViewState present(const Snapshot& s, uint32_t session, events::Status server) {
         v.recovery_visible = true;
         switch (server) {
         case events::Status::disconnected:
+        case events::Status::reconnecting:
             v.message = "Connecting to the server...";
             break;
         case events::Status::pairing:

@@ -20,7 +20,7 @@ namespace {
         } else if (argc == 2 && events::parse(argv[1], status)) {
             err = events::set_status(status);
         } else {
-            std::printf("usage: trigger notification|pairing|connected|disconnected|error|update\n");
+            std::printf("usage: trigger notification|pairing|connected|disconnected|error|update|reconnecting\n");
             return 1;
         }
         if (err != ESP_OK) {
@@ -64,8 +64,9 @@ namespace {
     }
 
     constexpr Command kCommands[] = {
-        { "trigger", "Post a notification, or set status: pairing, connected, disconnected, error or update", "<event>",
-            trigger },
+        { "trigger",
+            "Post a notification, or set status: pairing, connected, disconnected, error, update or reconnecting",
+            "<event>", trigger },
         { "volume", "Show or set the saved cue volume (10-100)", "[10-100]", volume },
         { "mute", "Show or set the saved cue muting", "[on|off]", mute },
     };

@@ -52,7 +52,8 @@ namespace {
     constexpr int kStartRow = kFirstRowY;
     constexpr int kDeviceRow = kStartRow + kRowStep;
     constexpr int kServerRow = kDeviceRow + kRowStep;
-    constexpr int kNetworkRow = kServerRow + kRowStep;
+    constexpr int kNotificationRow = kServerRow + kRowStep;
+    constexpr int kNetworkRow = kNotificationRow + kRowStep;
     constexpr int kPhoneRow = kNetworkRow + kRowStep;
     constexpr int kRoomRow = kPhoneRow + kRowStep;
     constexpr int kSliderY = kRoomRow + kRowHeight / 2;
@@ -315,13 +316,16 @@ void DeviceView::draw_panel() {
     const auto current = events::status();
     for (const auto status_choice :
         { events::Status::pairing, events::Status::connected, events::Status::disconnected, events::Status::error,
-            events::Status::update_required }) {
+            events::Status::update_required, events::Status::reconnecting }) {
         const std::string name = events::name(status_choice);
         x = button(x, kServerRow, title_case(name), current == status_choice, true, [name] {
             run_in_background("trigger " + name);
         }) + kButtonGap;
     }
-    button(x + kGroupGap - kButtonGap, kServerRow, "Send notification", false, true,
+
+    // What arrives once the device is paired.
+    row_label(kNotificationRow, "Notifications", "What the server sends");
+    button(kControlsX, kNotificationRow, "Send notification", false, true,
         [] { run_in_background("trigger notification"); });
 
     // How the saved network answers.

@@ -79,7 +79,7 @@ Raise logging with these options rather than the global log level: early boot th
 
 With `MOSAIC_DEBUG_TRIGGERS` (and in the preview), the `mosaic>` console accepts:
 
-- `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected`, `trigger error`, `trigger update`: publish that event as the server connection will.
+- `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected`, `trigger error`, `trigger update`, `trigger reconnecting`: publish that event as the server connection will.
 - `volume [10-100]`, `mute [on|off]`: show or change those settings.
 
 The normal firmware contains no trigger code; CI checks this.

@@ -66,6 +66,9 @@ Pattern pattern(Status status, bool paired) {
     switch (status) {
     case Status::connected:
         return { .ring = kOff, .strip = kAmbient };
+    case Status::reconnecting:
+        // Calm while it reconnects: the ring lights only once the device is offline.
+        return { .ring = kOff, .strip = strip };
     case Status::pairing:
         return { .ring = kPairing, .strip = kOff };
     case Status::error:

@@ -6,8 +6,8 @@
 using namespace mosaic::events;
 
 int main() {
-    for (Status value :
-        { Status::disconnected, Status::pairing, Status::connected, Status::error, Status::update_required }) {
+    for (Status value : { Status::disconnected, Status::pairing, Status::connected, Status::error,
+             Status::update_required, Status::reconnecting }) {
         Status parsed = Status::error;
         assert(parse(name(value), parsed));
         assert(parsed == value);
@@ -24,6 +24,7 @@ int main() {
     static_assert(!paired_after(false, Status::error));
     static_assert(paired_after(true, Status::update_required));
     static_assert(!paired_after(false, Status::update_required));
+    static_assert(paired_after(true, Status::reconnecting));
     static_assert(!paired_after(true, Status::disconnected));
     static_assert(!paired_after(true, Status::pairing));
 }
