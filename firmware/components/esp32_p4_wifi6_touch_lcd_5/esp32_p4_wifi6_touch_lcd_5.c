@@ -400,6 +400,7 @@ esp_err_t bsp_display_new_with_handles(const bsp_display_config_t* config, bsp_l
     esp_lcd_dsi_bus_config_t bus_config = {
         .bus_id             = 0,
         .num_data_lanes     = BSP_LCD_MIPI_DSI_LANE_NUM,
+        // 0 lets ESP-IDF pick the PHY clock for the chip revision; MIPI_DSI_PHY_CLK_SRC_DEFAULT only suits revisions below v3.
         .phy_clk_src        = 0,
         .lane_bit_rate_mbps = BSP_LCD_MIPI_DSI_LANE_BITRATE_MBPS,
     };
