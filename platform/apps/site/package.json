@@ -16,11 +16,13 @@
     "@astrojs/starlight": "0.43.1",
     "@mosaic/assets": "workspace:*",
     "@mosaic/tokens": "workspace:*",
-    "astro": "7.4.13"
+    "astro": "7.4.13",
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.12",
     "@mosaic/typescript-config": "workspace:*",
+    "@types/three": "0.187.0",
     "typescript": "~6.0.2"
   }
 }
