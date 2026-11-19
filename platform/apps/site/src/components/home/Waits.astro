@@ -13,8 +13,9 @@ import Device from './Device.astro'
       </h2>
 
       <div class="glow desktop-only" aria-hidden="true"></div>
-      <div class="scene at" style="--x: 400; --y: 290; --w: 859">
+      <div class="scene at" style="--x: 400; --y: 290; --w: 859" data-slot="waits">
         <Device
+          class="stand-in"
           screen="review"
           ring="blue"
           label="Mosaic display showing a GitHub review request: Avery requested your review on #194. Its knob ring is lit blue."
@@ -74,7 +75,8 @@ import Device from './Device.astro'
         return
       }
       const { top, height } = section.getBoundingClientRect()
-      const progress = -top / Math.max(1, height - innerHeight)
+      // The steps use the first three quarters; the rest zooms in on the knob.
+      const progress = -top / Math.max(1, height - innerHeight) / 0.75
       const step = progress < 1 / 3 ? '1' : progress < 2 / 3 ? '2' : '3'
       if (section.dataset.step === step) return
       section.dataset.step = step
@@ -183,7 +185,7 @@ import Device from './Device.astro'
 
   @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
     .waits {
-      height: 300vh;
+      height: 350vh;
     }
     .pin {
       position: sticky;

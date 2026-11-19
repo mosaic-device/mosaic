@@ -18,5 +18,15 @@ const { title, description } = Astro.props
   </head>
   <body>
     <slot />
+    <canvas class="device-scene" aria-hidden="true"></canvas>
+    <script>
+      // The 3D device. Until it is ready, and if WebGL isn't available, the
+      // drawn stand-ins in the hero, S2 and S3 stay.
+      const canvas = document.querySelector<HTMLCanvasElement>('.device-scene')
+      if (canvas)
+        import('../scripts/device/scene')
+          .then(({ mountScene }) => mountScene(canvas))
+          .catch((error) => console.warn('Mosaic: no 3D device', error))
+    </script>
   </body>
 </html>

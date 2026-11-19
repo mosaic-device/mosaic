@@ -1,7 +1,7 @@
 ---
-// S6: built from open parts. On desktop the section pins and the real device
-// model pulls apart into its layers as you scroll, labels fading in beside each
-// part. Until the model loads, and on phones, the line drawing stands in.
+// S6: built from open parts. The device, carried over from S5, lies down and
+// comes apart into its layers as you scroll; labels follow each part. The scene
+// is 3D (scripts/device). Phones list the parts under it.
 import { links } from './links'
 
 const labels = [
@@ -27,57 +27,29 @@ const labels = [
         <a class="button primary" href={links.build}>Read the build guide</a>
       </div>
 
-      <svg
-        class="drawing at"
-        style="--x: 500; --y: 86; --w: 858"
+      <div
+        class="slot at"
+        style="--x: 500; --y: 50; --w: 640"
+        data-slot="layers"
         role="img"
-        aria-label="Exploded drawing of Mosaic's layers: push knob, acrylic front, 5-inch touch display, carrier PCB and 3D-printed case"
-        viewBox="0 0 660 560"
+        aria-label="Mosaic pulled apart into its layers: push knob, acrylic front, 5-inch touch display, carrier PCB and 3D-printed case"
       >
-        <g fill="#0F1010" stroke="#3A3D40" stroke-width="1">
-          <polygon points="60,482 340,482 420,438 140,438"></polygon>
-          <polygon points="110,370 290,370 360,330 180,330" fill="#14100E" stroke="#4A3B33"
-          ></polygon>
-          <polygon points="80,290 320,290 396,248 156,248" fill="#0E1411" stroke="#2C4237"
-          ></polygon>
-          <polygon points="60,210 340,210 420,166 140,166"></polygon>
-          <polygon points="60,140 340,140 420,96 140,96"></polygon>
-        </g>
-        <polygon points="87,204 335,204 393,172 145,172" fill="#090A0A" stroke="#3A3D40"
-        ></polygon>
-        <ellipse cx="330" cy="66" rx="22" ry="10" fill="#141516" stroke="#3A3D40"></ellipse>
-        <ellipse
-          cx="330"
-          cy="66"
-          rx="27"
-          ry="13"
-          fill="none"
-          stroke="#1E64FF"
-          stroke-opacity="0.85"></ellipse>
-        <path d="M60 482 L 340 482" stroke="#FFA050" stroke-opacity="0.75" stroke-width="1.5"
-        ></path>
-        <g stroke="#303335" stroke-dasharray="2 4">
-          <path d="M360 66 H 520"></path>
-          <path d="M382 118 H 520"></path>
-          <path d="M382 188 H 520"></path>
-          <path d="M326 350 H 520"></path>
-          <path d="M382 460 H 520"></path>
-        </g>
-        <g font-size="11" fill="#F2F2EF">
-          <text x="530" y="64">Push knob</text>
-          <text x="530" y="116">Acrylic front</text>
-          <text x="530" y="186">5" touch display</text>
-          <text x="530" y="348">Carrier PCB</text>
-          <text x="530" y="458">Case</text>
-        </g>
-        <g font-size="9.5" fill="#92979B">
-          <text x="530" y="79">With an LED ring</text>
-          <text x="530" y="131">Over the screen</text>
-          <text x="530" y="201">ESP32-P4, Wi-Fi 6</text>
-          <text x="530" y="363">Open KiCad files</text>
-          <text x="530" y="473">3D-printed</text>
-        </g>
-      </svg>
+      </div>
+
+      {
+        labels.map((l) => (
+          <div
+            class="anchored column"
+            style="--col: 1190"
+            data-anchor={l.part}
+            data-section="layers"
+            aria-hidden="true"
+          >
+            <span class="name">{l.name}</span>
+            <span class="note">{l.note}</span>
+          </div>
+        ))
+      }
 
       <ul class="parts" aria-label="Parts">
         {
@@ -89,145 +61,24 @@ const labels = [
           ))
         }
       </ul>
-
-      <div class="model desktop-only" aria-hidden="true">
-        <canvas class="at" style="--x: 470; --y: 40; --w: 720"></canvas>
-        <svg class="leaders">
-          {labels.map(() => <line />)}
-        </svg>
-        <ul class="labels">
-          {
-            labels.map((l) => (
-              <li data-part={l.part}>
-                <span class="name">{l.name}</span>
-                <span class="note">{l.note}</span>
-              </li>
-            ))
-          }
-        </ul>
-      </div>
     </div>
   </div>
 </section>
 
-<script>
-  const section = document.querySelector<HTMLElement>('.layers')
-  const wide = matchMedia('(min-width: 900px)')
-  const still = matchMedia('(prefers-reduced-motion: reduce)')
-
-  function progressOf(el: HTMLElement) {
-    if (still.matches) return 1
-    const { top, height } = el.getBoundingClientRect()
-    // Open over the first two thirds of the pinned stretch, then hold.
-    return (-top / Math.max(1, height - innerHeight)) * 1.5
-  }
-
-  async function start(el: HTMLElement) {
-    const stage = el.querySelector<HTMLElement>('.stage')!
-    const canvas = el.querySelector<HTMLCanvasElement>('canvas')!
-    const lines = el.querySelectorAll<SVGLineElement>('.leaders line')
-    const labels = [...el.querySelectorAll<HTMLElement>('.labels li')].map(
-      (label, i) => ({ part: label.dataset.part!, label, leader: lines[i]! }),
-    )
-    try {
-      const { mountExploded } = await import('../../scripts/exploded')
-      const view = await mountExploded(canvas, labels, stage)
-      el.classList.add('loaded')
-      const update = () => view.setProgress(progressOf(el))
-      addEventListener('scroll', update, { passive: true })
-      addEventListener('resize', () => {
-        view.resize()
-        update()
-      })
-      still.addEventListener('change', update)
-      update()
-    } catch (error) {
-      // No WebGL or the model failed: the drawing stays.
-      console.warn('Mosaic: showing the drawing instead of the 3D model', error)
-    }
-  }
-
-  if (section && wide.matches) {
-    // Load three.js and the model only as the section comes near.
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return
-        observer.disconnect()
-        void start(section)
-      },
-      { rootMargin: '100% 0px' },
-    )
-    observer.observe(section)
-  }
-</script>
-
 <style>
-  .drawing {
-    display: block;
-    width: 100%;
-    height: auto;
-    font-family: var(--font-family-sans);
-    transition: opacity 600ms ease;
-  }
   .lede {
     margin-top: 24px;
   }
   .button {
     margin-top: 32px;
   }
-
-  .model {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 600ms ease;
+  .slot {
+    aspect-ratio: 640 / 800;
   }
-  .loaded .model {
-    opacity: 1;
-  }
-  .loaded .drawing {
-    opacity: 0;
-  }
-  canvas {
-    aspect-ratio: 720 / 820;
-  }
-  .leaders {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-  }
-  .leaders line {
-    stroke: var(--color-border);
-    stroke-dasharray: 2 4;
-    opacity: 0;
-  }
-  .labels {
-    position: absolute;
-    left: calc(1200 * var(--u));
-    top: 0;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-  .labels li {
-    position: absolute;
-    left: 0;
-    display: flex;
-    flex-direction: column;
-    width: max-content;
-    transform: translateY(-50%);
-    opacity: 0;
-    line-height: 1.4;
-  }
-  .name {
-    font-size: max(13px, calc(15 * var(--u)));
+  .parts .name {
     font-weight: 500;
   }
-  .note {
-    font-size: max(12px, calc(13 * var(--u)));
+  .parts .note {
     color: var(--color-muted-foreground);
   }
 
@@ -238,6 +89,9 @@ const labels = [
       bottom: calc(120 * var(--u));
       width: calc(360 * var(--u));
       z-index: 1;
+    }
+    .parts {
+      display: none;
     }
   }
 
@@ -262,28 +116,18 @@ const labels = [
       display: flex;
       flex-direction: column;
     }
-    .drawing {
-      order: -1;
-      margin-bottom: 40px;
-    }
-    /* At phone width the drawing's labels are too small to read; list the
-       parts under it instead. */
-    .drawing text,
-    .drawing [stroke-dasharray] {
-      display: none;
+    .slot {
+      order: -2;
+      width: 80%;
+      align-self: center;
     }
     .parts {
       display: grid;
       gap: 12px;
-      margin: 0 0 48px;
+      margin: 24px 0 48px;
       padding: 0;
       list-style: none;
       order: -1;
-    }
-  }
-  @media (min-width: 900px) {
-    .parts {
-      display: none;
     }
   }
 </style>

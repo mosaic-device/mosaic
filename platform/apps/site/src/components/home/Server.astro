@@ -1,298 +1,102 @@
 ---
-// S5: everything on the dashed plate is yours. Text holds the top left; the
-// isometric scene drops towards the bottom right.
+// S5: everything on the plate is yours. On desktop the section pins: the device
+// lands on the plate, your server and laptop rise beside it, and a review
+// request travels from your server to Mosaic, whose ring turns blue. The scene
+// is 3D (scripts/device); the labels here follow it.
 import { links } from './links'
 ---
 
-<section class="stage server" aria-labelledby="server-title">
-  <div class="copy at" style="--x: 160; --y: 100; --w: 360">
-    <h2 id="server-title" class="display">Your server.<br />Your tokens.</h2>
-    <p class="lede">
-      Mosaic runs on a server you host, in Docker or as a single binary. Your
-      tokens and your activity never pass through anyone else's servers.
-    </p>
-    <p class="lede">There's no Mosaic cloud and nothing to sign up for.</p>
-    <a class="arrow-link" href={links.selfHosting}>
-      Read the self-hosting guide
-      <svg
-        aria-hidden="true"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg
-      >
-    </a>
-  </div>
+<section class="server" aria-labelledby="server-title">
+  <div class="pin">
+    <div class="stage">
+      <div class="copy at" style="--x: 160; --y: 100; --w: 360">
+        <h2 id="server-title" class="display">Your server.<br />Your tokens.</h2>
+        <p class="lede">
+          Mosaic runs on a server you host, in Docker or as a single binary.
+          Your tokens and your activity never pass through anyone else's
+          servers.
+        </p>
+        <p class="lede">There's no Mosaic cloud and nothing to sign up for.</p>
+        <a class="arrow-link" href={links.selfHosting}>
+          Read the self-hosting guide
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg
+          >
+        </a>
+      </div>
 
-  <div class="scene at" style="--x: 470; --y: 270; --w: 960">
-    <svg
-      role="img"
-      aria-label="Isometric drawing: your server, Mosaic and your laptop sit on a plate marked Yours. Your accounts float outside it. A review request travels from your server to Mosaic, whose ring is lit blue. Your tokens live on your server, which also runs the admin app; the companion app runs on your laptop."
-      viewBox="-300 -140 960 560"
-    >
-      <defs
-        ><filter id="server-soft" x="-50%" y="-50%" width="200%" height="200%"
-          ><feGaussianBlur stdDeviation="14"></feGaussianBlur></filter
-        ></defs
+      <div
+        class="slot at"
+        style="--x: 470; --y: 270; --w: 960"
+        data-slot="server"
+        role="img"
+        aria-label="Your server, Mosaic and your laptop sit on a plate marked Yours. Your accounts float outside it. A review request travels from your server to Mosaic, whose ring turns blue. Your tokens live on your server, which also runs the admin app; the companion app runs on your laptop."
       >
-      <polygon
-        points="-277.1,172.0 86.6,382.0 86.6,370.0 -277.1,160.0"
-        fill="#0A0B0B"
-        stroke="#222426"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="363.7,222.0 86.6,382.0 86.6,370.0 363.7,210.0"
-        fill="#080909"
-        stroke="#222426"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="0.0,0.0 363.7,210.0 86.6,370.0 -277.1,160.0"
-        fill="#0D0E0E"
-        stroke="#222426"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="0.0,0.0 363.7,210.0 86.6,370.0 -277.1,160.0"
-        fill="none"
-        stroke="#7540B5"
-        stroke-linejoin="round"
-        stroke-width="1.5"
-        stroke-dasharray="5 6"></polygon>
-      <!-- Your server -->
-      <polygon
-        points="-112.6,105.0 -17.3,160.0 -17.3,96.0 -112.6,41.0"
-        fill="#111213"
-        stroke="#4A4D50"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="77.9,105.0 -17.3,160.0 -17.3,96.0 77.9,41.0"
-        fill="#0D0E0E"
-        stroke="#4A4D50"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-17.3,-14.0 77.9,41.0 -17.3,96.0 -112.6,41.0"
-        fill="#18191B"
-        stroke="#4A4D50"
-        stroke-linejoin="round"></polygon>
-      <path
-        d="M-21.7 8.5 L 39.0 43.5"
-        stroke="#303335"
-        fill="none"
-        stroke-width="1.5"
-        stroke-linecap="round"></path>
-      <path
-        d="M-40.7 19.5 L 19.9 54.5"
-        stroke="#303335"
-        fill="none"
-        stroke-width="1.5"
-        stroke-linecap="round"></path>
-      <path
-        d="M-59.8 30.5 L 0.9 65.5"
-        stroke="#303335"
-        fill="none"
-        stroke-width="1.5"
-        stroke-linecap="round"></path>
-      <circle cx="56.3" cy="43.5" r="2.5" fill="#92979B"></circle>
-      <!-- Mosaic -->
-      <polygon
-        points="13.9,222.0 143.8,297.0 143.8,213.0 13.9,138.0"
-        fill="#161718"
-        stroke="#3A3D40"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="164.5,285.0 143.8,297.0 143.8,213.0 164.5,201.0"
-        fill="#111213"
-        stroke="#3A3D40"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="34.6,126.0 164.5,201.0 143.8,213.0 13.9,138.0"
-        fill="#1A1B1D"
-        stroke="#3A3D40"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="22.5,215.0 100.5,260.0 100.5,198.0 22.5,153.0"
-        fill="#070808"
-        stroke="#2E3133"
-        stroke-linejoin="round"></polygon>
-      <path
-        d="M31.2 176.0 L 65.8 196.0"
-        stroke="#303335"
-        fill="none"
-        stroke-width="3"
-        stroke-linecap="round"></path>
-      <path
-        d="M31.2 188.0 L 90.1 222.0"
-        stroke="#F2F2EF"
-        fill="none"
-        stroke-width="4"
-        stroke-linecap="round"
-        stroke-opacity="0.8"></path>
-      <ellipse
-        cx="123.0"
-        cy="242.0"
-        rx="16"
-        ry="20"
-        fill="#1E64FF"
-        fill-opacity="0.16"
-        transform="rotate(-30 123.0 242.0)"></ellipse>
-      <ellipse
-        cx="123.0"
-        cy="242.0"
-        rx="8"
-        ry="10"
-        fill="#232426"
-        stroke="#1E64FF"
-        stroke-width="2"
-        transform="rotate(-30 123.0 242.0)"></ellipse>
-      <ellipse
-        cx="99.6"
-        cy="243.5"
-        rx="90"
-        ry="26"
-        fill="#FFA050"
-        fill-opacity="0.10"
-        filter="url(#server-soft)"></ellipse>
-      <!-- Your laptop -->
-      <polygon
-        points="-216.5,165.0 -121.2,220.0 -121.2,216.0 -216.5,161.0"
-        fill="#111213"
-        stroke="#4A4D50"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-69.3,190.0 -121.2,220.0 -121.2,216.0 -69.3,186.0"
-        fill="#0D0E0E"
-        stroke="#4A4D50"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-164.5,131.0 -69.3,186.0 -121.2,216.0 -216.5,161.0"
-        fill="#18191B"
-        stroke="#4A4D50"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-164.5,131.0 -69.3,186.0 -69.3,128.0 -164.5,73.0"
-        fill="#111213"
-        stroke="#4A4D50"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-157.6,129.0 -76.2,176.0 -76.2,130.0 -157.6,83.0"
-        fill="#070808"
-        stroke="#2E3133"
-        stroke-linejoin="round"></polygon>
-      <!-- Your accounts -->
-      <polygon
-        points="-183.6,-84.0 -164.5,-73.0 -164.5,-79.0 -183.6,-90.0"
-        fill="#1A1B1D"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-145.5,-84.0 -164.5,-73.0 -164.5,-79.0 -145.5,-90.0"
-        fill="#161718"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-164.5,-101.0 -145.5,-90.0 -164.5,-79.0 -183.6,-90.0"
-        fill="#222426"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-157.6,-69.0 -138.6,-58.0 -138.6,-64.0 -157.6,-75.0"
-        fill="#1A1B1D"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-119.5,-69.0 -138.6,-58.0 -138.6,-64.0 -119.5,-75.0"
-        fill="#161718"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-138.6,-86.0 -119.5,-75.0 -138.6,-64.0 -157.6,-75.0"
-        fill="#222426"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-196.6,-61.5 -177.5,-50.5 -177.5,-56.5 -196.6,-67.5"
-        fill="#1A1B1D"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-158.5,-61.5 -177.5,-50.5 -177.5,-56.5 -158.5,-67.5"
-        fill="#161718"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-177.5,-78.5 -158.5,-67.5 -177.5,-56.5 -196.6,-67.5"
-        fill="#222426"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-170.6,-46.5 -151.6,-35.5 -151.6,-41.5 -170.6,-52.5"
-        fill="#1A1B1D"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-132.5,-46.5 -151.6,-35.5 -151.6,-41.5 -132.5,-52.5"
-        fill="#161718"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <polygon
-        points="-151.6,-63.5 -132.5,-52.5 -151.6,-41.5 -170.6,-52.5"
-        fill="#222426"
-        stroke="#303335"
-        stroke-linejoin="round"></polygon>
-      <!-- Connections -->
-      <path
-        d="M-138.6 -56.0 L -60.6 35.0"
-        stroke="#303335"
-        fill="none"
-        stroke-width="1.5"
-        stroke-dasharray="3 5"></path>
-      <path d="M26.0 101.0 L 24.2 176.0" stroke="#3A3D40" fill="none" stroke-width="1.5"
-      ></path>
-      <path
-        d="M21.7 217.5 L -86.6 200.0"
-        stroke="#3A3D40"
-        fill="none"
-        stroke-width="1.5"
-        stroke-dasharray="3 5"></path>
-      <g transform="translate(26.0 140.0)"
-        ><rect
-          x="-58"
-          y="-13"
-          width="116"
-          height="26"
-          rx="13"
-          fill="#141516"
-          stroke="#1E64FF"
-          stroke-opacity="0.6"></rect><circle cx="-44" cy="0" r="3.5" fill="#1E64FF"
-        ></circle><text x="-34" y="4.5" font-size="12" fill="#F2F2EF">Review request</text
-        ></g
+      </div>
+
+      <div
+        class="anchored column"
+        style="--col: 1170"
+        data-anchor="server"
+        data-section="server"
+        aria-hidden="true"
       >
-      <!-- Labels -->
-      <path
-        d="M77.9 41.0 L 117.9 11.0 L 392.0 11.0"
-        stroke="#303335"
-        stroke-dasharray="2 4"
-        fill="none"></path>
-      <text x="400" y="7" class="name">Your server</text>
-      <text x="400" y="27" class="note">Docker or a single binary</text>
-      <text x="400" y="47" class="note accent">Your tokens live here</text>
-      <text x="400" y="67" class="note">Admin app: connect accounts, pair</text>
-      <path d="M164.5 201.0 L 392.0 201.0" stroke="#303335" stroke-dasharray="2 4" fill="none"
-      ></path>
-      <text x="400" y="205" class="name">Mosaic</text>
-      <text x="400" y="225" class="note">On your desk</text>
-      <path d="M-168.9 192.5 L -168.9 244.5" stroke="#303335" stroke-dasharray="2 4" fill="none"
-      ></path>
-      <text x="-168.9" y="266.5" class="name" text-anchor="middle">Companion app</text>
-      <text x="-168.9" y="286.5" class="note" text-anchor="middle">On your laptop</text>
-      <text x="-154.2" y="-111" class="note" font-size="14" text-anchor="middle"
-        >Your accounts</text
+        <span class="name">Your server</span>
+        <span class="note">Docker or a single binary</span>
+        <span class="note accent">Your tokens live here</span>
+        <span class="note">Admin app: connect accounts, pair</span>
+      </div>
+      <div
+        class="anchored column"
+        style="--col: 1170"
+        data-anchor="mosaic"
+        data-section="server"
+        aria-hidden="true"
       >
-      <text x="-12" y="-12" class="yours" text-anchor="end">Yours</text>
-    </svg>
+        <span class="name">Mosaic</span>
+        <span class="note">On your desk</span>
+      </div>
+      <div
+        class="anchored at"
+        style="--dy: 2.4"
+        data-anchor="laptop"
+        data-section="server"
+        aria-hidden="true"
+      >
+        <span class="name">Companion app</span>
+        <span class="note">On your laptop</span>
+      </div>
+      <div
+        class="anchored at"
+        style="--dy: -1.6"
+        data-anchor="accounts"
+        data-section="server"
+        aria-hidden="true"
+      >
+        <span class="note">Your accounts</span>
+      </div>
+      <div
+        class="anchored at yours"
+        style="--dx: -1.8; --dy: -1"
+        data-anchor="yours"
+        data-section="server"
+        aria-hidden="true"
+      >
+        Yours
+      </div>
+      <div class="pill" data-pill aria-hidden="true">
+        <i></i>Review request
+      </div>
+    </div>
   </div>
 </section>
 
@@ -306,30 +110,58 @@ import { links } from './links'
   .arrow-link {
     margin-top: 32px;
   }
+  .slot {
+    aspect-ratio: 960 / 560;
+  }
+  .accent {
+    color: var(--color-focus);
+  }
+  .yours {
+    font-size: max(13px, calc(14 * var(--u)));
+    font-weight: 500;
+    color: var(--color-focus);
+  }
 
-  .scene svg {
-    display: block;
-    width: 100%;
-    height: auto;
-    overflow: visible;
-    font-family: var(--font-family-sans);
+  .pill {
+    position: absolute;
+    left: var(--ax);
+    top: var(--ay);
+    z-index: 11;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 12px 0 10px;
+    border: 1px solid rgb(var(--ring-blue) / 0.6);
+    border-radius: 13px;
+    background: var(--color-surface);
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
   }
-  .name {
-    font-size: 16px;
-    font-weight: 500;
-    fill: var(--color-foreground);
+  .pill i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgb(var(--ring-blue));
   }
-  .note {
-    font-size: 13px;
-    fill: var(--color-muted-foreground);
-  }
-  .accent,
-  .yours {
-    fill: var(--color-focus);
-  }
-  .yours {
-    font-size: 14px;
-    font-weight: 500;
+
+  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
+    .server {
+      height: 250vh;
+    }
+    .pin {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+    .pin .stage {
+      width: min(100%, 1440px, 160vh);
+    }
   }
 
   @media (max-width: 899.98px) {
@@ -338,8 +170,11 @@ import { links } from './links'
       flex-direction: column;
       align-items: flex-start;
     }
-    .scene {
+    .slot {
       margin-top: 48px;
+    }
+    .pill {
+      display: none;
     }
   }
 </style>
