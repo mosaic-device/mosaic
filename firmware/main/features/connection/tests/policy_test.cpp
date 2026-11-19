@@ -229,9 +229,12 @@ void losing_wifi_is_not_a_server_error() {
 
 void a_lost_connection_shows_its_last_answer_until_offline() {
     for (const Frame answer : { Frame::paired, Frame::pairing_pending }) {
-        const Status shown = answer == Frame::paired ? Status::connected : Status::pairing;
+        // Paired: reconnecting. Waiting for a claim: still pairing, so the code stays up.
+        const Status shown = answer == Frame::paired ? Status::reconnecting : Status::pairing;
+        const Status answered = answer == Frame::paired ? Status::connected : Status::pairing;
         Policy policy = connecting();
         policy.received(100, answer);
+        assert(policy.status() == answered);
         uint64_t now = 1'000;
         for (uint32_t failures = 1; failures < kOfflineAfter; ++failures) {
             now = fail_and_retry(policy, now);
@@ -245,7 +248,7 @@ void a_lost_connection_shows_its_last_answer_until_offline() {
         policy.tick(*policy.next_deadline_ms(), kExact);
         policy.opened(now + 20'000);
         policy.received(now + 20'100, answer);
-        assert(policy.status() == shown);
+        assert(policy.status() == answered);
     }
 }
 
@@ -292,6 +295,39 @@ void a_renewed_address_keeps_the_backoff() {
     assert(*policy.next_deadline_ms() == now + 4'000);
     assert(policy.status() == Status::error);
 }
+
+void a_restored_pairing_reconnects_quietly() {
+    Policy policy;
+    policy.restore_paired();
+    assert(policy.status() == Status::reconnecting);
+    policy.wifi_up(0);
+    // A failure while restoring isn't a setup error: still reconnecting until offline.
+    policy.closed(100, kExact);
+    assert(policy.status() == Status::reconnecting);
+    assert(policy.tick(*policy.next_deadline_ms(), kExact) == Action::open);
+    policy.opened(2'000);
+    assert(policy.received(2'100, Frame::paired) == Action::none);
+    assert(policy.status() == Status::connected);
+    // The server no longer knows it: waiting for a claim again.
+    Policy forgotten;
+    forgotten.restore_paired();
+    forgotten.wifi_up(0);
+    forgotten.opened(100);
+    forgotten.received(200, Frame::pairing_pending);
+    assert(forgotten.status() == Status::pairing);
+}
+
+void a_removed_device_starts_over() {
+    Policy policy = connecting();
+    policy.received(100, Frame::paired);
+    policy.received(200, Frame::rejected, Reject::credential_revoked);
+    assert(policy.closed(300, kExact) == Action::open);
+    // Unpaired, reaching the server for a new code.
+    assert(policy.status() == Status::disconnected);
+    policy.opened(400);
+    policy.received(500, Frame::pairing_pending);
+    assert(policy.status() == Status::pairing);
+}
 } // namespace
 
 int main() {
@@ -313,5 +349,7 @@ int main() {
     rejections_show_an_error_or_an_update();
     time_without_wifi_does_not_slow_the_first_retry();
     a_renewed_address_keeps_the_backoff();
+    a_restored_pairing_reconnects_quietly();
+    a_removed_device_starts_over();
     std::puts("Policy tests passed");
 }
