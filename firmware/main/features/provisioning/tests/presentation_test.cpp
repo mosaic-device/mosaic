@@ -1,6 +1,7 @@
 #include "../presentation/presenter.hpp"
 #include "../presentation/action_admission.hpp"
 #include <cassert>
+#include <string_view>
 using namespace mosaic::features::provisioning;
 void online(StateMachine& s) {
     (void)s.dispatch(Start { true }, 0);
@@ -31,6 +32,21 @@ int main() {
     (void)s.dispatch(GotIp { }, 4);
     assert(present(s.snapshot()).heading == "Wi-Fi connected");
     assert(present(s.snapshot()).online && !present(s.snapshot()).starting);
+    {
+        // Online, the screen follows the server connection.
+        using mosaic::events::Status;
+        const auto reaching = present(s.snapshot(), 0, Status::disconnected);
+        assert(reaching.message == "Connecting to the server..." && reaching.recovery_visible);
+        assert(present(s.snapshot(), 0, Status::pairing).message == "Waiting for device pairing.");
+        // Unreachable, a bad address or a TLS failure: point to setup recovery.
+        const auto error = present(s.snapshot(), 0, Status::error);
+        assert(error.heading == "Can't reach the server");
+        assert(error.message.view().find("change the address in setup") != std::string_view::npos);
+        assert(error.recovery_visible && error.recovery_enabled && error.online);
+        // A new address won't fix an old firmware, so nothing is offered.
+        const auto update = present(s.snapshot(), 0, Status::update_required);
+        assert(update.heading == "Update required" && !update.recovery_visible && update.online);
+    }
     (void)s.dispatch(SetupTapped { 2 }, 10);
     assert(s.snapshot().recovery == RecoveryState::confirming);
     auto confirming = present(s.snapshot());

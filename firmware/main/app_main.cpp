@@ -19,6 +19,7 @@
 #include "features/provisioning/ui/renderer.hpp"
 #include "features/provisioning/presentation/presenter.hpp"
 #include "events/bus.hpp"
+#include "features/connection/adapters/service.hpp"
 #ifdef MOSAIC_DEBUG_TRIGGERS
 #include "features/debug_triggers/console.hpp"
 #endif
@@ -72,6 +73,11 @@ extern "C" void app_main() {
     ESP_LOGW(kTag, "Development debug triggers enabled");
     ESP_ERROR_CHECK(mosaic::features::debug_triggers::start());
 #endif
+
+    // Before provisioning joins Wi-Fi, so the first connection isn't missed.
+    const esp_err_t connection_err = mosaic::features::connection::adapters::service::start();
+    if (connection_err != ESP_OK)
+        ESP_LOGE(kTag, "Server connection unavailable: %s", esp_err_to_name(connection_err));
 
     ESP_LOGI(kTag, "Starting provisioning service");
     const esp_err_t err = mosaic::features::provisioning::start();

@@ -5,11 +5,12 @@
 
 namespace mosaic::events {
 namespace {
-    constexpr std::array<std::pair<Status, const char*>, 4> kNames { {
+    constexpr std::array<std::pair<Status, const char*>, 5> kNames { {
         { Status::disconnected, "disconnected" },
         { Status::pairing, "pairing" },
         { Status::connected, "connected" },
         { Status::error, "error" },
+        { Status::update_required, "update" },
     } };
 } // namespace
 

@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 
-from firmware import PLACEHOLDER, run, select_compilation_database
+from firmware import PLACEHOLDER, command, run, select_compilation_database
 
 
 class FirmwareLockTests(unittest.TestCase):
@@ -61,6 +61,30 @@ class FirmwareLockTests(unittest.TestCase):
                 )
                 self.assertFalse((firmware / ".mosaic-idf.lock").exists())
 
+    def test_path_respelled_by_idf_is_restored_with_line_endings_kept(self):
+        with tempfile.TemporaryDirectory() as directory:
+            firmware = pathlib.Path(directory)
+            lock = firmware / "dependencies.lock"
+            original = (
+                "dependencies:\r\n"
+                "  esp_lcd_hx8394:\r\n"
+                "    source:\r\n"
+                f"      path: {PLACEHOLDER}\r\n"
+                "      type: local\r\n"
+            ).encode()
+            lock.write_bytes(original)
+            # Rewrites the path in the platform's own spelling, as IDF may when it saves the
+            # lockfile: backslashes on Windows.
+            child = (
+                "import pathlib; "
+                "p=pathlib.Path('dependencies.lock'); "
+                "a=pathlib.Path.cwd() / 'components' / 'esp_lcd_hx8394'; "
+                "t=p.read_bytes().decode(); assert a.as_posix() in t; "
+                "p.write_bytes(t.replace(a.as_posix(), str(a)).encode())"
+            )
+            self.assertEqual(run(firmware, ["-c", child], sys.executable), 0)
+            self.assertEqual(lock.read_bytes(), original)
+
     def test_missing_executable_restores_lock(self):
         with tempfile.TemporaryDirectory() as directory:
             firmware = pathlib.Path(directory)
@@ -90,6 +114,34 @@ class FirmwareLockTests(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 run(firmware, [])
             self.assertTrue(guard.exists())
+
+
+class IdfCommandTests(unittest.TestCase):
+    def test_other_platforms_and_programs_run_as_given(self):
+        never = lambda name: self.fail(f"looked up {name}")
+        self.assertEqual(command("idf.py", windows=False, env={}, which=never), ["idf.py"])
+        self.assertEqual(command("python", windows=True, env={}, which=never), ["python"])
+
+    def test_windows_prefers_an_installed_launcher(self):
+        which = {"idf.py": r"C:\idf\idf.py.exe"}.get
+        self.assertEqual(
+            command("idf.py", windows=True, env={}, which=which), [r"C:\idf\idf.py.exe"]
+        )
+
+    def test_windows_runs_the_activated_script_with_idf_python(self):
+        with tempfile.TemporaryDirectory() as directory:
+            script = pathlib.Path(directory, "tools", "idf.py")
+            script.parent.mkdir()
+            script.touch()
+            env = {"IDF_PATH": directory, "IDF_PYTHON_ENV_PATH": r"C:\env"}
+            self.assertEqual(
+                command("idf.py", windows=True, env=env, which=lambda name: None),
+                [str(pathlib.Path(r"C:\env", "Scripts", "python.exe")), str(script)],
+            )
+
+    def test_windows_without_esp_idf_explains_activation(self):
+        with self.assertRaisesRegex(RuntimeError, "Activate ESP-IDF"):
+            command("idf.py", windows=True, env={}, which=lambda name: None)
 
 
 if __name__ == "__main__":
