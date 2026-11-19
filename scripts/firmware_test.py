@@ -73,13 +73,14 @@ class FirmwareLockTests(unittest.TestCase):
                 "      type: local\r\n"
             ).encode()
             lock.write_bytes(original)
-            # Rewrites the path with forward slashes, as IDF may when it saves the lockfile.
+            # Rewrites the path in the platform's own spelling, as IDF may when it saves the
+            # lockfile: backslashes on Windows.
             child = (
                 "import pathlib; "
                 "p=pathlib.Path('dependencies.lock'); "
-                "a=str(pathlib.Path.cwd() / 'components' / 'esp_lcd_hx8394'); "
-                "t=p.read_bytes().decode(); assert a in t; "
-                "p.write_bytes(t.replace(a, pathlib.Path(a).as_posix()).encode())"
+                "a=pathlib.Path.cwd() / 'components' / 'esp_lcd_hx8394'; "
+                "t=p.read_bytes().decode(); assert a.as_posix() in t; "
+                "p.write_bytes(t.replace(a.as_posix(), str(a)).encode())"
             )
             self.assertEqual(run(firmware, ["-c", child], sys.executable), 0)
             self.assertEqual(lock.read_bytes(), original)

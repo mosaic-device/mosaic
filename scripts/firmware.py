@@ -98,7 +98,8 @@ def run(firmware, args, executable="idf.py"):
     # a file that is still open. A refused invocation raises here and never removes it.
     guard.open("x").close()
     try:
-        absolute = str(firmware / "components" / "esp_lcd_hx8394")
+        # Forward slashes on every platform; IDF may write it back with backslashes.
+        absolute = (firmware / "components/esp_lcd_hx8394").as_posix()
         original = read_lock(lock)
         expanded = replace_path(original, PLACEHOLDER, absolute)
         write_lock(lock, expanded)
