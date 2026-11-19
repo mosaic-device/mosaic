@@ -1,21 +1,38 @@
 #include "commands.hpp"
 
 #include "../../events/bus.hpp"
+#include "../notifications/store.hpp"
 #include "../settings/service.hpp"
 
 #include <array>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <string>
 
 namespace mosaic::features::debug_triggers {
 namespace {
     namespace events = mosaic::events;
 
+    // A notification as the server would send one, stored like one, with a new ID each time.
+    notifications::Notification sample() {
+        static unsigned count = 0;
+        notifications::Notification n;
+        notifications::copy_text(n.id, "debug-" + std::to_string(++count));
+        notifications::copy_text(n.source, "Mosaic");
+        notifications::copy_text(n.title, "Sample notification");
+        notifications::copy_text(n.text, "Sent from the debug console. Notifications from the server look the same.");
+        const std::time_t now = std::time(nullptr);
+        n.occurred_at = now > 0 ? now : 1;
+        return n;
+    }
+
     int trigger(int argc, char** argv) {
         events::Status status;
         esp_err_t err;
         if (argc == 2 && std::strcmp(argv[1], "notification") == 0) {
+            notifications::store::accept(sample());
             err = events::post_notification();
         } else if (argc == 2 && events::parse(argv[1], status)) {
             err = events::set_status(status);

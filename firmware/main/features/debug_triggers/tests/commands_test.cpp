@@ -1,6 +1,7 @@
 #include "../commands.hpp"
 
 #include "../../../events/bus.hpp"
+#include "../../notifications/store.hpp"
 #include "../../settings/service.hpp"
 
 #include <cassert>
@@ -54,10 +55,21 @@ void set(const Settings& settings) {
 }
 }
 
+namespace stored = mosaic::features::notifications;
+
 int main() {
     // Triggers publish through the bus like the server connection will.
     reset();
     assert(run("trigger notification") == 0 && notifications == 1);
+    // A sample is stored first, so the screen has something to show; each is new.
+    {
+        stored::Notification shown;
+        uint32_t arrivals = 0;
+        assert(stored::store::latest(shown, arrivals) && arrivals == 1);
+        assert(shown.title_view() == "Sample notification" && shown.id_view() == "debug-1");
+        assert(run("trigger notification") == 0 && notifications == 2);
+        assert(stored::store::latest(shown, arrivals) && arrivals == 2);
+    }
     assert(run("  trigger\tconnected\r\n") == 0 && posted_status == events::Status::connected);
     assert(run("trigger error") == 0 && posted_status == events::Status::error);
     reset();
