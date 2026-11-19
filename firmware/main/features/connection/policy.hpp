@@ -75,13 +75,13 @@ public:
 
 private:
     enum class Phase : uint8_t {
-        waiting,  // For retry_at_ms_, with no socket.
-        opening,  // Asked the service to open; waiting for opened() or closed().
+        waiting, // For retry_at_ms_, with no socket.
+        opening, // Asked the service to open; waiting for opened() or closed().
         replying, // Sent connect; waiting for the reply.
-        pending,  // pairing_pending received.
-        paired,   // paired received.
-        closing,  // Asked the service to close; waiting for closed().
-        stopped,  // Update required: no more attempts this boot.
+        pending, // pairing_pending received.
+        paired, // paired received.
+        closing, // Asked the service to close; waiting for closed().
+        stopped, // Update required: no more attempts this boot.
     };
 
     Action start_attempt(uint64_t now_ms);

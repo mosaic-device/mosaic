@@ -12,4 +12,4 @@ namespace mosaic::features::connection::adapters::service {
 // do nothing.
 esp_err_t start();
 
-} 
+}
