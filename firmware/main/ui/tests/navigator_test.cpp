@@ -1,4 +1,5 @@
 #include "../navigation/navigator.hpp"
+#include "../navigation/paired_hold.hpp"
 
 #include <cassert>
 #include <initializer_list>
@@ -7,10 +8,10 @@ using namespace mosaic::ui::navigation;
 
 namespace {
 constexpr Conditions kStarting { };
-constexpr Conditions kOffline { .starting = false, .online = false, .paired = false };
-constexpr Conditions kUnpaired { .starting = false, .online = true, .paired = false };
-constexpr Conditions kPaired { .starting = false, .online = true, .paired = true };
-constexpr Conditions kPairedOffline { .starting = false, .online = false, .paired = true };
+constexpr Conditions kSetup { .starting = false, .setup = true, .paired = false };
+constexpr Conditions kUnpaired { .starting = false, .setup = false, .paired = false };
+constexpr Conditions kPaired { .starting = false, .setup = false, .paired = true };
+constexpr Conditions kPairedSetup { .starting = false, .setup = true, .paired = true };
 
 constexpr std::initializer_list<Screen> kAll {
     Screen::boot,
@@ -31,15 +32,16 @@ void conditions_choose_the_base_screen() {
     assert(navigator.active() == Screen::boot);
     navigator.update(kStarting);
     assert(navigator.active() == Screen::boot);
-    navigator.update(kOffline);
+    navigator.update(kSetup);
     assert(navigator.active() == Screen::setup);
-    // Home waits for pairing; Wi-Fi alone shows the unpaired setup screen.
+    // Home waits for pairing: provisioning's screens show Wi-Fi, the server and the code.
     navigator.update(kUnpaired);
     assert(navigator.active() == Screen::setup);
+    // Once paired, Home, whatever Wi-Fi or the server are doing.
     navigator.update(kPaired);
     assert(navigator.active() == Screen::home);
-    // Losing Wi-Fi returns to provisioning's screens even when paired.
-    navigator.update(kPairedOffline);
+    // Only setup itself takes over a paired device.
+    navigator.update(kPairedSetup);
     assert(navigator.active() == Screen::setup);
 }
 
@@ -52,7 +54,7 @@ void settings_opens_from_home_and_back_returns() {
 }
 
 void back_does_nothing_on_base_screens() {
-    for (Conditions conditions : { kStarting, kOffline, kUnpaired, kPaired }) {
+    for (Conditions conditions : { kStarting, kSetup, kUnpaired, kPaired }) {
         Navigator navigator;
         navigator.update(conditions);
         const Screen before = navigator.active();
@@ -63,7 +65,7 @@ void back_does_nothing_on_base_screens() {
 
 void unavailable_screens_do_not_open() {
     // Nothing opens from boot or setup: provisioning keeps the screen until it is done.
-    for (Conditions conditions : { kStarting, kOffline, kUnpaired }) {
+    for (Conditions conditions : { kStarting, kSetup, kUnpaired, kPairedSetup }) {
         Navigator navigator;
         navigator.update(conditions);
         const Screen before = navigator.active();
@@ -104,8 +106,8 @@ void a_new_base_closes_opened_screens() {
     // Unchanged conditions keep what is open.
     navigator.update(kPaired);
     assert(navigator.active() == Screen::notification);
-    // Losing Wi-Fi shows provisioning; coming back starts at Home, not the old stack.
-    navigator.update(kPairedOffline);
+    // Opening setup shows provisioning; leaving it starts at Home, not the old stack.
+    navigator.update(kPairedSetup);
     assert(navigator.active() == Screen::setup);
     assert(!navigator.back());
     navigator.update(kPaired);
@@ -128,9 +130,34 @@ void every_reachable_screen_has_a_way_back() {
         }
     }
 }
+
+void pairing_holds_home_back_briefly() {
+    // Paired at boot: Home at once.
+    PairedHold restored;
+    assert(restored.paired(true, 0) && !restored.holding());
+    // Paired while waiting: the pairing screen says so first.
+    PairedHold hold;
+    assert(!hold.paired(false, 0));
+    assert(!hold.paired(true, 1'000) && hold.holding());
+    assert(!hold.paired(true, 1'000 + PairedHold::kHoldMs - 1));
+    assert(hold.paired(true, 1'000 + PairedHold::kHoldMs) && !hold.holding());
+    assert(hold.paired(true, 50'000));
+    // Unpaired during the hold: nothing to celebrate.
+    PairedHold removed;
+    removed.paired(false, 0);
+    removed.paired(true, 100);
+    assert(!removed.paired(false, 200) && !removed.holding());
+    // The clock wrapping around doesn't cut it short.
+    PairedHold wrapping;
+    wrapping.paired(false, 0xFFFF'FF00);
+    assert(!wrapping.paired(true, 0xFFFF'FF00));
+    assert(!wrapping.paired(true, 0x0000'0100));
+    assert(wrapping.paired(true, 0xFFFF'FF00 + PairedHold::kHoldMs));
+}
 } // namespace
 
 int main() {
+    pairing_holds_home_back_briefly();
     conditions_choose_the_base_screen();
     settings_opens_from_home_and_back_returns();
     back_does_nothing_on_base_screens();

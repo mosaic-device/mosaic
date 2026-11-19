@@ -192,6 +192,21 @@ lv_obj_t* switch_row(lv_obj_t* parent, const char* label, Action action) {
     bind(row, action, Request::toggle);
     return row;
 }
+lv_obj_t* action_row(lv_obj_t* parent, const char* label, Action action) {
+    auto* row = lv_button_create(parent);
+    styles::control(row, styles::Control::secondary);
+    lv_obj_set_size(row, lv_pct(100), LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(row, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_hor(row, TOKEN_FIRMWARE_SPACE_CARD, 0);
+    // As tall as a switch row, so the list keeps one rhythm.
+    lv_obj_set_style_min_height(row, 52 + 2 * lv_obj_get_style_pad_top(row, LV_PART_MAIN), 0);
+    auto* name = text(row, label);
+    lv_obj_set_width(name, LV_SIZE_CONTENT);
+    lv_obj_set_flex_grow(name, 1);
+    bind(row, action, Request::activate);
+    return row;
+}
 void render_switch(lv_obj_t* row, bool on) {
     lv_obj_set_state(row, LV_STATE_CHECKED, on);
     if (auto* indicator = lv_obj_get_child(row, 1))

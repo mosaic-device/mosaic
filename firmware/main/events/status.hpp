@@ -6,12 +6,13 @@
 namespace mosaic::events {
 
 // The device's connection status. `error` holds until another status replaces it.
+// `reconnecting`: a paired device whose server hasn't answered yet, such as after a restart.
 // `update_required`: the server doesn't speak this firmware's protocol version.
-enum class Status : uint8_t { disconnected, pairing, connected, error, update_required };
+enum class Status : uint8_t { disconnected, pairing, connected, error, update_required, reconnecting };
 
 // Whether the device is paired once status follows: connecting proves it, `disconnected`
-// and `pairing` mean it is not, and an error or a required update leaves it as it was,
-// since a paired device that cannot reach the server is still paired.
+// and `pairing` mean it is not, and reconnecting, an error or a required update leave it as
+// it was, since a paired device that cannot reach the server is still paired.
 constexpr bool paired_after(bool paired, Status status) {
     switch (status) {
     case Status::connected:
@@ -21,6 +22,7 @@ constexpr bool paired_after(bool paired, Status status) {
         return false;
     case Status::error:
     case Status::update_required:
+    case Status::reconnecting:
         break;
     }
     return paired;

@@ -22,7 +22,8 @@ protocol_sources = [
     nanopb / "pb_encode.c",
     protos / "events.pb.c",
 ]
-# Each test program, the feature sources it covers, and its arguments.
+# Each test program, the feature sources it covers, and its arguments. Adapter tests also get
+# fake ESP-IDF headers (see `fakes`).
 programs = {
     "backoff": ([feature / "backoff.cpp", feature / "tests/backoff_test.cpp"], []),
     "policy": (
@@ -30,7 +31,14 @@ programs = {
         [],
     ),
     "frames": ([feature / "frames.cpp", feature / "tests/frames_test.cpp"], [str(golden)]),
+    "credential": ([feature / "frames.cpp", feature / "credential.cpp", feature / "tests/credential_test.cpp"], []),
+    "credential_store": (
+        [feature / "frames.cpp", feature / "credential.cpp", feature / "adapters/credential_store.cpp",
+         feature / "tests/credential_store_test.cpp"],
+        [],
+    ),
 }
+fakes = {"credential_store": ["-I", str(feature / "tests/nvs_fakes")]}
 
 with tempfile.TemporaryDirectory(prefix="mosaic-connection-") as work:
     env = {**os.environ, "TMPDIR": work, "TMP": work, "TEMP": work}
@@ -50,6 +58,7 @@ with tempfile.TemporaryDirectory(prefix="mosaic-connection-") as work:
             + ["-std=c++23", "-fno-exceptions", "-fno-rtti", "-UNDEBUG"]
             + warnings
             + includes
+            + fakes.get(name, [])
             + [str(source) for source in sources]
             + protocol_objects
             + ["-o", str(exe)],

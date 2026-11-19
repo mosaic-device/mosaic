@@ -47,6 +47,9 @@ enum class Action : uint8_t { none, open, send_connect, close };
 // calls tick() at next_deadline_ms().
 class Policy {
 public:
+    // Call once before anything else when the saved credential is paired: the device shows
+    // `reconnecting` instead of reaching the server for the first time.
+    void restore_paired();
     // Wi-Fi has an address. Coming back from down, the backoff starts over.
     Action wifi_up(uint64_t now_ms);
     Action wifi_down(uint64_t now_ms);
@@ -64,9 +67,11 @@ public:
     State state() const;
     // What the device shows about the server. Until the server first answers, the owner is
     // still setting up: `disconnected` while reaching it, and `error` once an attempt fails
-    // with Wi-Fi up, so a wrong address or a TLS failure shows at once. After that, a lost
-    // connection keeps showing `connected` or `pairing` while it reconnects, and `error`
-    // only once offline. A rejection shows `error`, or `update_required` for the version.
+    // with Wi-Fi up, so a wrong address or a TLS failure shows at once. A paired device,
+    // including one restored at boot, shows `reconnecting` until the server answers, and an
+    // unpaired one that lost its connection keeps showing `pairing`; both show `error` only
+    // once offline. A rejection shows `error`, or `update_required` for the version. After a
+    // removal, the device starts over as if it had never reached the server.
     events::Status status() const;
     // When tick() next has something to do, or nothing if it is waiting on an event.
     std::optional<uint64_t> next_deadline_ms() const;

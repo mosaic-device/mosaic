@@ -21,6 +21,7 @@ constexpr std::array kStatuses {
     Status::connected,
     Status::error,
     Status::update_required,
+    Status::reconnecting,
 };
 
 // Matches the hardware: an 8-LED ring and a 12-LED strip.
@@ -100,6 +101,9 @@ void each_status_means_one_thing() {
     assert(pattern(Status::error, false).strip.effect == Effect::off);
     // A server that needs newer firmware is out of reach too.
     assert(pattern(Status::update_required, true) == trouble);
+    // Reconnecting is quiet: the room light stays as it was and the ring stays off.
+    assert(pattern(Status::reconnecting, true) == idle);
+    assert(pattern(Status::reconnecting, false) == Pattern { });
     // Trouble, pairing and a notification each use their own ring color.
     const std::array colors {
         trouble.ring.color,

@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include "../../../ui/components/controls.hpp"
+#include "../../../ui/generated/assets/assets.h"
 #include "../../../ui/generated/design_tokens.h"
 
 namespace mosaic::features::provisioning {
@@ -32,6 +33,12 @@ bool StatusScreen::create(lv_obj_t* parent) {
     lv_obj_set_style_pad_all(middle, TOKEN_FOCUS_OFFSET + TOKEN_FOCUS_WIDTH, 0);
     heading = components::text(middle, "", styles::Text::title);
     lv_obj_set_width(heading, lv_pct(75));
+    // The pairing code: large and spaced out, to read from across a desk and type exactly.
+    code = components::text(middle, "", styles::Text::title);
+    lv_obj_set_style_text_font(code, &mosaic_manrope_60_600, 0);
+    lv_obj_set_style_text_letter_space(code, 6, 0);
+    lv_obj_set_width(code, LV_SIZE_CONTENT);
+    lv_obj_add_flag(code, LV_OBJ_FLAG_HIDDEN);
     description = components::text(middle, "", styles::Text::body, true);
     lv_obj_set_width(description, lv_pct(75));
     recovery_button = components::button(middle, "", styles::Control::primary);
@@ -45,7 +52,7 @@ bool StatusScreen::create(lv_obj_t* parent) {
     lv_obj_add_event_cb(recovery_button, on_recovery, LV_EVENT_CLICKED, this);
     lv_obj_add_flag(recovery_button, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(content, LV_OBJ_FLAG_HIDDEN);
-    return heading && description && recovery_label;
+    return heading && code && description && recovery_label;
 }
 
 void StatusScreen::on_recovery(lv_event_t* event) {
@@ -66,6 +73,11 @@ void StatusScreen::render(const ViewState& state) {
         lv_obj_remove_flag(content, LV_OBJ_FLAG_HIDDEN);
     }
     lv_label_set_text(heading, state.heading.data());
+    lv_label_set_text(code, state.code.data());
+    if (state.code.empty())
+        lv_obj_add_flag(code, LV_OBJ_FLAG_HIDDEN);
+    else
+        lv_obj_remove_flag(code, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(description, state.message.data());
     lv_label_set_text(recovery_label, state.recovery_prompt.data());
     if (state.recovery_visible)

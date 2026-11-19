@@ -2,6 +2,11 @@
 
 namespace mosaic::features::connection {
 
+void Policy::restore_paired() {
+    reached_ = true;
+    answered_ = events::Status::connected;
+}
+
 Action Policy::wifi_up(uint64_t now_ms) {
     // Only when Wi-Fi was down: a renewed address reports Wi-Fi up again, and must not wipe
     // out real server failures.
@@ -74,8 +79,11 @@ Action Policy::closed(uint64_t now_ms, uint32_t random) {
         state_ = State::update_required;
         return Action::none;
     case Reject::credential_revoked:
-        // Reconnect straight away for a new pairing code, without backoff.
+        // Reconnect straight away for a new pairing code, without backoff, as a new device.
         backoff_.reset();
+        reached_ = false;
+        failed_ = false;
+        answered_ = events::Status::pairing;
         phase_ = Phase::waiting;
         retry_at_ms_ = now_ms;
         state_ = State::reconnecting;
@@ -167,8 +175,10 @@ events::Status Policy::status() const {
     }
     if (state_ == State::server_error)
         return events::Status::error;
+    if (reached_ && state_ == State::offline)
+        return events::Status::error;
     if (reached_)
-        return state_ == State::offline ? events::Status::error : answered_;
+        return answered_ == events::Status::connected ? events::Status::reconnecting : answered_;
     return failed_ ? events::Status::error : events::Status::disconnected;
 }
 

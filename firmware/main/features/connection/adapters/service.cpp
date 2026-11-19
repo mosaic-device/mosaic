@@ -1,5 +1,7 @@
 #include "service.hpp"
+#include "credential_store.hpp"
 #include "websocket.hpp"
+#include "../credential.hpp"
 #include "../frames.hpp"
 #include "../policy.hpp"
 #include "../../provisioning/adapters/settings_store.hpp"
@@ -10,6 +12,7 @@
 #include <array>
 #include <atomic>
 #include <cstdint>
+#include <string_view>
 
 #include "esp_event.h"
 #include "esp_log.h"
@@ -24,7 +27,8 @@
 namespace mosaic::features::connection::adapters::service {
 namespace {
     constexpr char kTag[] = "connection";
-    constexpr uint32_t kTaskStack = 4 * 1'024;
+    // Room for NVS writes of the credential, as well as the socket calls.
+    constexpr uint32_t kTaskStack = 6 * 1'024;
     constexpr UBaseType_t kTaskPriority = 3;
     constexpr UBaseType_t kQueueLength = 8;
     // The task wakes at least this often, so a lost queue slot only delays an event.
@@ -41,10 +45,12 @@ namespace {
     // An ended report that didn't fit in the queue; the task picks it up on its next wake.
     std::atomic<uint32_t> s_unqueued_end { 0 };
 
-    // Placeholder until #111: a fresh secret each boot, never stored or logged, so the server
-    // sees a new unpaired device after every reboot. #111 replaces it with the stored device
-    // credential.
-    std::array<uint8_t, kSecretSize> s_secret { };
+    // The saved credential, once loaded or made; only the connection task touches it after
+    // start(). Never log its secret.
+    Credential s_credential { };
+    bool s_have_credential = false;
+    // The saved credential was paired at boot.
+    bool s_restored_paired = false;
 
     uint64_t now_ms() {
         return static_cast<uint64_t>(esp_timer_get_time()) / 1'000;
@@ -94,6 +100,8 @@ namespace {
     class Connection {
     public:
         void run() {
+            if (s_restored_paired)
+                policy_.restore_paired();
             State shown = policy_.state();
             ESP_LOGI(kTag, "Server connection: %s", name(shown));
             while (true) {
@@ -143,8 +151,10 @@ namespace {
             case Kind::ended:
                 return event.attempt == attempt_ ? closed() : Action::none;
             case Kind::frame:
-                return event.attempt == attempt_ ? policy_.received(now, event.reply.frame, event.reply.reason)
-                                                 : Action::none;
+                if (event.attempt != attempt_)
+                    return Action::none;
+                remember(event.reply, now);
+                return policy_.received(now, event.reply.frame, event.reply.reason);
             }
             return Action::none;
         }
@@ -168,6 +178,61 @@ namespace {
             }
         }
 
+        // A credential for `url`: the saved one if it belongs to it, otherwise a new one, saved
+        // before it is ever sent. False if it can't be saved, and nothing may be sent.
+        bool credential_for(std::string_view url) {
+            if (s_have_credential && belongs_to(s_credential, url))
+                return true;
+            return replace_credential(url);
+        }
+
+        bool replace_credential(std::string_view url) {
+            std::array<uint8_t, kSecretSize> secret { };
+            esp_fill_random(secret.data(), secret.size());
+            Credential made { };
+            const bool fits = fresh(secret, url, made);
+            support::secure_erase(secret);
+            const esp_err_t err = fits ? credential_store::save(made) : ESP_ERR_INVALID_SIZE;
+            support::secure_erase(s_credential);
+            s_have_credential = err == ESP_OK;
+            if (s_have_credential)
+                s_credential = made;
+            else
+                ESP_LOGE(kTag, "Cannot save a device credential: %s", esp_err_to_name(err));
+            support::secure_erase(made);
+            return s_have_credential;
+        }
+
+        // Keeps the saved credential and the pairing code in step with what the server said.
+        void remember(const Reply& reply, uint64_t now) {
+            if (reply.frame == Frame::pairing_pending)
+                events::set_pairing_code(events::make_pairing_code(reply.code.data(), reply.expires_in_s, now));
+            else if (reply.frame == Frame::paired)
+                events::set_pairing_code({ });
+            switch (after(s_credential, reply)) {
+            case Change::none:
+                return;
+            case Change::mark_paired:
+            case Change::mark_unpaired: {
+                s_credential.paired = reply.frame == Frame::paired;
+                // If this fails, the next boot asks the server again, which knows the answer.
+                const esp_err_t err = credential_store::save(s_credential);
+                if (err != ESP_OK)
+                    ESP_LOGW(kTag, "Cannot save the pairing: %s", esp_err_to_name(err));
+                return;
+            }
+            case Change::replace: {
+                ESP_LOGI(kTag, "Removed by the server; starting over with a new credential");
+                events::set_pairing_code({ });
+                // Same server, new secret. If saving fails, the next attempt makes one again
+                // before sending anything.
+                const auto url = s_credential.url;
+                replace_credential(url.data());
+                return;
+            }
+            }
+        }
+
         Action open() {
             provisioning::form::Settings settings { };
             bool found = false;
@@ -175,6 +240,10 @@ namespace {
             if (err != ESP_OK || !found) {
                 support::secure_erase(settings);
                 ESP_LOGW(kTag, "No saved server address (%s)", err == ESP_OK ? "not set" : esp_err_to_name(err));
+                return policy_.closed(now_ms(), esp_random());
+            }
+            if (!credential_for(settings.ws_url)) {
+                support::secure_erase(settings);
                 return policy_.closed(now_ms(), esp_random());
             }
             // The URL exactly as the owner entered it; the adapter refuses anything but wss://.
@@ -189,7 +258,7 @@ namespace {
 
         Action send_connect() {
             std::array<uint8_t, kSendLimit> frame { };
-            const size_t length = encode_connect(s_secret, frame);
+            const size_t length = encode_connect(s_credential.secret, frame);
             const bool sent = length > 0 && websocket::send(std::span<const uint8_t>(frame.data(), length));
             support::secure_erase(frame);
             if (sent)
@@ -211,6 +280,25 @@ namespace {
         events::Status published_ = events::Status::disconnected;
     };
 
+    // Loads the saved credential before Wi-Fi starts, so a paired device starts paired.
+    void restore() {
+        provisioning::form::Settings settings { };
+        bool have_settings = false;
+        Credential saved { };
+        bool have_saved = false;
+        if (provisioning::adapters::settings::load(settings, have_settings) == ESP_OK && have_settings
+            && credential_store::load(saved, have_saved) == ESP_OK && have_saved
+            && belongs_to(saved, settings.ws_url)) {
+            s_credential = saved;
+            s_have_credential = true;
+            s_restored_paired = saved.paired;
+        }
+        support::secure_erase(settings);
+        support::secure_erase(saved);
+        events::restore_paired(s_restored_paired);
+        ESP_LOGI(kTag, "Device credential: %s", s_restored_paired ? "paired" : s_have_credential ? "unpaired" : "none");
+    }
+
     void run(void*) {
         static Connection connection;
         connection.run();
@@ -223,7 +311,7 @@ esp_err_t start() {
     s_queue = xQueueCreate(kQueueLength, sizeof(Event));
     if (!s_queue)
         return ESP_ERR_NO_MEM;
-    esp_fill_random(s_secret.data(), s_secret.size());
+    restore();
     esp_err_t err = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_network, nullptr, nullptr);
     if (err == ESP_OK)
         err = esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_LOST_IP, on_network, nullptr, nullptr);

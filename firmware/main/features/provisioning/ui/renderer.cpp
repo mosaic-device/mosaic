@@ -20,6 +20,7 @@ namespace {
     // What the visible provisioning screen means for navigation. LVGL worker only.
     bool showing_starting = true;
     bool showing_online = false;
+    bool showing_setup = false;
     struct Credentials {
         uint32_t session;
         char ssid[33] { };
@@ -33,6 +34,7 @@ namespace {
         status.render(present(StartupView::starting));
         showing_starting = true;
         showing_online = false;
+        showing_setup = false;
         has_rendered = false;
         credential_session = 0;
         portENTER_CRITICAL(&mux);
@@ -66,6 +68,7 @@ namespace {
                 has_rendered = true;
                 showing_starting = state.starting;
                 showing_online = state.online && !credential_session;
+                showing_setup = state.setup || credential_session;
             }
         }
         portENTER_CRITICAL(&mux);
@@ -87,6 +90,7 @@ namespace {
         setup.show(value.ssid, value.password, value.url, qr);
         showing_starting = false;
         showing_online = false;
+        showing_setup = true;
         support::secure_erase(qr);
         credential_session = value.session;
         support::secure_erase(value);
@@ -104,6 +108,7 @@ namespace {
         status.render(present(StartupView::starting));
         showing_starting = true;
         showing_online = false;
+        showing_setup = false;
     }
     bool valid(std::string_view value, size_t max) {
         return !value.empty() && value.size() <= max && value.find('\0') == std::string_view::npos;
@@ -121,6 +126,19 @@ bool starting() {
 }
 bool online() {
     return showing_online;
+}
+bool setup_open() {
+    return showing_setup;
+}
+Recovery recovery() {
+    if (!has_rendered || credential_session)
+        return { };
+    return { .prompt = rendered.recovery_prompt.view(),
+        .available = rendered.recovery_allowed && rendered.recovery_enabled };
+}
+void request_setup() {
+    if (status.action_callback)
+        status.action_callback(UiAction::SetupTapped, status.action_context);
 }
 esp_err_t publish_view(const ViewState& state) {
     if (!mosaic::ui::ready())

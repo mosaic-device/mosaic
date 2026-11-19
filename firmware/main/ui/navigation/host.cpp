@@ -16,7 +16,7 @@ namespace {
     std::array<Container, kSlots> s_containers { };
     Slot s_shown = kSlots;
     // Setup credentials are rendering: provisioning's screen stays in front until its
-    // reported state catches up and says Wi-Fi is no longer online.
+    // reported state catches up and says setup is open.
     bool s_setup_forced = false;
     uint32_t s_backs_seen = 0;
     uint32_t s_inactive_ms = 0;
@@ -68,10 +68,10 @@ namespace {
     }
     void follow_conditions() {
         Conditions conditions = s_screens.conditions(s_screens.conditions_context);
-        if (s_setup_forced && !conditions.online)
+        if (s_setup_forced && conditions.setup)
             s_setup_forced = false;
         if (s_setup_forced)
-            conditions.online = false;
+            conditions.setup = true;
         s_navigator.update(conditions);
     }
     bool create_container(lv_obj_t* root, Slot index, bool (*create)(lv_obj_t*, void*), void* context) {
@@ -134,11 +134,13 @@ namespace {
     }
     bool credentials(const void* bytes, size_t size, void*) {
         s_setup_forced = true;
-        s_navigator.update({ .starting = false, .online = false, .paired = false });
+        s_navigator.update({ .starting = false, .setup = true, .paired = false });
         show_active();
         return s_screens.setup.credentials(bytes, size, s_screens.setup.context);
     }
     void cancel_credentials(void*) {
+        // Nothing more is coming from that setup; follow provisioning's reported state again.
+        s_setup_forced = false;
         s_screens.setup.cancel_credentials(s_screens.setup.context);
     }
 } // namespace

@@ -34,6 +34,9 @@ lv_obj_t* fill(lv_obj_t* page);
 // with render_switch().
 lv_obj_t* switch_row(lv_obj_t* parent, const char* label, Action action);
 void render_switch(lv_obj_t* row, bool on);
+// A full-width row like a switch row, with only its label: for an action such as opening
+// setup. Requests Request::activate; render() disables it. The label is the first child.
+lv_obj_t* action_row(lv_obj_t* parent, const char* label, Action action);
 
 // A labelled level: a slider from 0 to steps with its value beside it. Press to adjust
 // with the encoder, turn, then press again; touch drags. Changes report the step.

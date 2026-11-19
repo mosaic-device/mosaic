@@ -58,9 +58,10 @@ const std::array<State, 7> kStates { {
     // Provisioning gives a saved network its full test timeout before going offline.
     { "offline", true, device::Network::rejects, { }, 21500ms },
     { "unpaired", true, device::Network::joins, { } },
-    { "home", true, device::Network::joins, { "trigger connected" } },
-    { "trouble", true, device::Network::joins, { "trigger connected", "trigger error" } },
-    { "settings", true, device::Network::joins, { "trigger connected", "screen settings" } },
+    // Pairing shows its confirmation for a few seconds before Home.
+    { "home", true, device::Network::joins, { "trigger connected" }, 4500ms },
+    { "trouble", true, device::Network::joins, { "trigger connected", "trigger error" }, 4500ms },
+    { "settings", true, device::Network::joins, { "trigger connected", "screen settings" }, 4500ms },
 } };
 
 std::vector<std::string> g_args;

@@ -41,14 +41,22 @@ struct ViewState {
     ViewText<32> heading;
     ViewText<192> message;
     ViewText<64> recovery_prompt;
+    // The pairing code as XXXX-XXXX, shown large between the heading and the message. Empty
+    // when there's no code to show.
+    ViewText<9> code;
     bool recovery_visible = false;
     bool recovery_enabled = true;
+    // Setup recovery can be asked for now, even where this screen hides its button: Settings
+    // offers it to a paired device.
+    bool recovery_allowed = false;
     ViewText<192> setup_failure;
     uint32_t session = 0;
     // For navigation: startup has not reported a state yet, or Wi-Fi is joined with
-    // setup closed. Other screens show only while online.
+    // setup closed.
     bool starting = false;
     bool online = false;
+    // Setup is open, opening or closing, so it takes the screen even on a paired device.
+    bool setup = false;
     bool operator==(const ViewState&) const = default;
 };
 enum class StartupView { starting, unavailable };

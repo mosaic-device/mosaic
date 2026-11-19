@@ -20,16 +20,17 @@ enum class Screen : uint8_t {
 struct Conditions {
     // Provisioning has not reported its first state yet.
     bool starting = true;
-    // Wi-Fi joined and setup is not in progress.
-    bool online = false;
-    // Paired, even if the server is out of reach for now (events::paired()).
+    // Setup is open, or opening or closing: the owner is entering Wi-Fi and server details.
+    bool setup = false;
+    // Paired, even if Wi-Fi or the server is out of reach for now (events::paired()).
     bool paired = false;
 };
 
 // The device's screen map: which screen shows, what can be opened from it, and what
-// Back does. Home appears only once paired; until then the unpaired state is
-// provisioning's "Wi-Fi connected" screen. A paired device that loses the server stays
-// on Home, which says so; losing Wi-Fi brings back provisioning's screens, which offer setup.
+// Back does. Home appears whenever the device is paired; until then provisioning's
+// screens show Wi-Fi, the server and the pairing code. A paired device that loses Wi-Fi
+// or the server stays on Home, which says so, and Settings offers setup. Only setup
+// itself takes over the screen.
 class Navigator {
 public:
     Screen active() const;

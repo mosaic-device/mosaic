@@ -15,6 +15,7 @@ namespace {
     lv_obj_t* s_date = nullptr;
     lv_obj_t* s_trouble = nullptr;
     lv_obj_t* s_trouble_text = nullptr;
+    lv_obj_t* s_trouble_dot = nullptr;
     std::time_t s_checked = -1; // The last second the clock text was checked.
     std::string s_shown_time;
     std::string s_shown_date;
@@ -35,13 +36,15 @@ namespace {
         show_text(s_time, s_shown_time, clock::now_text(time));
         show_text(s_date, s_shown_date, clock::today_text(date));
     }
-    // What the trouble line says for a status, or nothing when all is well.
+    // What the line under the clock says about the server, or nothing when all is well.
     const char* trouble_text(events::Status status) {
         switch (status) {
         case events::Status::error:
             return "Can't reach the server. Retrying.";
         case events::Status::update_required:
             return "The server needs newer firmware on this device.";
+        case events::Status::reconnecting:
+            return "Connecting to the server...";
         case events::Status::disconnected:
         case events::Status::pairing:
         case events::Status::connected:
@@ -57,12 +60,12 @@ namespace {
         lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
         lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
         lv_obj_set_style_pad_column(row, TOKEN_SPACE_3, 0);
-        auto* dot = lv_obj_create(row);
-        lv_obj_remove_style_all(dot);
-        lv_obj_set_size(dot, TOKEN_SPACE_4, TOKEN_SPACE_4);
-        lv_obj_set_style_radius(dot, TOKEN_RADIUS_FULL, 0);
-        lv_obj_set_style_bg_color(dot, lv_color_hex(TOKEN_COLOR_WARNING_DARK), 0);
-        lv_obj_set_style_bg_opa(dot, LV_OPA_COVER, 0);
+        s_trouble_dot = lv_obj_create(row);
+        lv_obj_remove_style_all(s_trouble_dot);
+        lv_obj_set_size(s_trouble_dot, TOKEN_SPACE_4, TOKEN_SPACE_4);
+        lv_obj_set_style_radius(s_trouble_dot, TOKEN_RADIUS_FULL, 0);
+        lv_obj_set_style_bg_color(s_trouble_dot, lv_color_hex(TOKEN_COLOR_WARNING_DARK), 0);
+        lv_obj_set_style_bg_opa(s_trouble_dot, LV_OPA_COVER, 0);
         s_trouble_text = components::text(row, "", styles::Text::body, true);
         lv_obj_set_width(s_trouble_text, LV_SIZE_CONTENT);
         lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
@@ -83,7 +86,7 @@ namespace {
         // The only control, so the encoder starts on it.
         auto* settings = components::icon_button(header, { .callback = open_settings });
         show_time();
-        return s_time && s_date && s_trouble && s_trouble_text && settings;
+        return s_time && s_date && s_trouble && s_trouble_text && s_trouble_dot && settings;
     }
     // Every UI tick; checks the clock once a second and redraws only what changed.
     void update(void*) {
@@ -92,6 +95,11 @@ namespace {
             s_shown_status = status;
             if (const char* text = trouble_text(status)) {
                 lv_label_set_text(s_trouble_text, text);
+                // Only trouble gets the warning dot, matching the amber ring; reconnecting is quiet.
+                if (status == events::Status::reconnecting)
+                    lv_obj_add_flag(s_trouble_dot, LV_OBJ_FLAG_HIDDEN);
+                else
+                    lv_obj_remove_flag(s_trouble_dot, LV_OBJ_FLAG_HIDDEN);
                 lv_obj_remove_flag(s_trouble, LV_OBJ_FLAG_HIDDEN);
             } else {
                 lv_obj_add_flag(s_trouble, LV_OBJ_FLAG_HIDDEN);

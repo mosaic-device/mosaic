@@ -79,7 +79,7 @@ Raise logging with these options rather than the global log level: early boot th
 
 With `MOSAIC_DEBUG_TRIGGERS` (and in the preview), the `mosaic>` console accepts:
 
-- `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected`, `trigger error`, `trigger update`: publish that event as the server connection will.
+- `trigger notification`, `trigger pairing`, `trigger connected`, `trigger disconnected`, `trigger error`, `trigger update`, `trigger reconnecting`: publish that event as the server connection will.
 - `volume [10-100]`, `mute [on|off]`: show or change those settings.
 
 The normal firmware contains no trigger code; CI checks this.
@@ -91,7 +91,13 @@ The normal firmware contains no trigger code; CI checks this.
 3. Enter the home network name, its password and the server URL, `wss://<host>/ws/device`, then tap **Save and reboot**. The password must be empty for an open network or 8–63 characters.
 4. The device shows success for about six seconds, reboots and joins the network.
 
-Setup doesn't test the network or contact the server, so wrong details are saved too and the device keeps retrying. If the server can't be reached, through a wrong address, a certificate it can't verify or the server being down, the screen says so. To change the details, tap **Enter setup mode** twice within ten seconds and submit new ones. Networks that need a browser sign-in aren't supported. Design constraints are in the [provisioning guide](main/features/provisioning/README.md) and the [provisioning decision](../docs/adr/0001-softap-provisioning.md).
+Setup doesn't test the network or contact the server, so wrong details are saved too and the device keeps retrying. If the server can't be reached, through a wrong address, a certificate it can't verify or the server being down, the screen says so. To change the details, tap **Enter setup mode** twice within ten seconds and submit new ones; once the device is paired, the same two taps are under **Settings → Change Wi-Fi or server**. Networks that need a browser sign-in aren't supported.
+
+## Pairing
+
+Once it reaches the server, the device shows an eight-character code, the server's address and how long the code lasts. Enter the code in the admin app's pair form within ten minutes; the server sends a new code when one runs out. The device then shows that it's paired and opens Home.
+
+The device keeps a credential for the server URL in its own NVS namespace, `mosaic_device`, apart from the Wi-Fi settings. A paired device starts on Home after every restart, even while Wi-Fi or the server is unreachable, and goes back to the pairing screen only if the server says it isn't paired. Changing the server URL in setup makes a new credential that needs a new claim; saving the same URL keeps the pairing. Removing the device in the admin app replaces its credential, and it shows a new code. Design constraints are in the [provisioning guide](main/features/provisioning/README.md) and the [provisioning decision](../docs/adr/0001-softap-provisioning.md).
 
 ## Tests and tooling
 

@@ -39,6 +39,23 @@ int main() {
     assert(post_notification() == ESP_ERR_INVALID_STATE);
     assert(status() == Status::disconnected && fake_posts == 0);
 
+    // A saved pairing holds before anything is posted; a status that unpairs clears it.
+    restore_paired(true);
+    assert(paired() && fake_posts == 0);
+    restore_paired(false);
+
+    // The pairing code is shared as it was set, and cleared with an empty one.
+    assert(pairing_code().empty());
+    const PairingCode code = make_pairing_code("K7QM3XPA", 600, 5'000);
+    set_pairing_code(code);
+    assert(pairing_code() == code && pairing_code().view() == "K7QM3XPA");
+    assert(pairing_code().expires_at_ms == 605'000);
+    set_pairing_code({ });
+    assert(pairing_code().empty());
+    // Only an eight-character code is kept.
+    assert(make_pairing_code("K7QM", 600, 0).empty());
+    assert(make_pairing_code("K7QM3XPA9", 600, 0).empty());
+
     // Failed starts clean up and can be retried.
     fake_semaphore_create_fails = true;
     assert(start() == ESP_ERR_NO_MEM);

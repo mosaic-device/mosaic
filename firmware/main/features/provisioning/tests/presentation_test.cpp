@@ -18,6 +18,12 @@ int main() {
     assert(text_a == text_b); // stale array tails/padding are not presentation semantics
     static_assert(sizeof(ViewState) <= 512);
 
+    // Where the owner enters the code: the server's host, with its port if it has one.
+    assert(server_host("wss://mosaic.example.ts.net/ws/device") == "mosaic.example.ts.net");
+    assert(server_host("wss://192.168.1.20:8443/ws/device?x=1") == "192.168.1.20:8443");
+    assert(server_host("wss://host") == "host");
+    assert(server_host("ws://host/ws/device").empty() && server_host("").empty());
+
     assert(!present(StartupView::unavailable).recovery_visible);
     StateMachine s;
     assert(present(s.snapshot()) == present(StartupView::starting));
@@ -32,12 +38,43 @@ int main() {
     (void)s.dispatch(GotIp { }, 4);
     assert(present(s.snapshot()).heading == "Wi-Fi connected");
     assert(present(s.snapshot()).online && !present(s.snapshot()).starting);
+    // Online is not setup: a paired device stays on Home.
+    assert(!present(s.snapshot()).setup);
     {
         // Online, the screen follows the server connection.
         using mosaic::events::Status;
         const auto reaching = present(s.snapshot(), 0, Status::disconnected);
         assert(reaching.message == "Connecting to the server..." && reaching.recovery_visible);
-        assert(present(s.snapshot(), 0, Status::pairing).message == "Waiting for device pairing.");
+        // Waiting to be claimed: the code, where to enter it and how long it lasts.
+        const Pairing pairing {
+            .code = mosaic::events::make_pairing_code("K7QF2M9X", 600, 1'000),
+            .now_ms = 1'000,
+            .server_url = "wss://mosaic.example.ts.net/ws/device",
+        };
+        const auto waiting = present(s.snapshot(), 0, Status::pairing, pairing);
+        assert(waiting.heading == "Pair this Mosaic" && waiting.code == "K7QF-2M9X");
+        assert(waiting.message == "Enter it in Mosaic at mosaic.example.ts.net.\nExpires in 10:00.");
+        // Setup recovery stays, to change the server.
+        assert(waiting.recovery_visible && waiting.online && !waiting.setup);
+        // The time counts down in whole seconds, rounded up.
+        Pairing later = pairing;
+        later.now_ms = 1'000 + 600'000 - 61'500;
+        assert(present(s.snapshot(), 0, Status::pairing, later).message.view().ends_with("Expires in 1:02."));
+        later.now_ms = 1'000 + 600'000 - 1;
+        assert(present(s.snapshot(), 0, Status::pairing, later).message.view().ends_with("Expires in 0:01."));
+        // Run out: the old code goes away until the server sends a new one.
+        later.now_ms = 1'000 + 600'000;
+        const auto expired = present(s.snapshot(), 0, Status::pairing, later);
+        assert(expired.code.empty() && expired.message == "That code expired. Waiting for a new one...");
+        // No code yet.
+        const auto none = present(s.snapshot(), 0, Status::pairing);
+        assert(none.code.empty() && none.message == "Getting a pairing code...");
+        assert(present(s.snapshot(), 0, Status::error, pairing).code.empty());
+        // Just paired: says so, briefly, before Home.
+        const auto paired = present(s.snapshot(), 0, Status::connected, pairing);
+        assert(paired.heading == "Paired" && paired.code.empty() && !paired.recovery_visible);
+        // Hidden on that screen, but Settings still offers setup to the paired device.
+        assert(paired.recovery_allowed && paired.recovery_enabled);
         // Unreachable, a bad address or a TLS failure: point to setup recovery.
         const auto error = present(s.snapshot(), 0, Status::error);
         assert(error.heading == "Can't reach the server");
@@ -46,6 +83,7 @@ int main() {
         // A new address won't fix an old firmware, so nothing is offered.
         const auto update = present(s.snapshot(), 0, Status::update_required);
         assert(update.heading == "Update required" && !update.recovery_visible && update.online);
+        assert(update.recovery_allowed);
     }
     (void)s.dispatch(SetupTapped { 2 }, 10);
     assert(s.snapshot().recovery == RecoveryState::confirming);
@@ -146,6 +184,8 @@ int main() {
     StateMachine setup;
     (void)setup.dispatch(Start { false }, 0);
     assert(present(setup.snapshot(), 1).screen == ScreenKind::setup);
+    // Setup takes the screen from the moment it opens until the restart after saving.
+    assert(present(setup.snapshot(), 1).setup);
     (void)setup.dispatch(StartupCompleted { true }, 1);
     form::Settings settings { };
     (void)setup.dispatch(Submit { settings }, 2);
@@ -155,9 +195,11 @@ int main() {
     (void)setup.dispatch(Submit { settings }, 4);
     (void)setup.dispatch(Saved { true }, 5);
     assert(present(setup.snapshot(), 1).message.view().find("Settings saved") == 0);
+    assert(present(setup.snapshot(), 1).setup);
     auto saved = present(setup.snapshot(), 1);
     (void)setup.dispatch(Tick { }, 6);
     assert(present(setup.snapshot(), 1) == saved);
     (void)setup.dispatch(Tick { }, 6'000'005);
     assert(present(setup.snapshot(), 1).message == "Restarting...");
+    assert(present(setup.snapshot(), 1).setup);
 }

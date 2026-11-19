@@ -230,8 +230,14 @@ namespace {
             ++setup_session;
         action_context.store(snapshot.action_context);
         published_status.store(snapshot.portal_status);
-        // Every tick too, so the online screen follows the server connection.
-        publish_view(present(snapshot, setup_session, events::status()));
+        // Every tick too, so the online screen follows the server connection and the pairing
+        // code's countdown.
+        const Pairing pairing {
+            .code = events::pairing_code(),
+            .now_ms = static_cast<uint64_t>(now) / 1'000,
+            .server_url = saved.ws_url,
+        };
+        publish_view(present(snapshot, setup_session, events::status(), pairing));
         for (size_t i = 0; i < effects.count; ++i)
             execute(model, effects.effects[i]);
         // StateMachine effects can contain copies of credentials; erase even unused slots.
