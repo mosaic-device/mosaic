@@ -117,6 +117,7 @@ Action Policy::received(uint64_t, Frame frame, Reject reason) {
         rejection_ = reason;
         phase_ = Phase::closing;
         return Action::close;
+    case Frame::notification:
     case Frame::other:
         return Action::none;
     }

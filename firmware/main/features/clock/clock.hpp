@@ -33,5 +33,12 @@ inline constexpr size_t kDateSize = 24;
 // The date under the Home clock, such as "Tuesday, November 3", or empty whenever
 // text() would show the placeholder, so an untrusted clock shows no date either.
 std::string_view date(bool synced, std::time_t now, std::span<char, kDateSize> buffer);
+// Room for the longest age text, "999 days ago", and its terminator.
+inline constexpr size_t kAgoSize = 16;
+// How long before `now` something happened `then`, such as "just now", "1 min ago",
+// "3 h ago" or "2 days ago". Empty when the clock is untrusted, as text() decides, or `then`
+// isn't a real time, so a wrong age is never shown. A time slightly ahead of the clock counts
+// as just now.
+std::string_view ago(bool synced, std::time_t now, std::time_t then, std::span<char, kAgoSize> buffer);
 
 }

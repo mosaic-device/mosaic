@@ -20,8 +20,9 @@ namespace {
     // Each connect, read or write step gives up after this; the policy's open deadline caps
     // the whole attempt.
     constexpr int kNetworkTimeoutMs = 10'000;
-    // The client's default, plus room for decode_reply in Listener::frame.
-    constexpr int kTaskStack = 6 * 1'024;
+    // The client's default, plus room for decode_reply in Listener::frame: a decoded envelope
+    // and a Reply each hold a whole notification, about 1.3 KB.
+    constexpr int kTaskStack = 8 * 1'024;
     constexpr TickType_t kSendTimeout = pdMS_TO_TICKS(5'000);
     constexpr TickType_t kCloseTimeout = pdMS_TO_TICKS(1'000);
 

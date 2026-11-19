@@ -24,11 +24,13 @@ namespace {
     void ring_room(lv_event_t* e) {
         lv_event_set_ext_draw_size(e, TOKEN_FOCUS_OFFSET + TOKEN_FOCUS_WIDTH);
     }
-    void allow_focus_overflow(lv_obj_t* object) {
-        lv_obj_add_flag(object, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
-        lv_obj_add_event_cb(object, ring_room, LV_EVENT_REFR_EXT_DRAW_SIZE, nullptr);
-        lv_obj_refresh_ext_draw_size(object);
-    }
+} // namespace
+void allow_focus_overflow(lv_obj_t* object) {
+    lv_obj_add_flag(object, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+    lv_obj_add_event_cb(object, ring_room, LV_EVENT_REFR_EXT_DRAW_SIZE, nullptr);
+    lv_obj_refresh_ext_draw_size(object);
+}
+namespace {
     void bind(lv_obj_t* object, Action action, Request request) {
         auto* binding = new (std::nothrow) Binding { action, request };
         if (!binding) {

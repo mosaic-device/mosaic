@@ -4,6 +4,7 @@
 #include "../credential.hpp"
 #include "../frames.hpp"
 #include "../policy.hpp"
+#include "../../notifications/store.hpp"
 #include "../../provisioning/adapters/settings_store.hpp"
 #include "../../../events/bus.hpp"
 #include "../../../support/secure_erase.hpp"
@@ -27,8 +28,9 @@
 namespace mosaic::features::connection::adapters::service {
 namespace {
     constexpr char kTag[] = "connection";
-    // Room for NVS writes of the credential, as well as the socket calls.
-    constexpr uint32_t kTaskStack = 6 * 1'024;
+    // Room for NVS writes of the credential and the socket calls, and for an Event, which holds
+    // a whole notification (about 1.3 KB).
+    constexpr uint32_t kTaskStack = 8 * 1'024;
     constexpr UBaseType_t kTaskPriority = 3;
     constexpr UBaseType_t kQueueLength = 8;
     // The task wakes at least this often, so a lost queue slot only delays an event.
@@ -153,6 +155,10 @@ namespace {
             case Kind::frame:
                 if (event.attempt != attempt_)
                     return Action::none;
+                if (event.reply.frame == Frame::notification) {
+                    receive(event.reply.notification);
+                    return Action::none;
+                }
                 remember(event.reply, now);
                 return policy_.received(now, event.reply.frame, event.reply.reason);
             }
@@ -254,6 +260,27 @@ namespace {
                 return policy_.closed(now_ms(), esp_random());
             }
             return Action::none;
+        }
+
+        // Notification Delivery Protocol, section 2: only once paired; stored, then confirmed,
+        // then shown. A receipt that can't be sent leaves the server to time out; the device
+        // shows the notification anyway.
+        void receive(const notifications::Notification& notification) {
+            if (!policy_.application_frames_allowed()) {
+                ESP_LOGW(kTag, "Dropped a notification that arrived before pairing");
+                return;
+            }
+            const notifications::Receipt receipt = notifications::store::accept(notification);
+            std::array<uint8_t, kSendLimit> frame { };
+            const size_t length = encode_receipt(notification.id_view(), receipt, frame);
+            const bool sent = length > 0 && websocket::send(std::span<const uint8_t>(frame.data(), length));
+            ESP_LOGI(kTag, "Notification %s: %s%s", notification.id_view().data(),
+                receipt == notifications::Receipt::stored          ? "stored"
+                    : receipt == notifications::Receipt::duplicate ? "duplicate"
+                                                                   : "invalid",
+                sent ? "" : " (receipt not sent)");
+            if (receipt == notifications::Receipt::stored)
+                events::post_notification();
         }
 
         Action send_connect() {

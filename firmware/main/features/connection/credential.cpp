@@ -25,6 +25,7 @@ Change after(const Credential& saved, const Reply& reply) {
         return saved.paired ? Change::mark_unpaired : Change::none;
     case Frame::rejected:
         return reply.reason == Reject::credential_revoked ? Change::replace : Change::none;
+    case Frame::notification:
     case Frame::other:
         break;
     }

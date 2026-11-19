@@ -19,7 +19,7 @@ struct Screens {
     Renderer setup;
     Page home;
     Page settings;
-    // M3: leave empty until the notification screen exists; opening it fails until then.
+    // Incoming notifications and their detail; opens over Home or Settings.
     Page notification;
     // Read every tick in the LVGL context, after setup's routine.
     Conditions (*conditions)(void* context) = nullptr;
@@ -36,4 +36,6 @@ Renderer renderer(const Screens& screens);
 // screen; nothing changes.
 bool open(Screen screen);
 bool back();
+// The screen in front. LVGL context.
+Screen active();
 }

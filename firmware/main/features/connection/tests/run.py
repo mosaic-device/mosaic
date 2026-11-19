@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 feature = Path(__file__).resolve().parents[1]
+notifications = feature.parent / "notifications"
 firmware = feature.parents[2]
 protos = firmware / "components/device_protos/generated"
 nanopb = firmware / "components/nanopb"
@@ -30,7 +31,7 @@ programs = {
         [feature / "backoff.cpp", feature / "policy.cpp", feature / "tests/policy_test.cpp"],
         [],
     ),
-    "frames": ([feature / "frames.cpp", feature / "tests/frames_test.cpp"], [str(golden)]),
+    "frames": ([feature / "frames.cpp", notifications / "notification.cpp", feature / "tests/frames_test.cpp"], [str(golden)]),
     "credential": ([feature / "frames.cpp", feature / "credential.cpp", feature / "tests/credential_test.cpp"], []),
     "credential_store": (
         [feature / "frames.cpp", feature / "credential.cpp", feature / "adapters/credential_store.cpp",

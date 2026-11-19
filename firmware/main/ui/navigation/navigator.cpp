@@ -48,7 +48,7 @@ bool Navigator::open(Screen screen) {
 bool Navigator::back() {
     if (size_ == 1)
         return false;
-    --size_;
+    size_ = active() == Screen::notification ? 1 : size_ - 1;
     return true;
 }
 

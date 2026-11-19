@@ -2,6 +2,7 @@
 #include "../events/bus.hpp"
 #include "../features/home/screen.hpp"
 #include "../features/led_feedback/service.hpp"
+#include "../features/notifications/ui/screen.hpp"
 #include "../features/provisioning/ui/renderer.hpp"
 #include "../features/settings/screen.hpp"
 #include "../ui/navigation/host.hpp"
@@ -31,7 +32,7 @@ ui::Renderer screens() {
         .setup = provisioning::renderer_callbacks(),
         .home = features::home::page(),
         .settings = features::settings::page(),
-        .notification = { },
+        .notification = features::notifications::page(),
         .conditions = conditions,
         .conditions_context = nullptr,
         .input = input,

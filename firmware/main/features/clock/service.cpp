@@ -33,4 +33,8 @@ std::string_view now_text(std::span<char, kTextSize> buffer) {
 std::string_view today_text(std::span<char, kDateSize> buffer) {
     return date(s_synced.load(), std::time(nullptr), buffer);
 }
+
+std::string_view ago_text(std::time_t then, std::span<char, kAgoSize> buffer) {
+    return ago(s_synced.load(), std::time(nullptr), then, buffer);
+}
 }

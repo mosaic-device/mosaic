@@ -10,7 +10,14 @@ from pathlib import Path
 feature = Path(__file__).resolve().parents[1]
 main = feature.parents[1]
 compiler = shlex.split(os.environ.get("CXX", "c++"))
-sources = [feature / "commands.cpp", main / "events/status.cpp", feature / "tests/commands_test.cpp"]
+sources = [
+    feature / "commands.cpp",
+    main / "events/status.cpp",
+    main / "features/notifications/notification.cpp",
+    main / "features/notifications/inbox.cpp",
+    main / "features/notifications/store.cpp",
+    feature / "tests/commands_test.cpp",
+]
 
 with tempfile.TemporaryDirectory(prefix="mosaic-debug-triggers-") as work:
     env = {**os.environ, "TMPDIR": work, "TMP": work, "TEMP": work}

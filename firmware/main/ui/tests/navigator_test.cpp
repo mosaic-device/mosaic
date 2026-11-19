@@ -83,7 +83,7 @@ void unavailable_screens_do_not_open() {
     assert(navigator.active() == Screen::settings);
 }
 
-void notification_returns_to_what_was_underneath() {
+void notification_returns_home() {
     Navigator navigator = at_home();
     assert(navigator.open(Screen::notification));
     assert(!navigator.open(Screen::settings));
@@ -92,8 +92,6 @@ void notification_returns_to_what_was_underneath() {
 
     assert(navigator.open(Screen::settings));
     assert(navigator.open(Screen::notification));
-    assert(navigator.back());
-    assert(navigator.active() == Screen::settings);
     assert(navigator.back());
     assert(navigator.active() == Screen::home);
     assert(!navigator.back());
@@ -162,7 +160,7 @@ int main() {
     settings_opens_from_home_and_back_returns();
     back_does_nothing_on_base_screens();
     unavailable_screens_do_not_open();
-    notification_returns_to_what_was_underneath();
+    notification_returns_home();
     a_new_base_closes_opened_screens();
     every_reachable_screen_has_a_way_back();
 }
