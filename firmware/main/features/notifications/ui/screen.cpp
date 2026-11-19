@@ -3,6 +3,7 @@
 #include "../store.hpp"
 #include "../../clock/service.hpp"
 #include "../../led_feedback/patterns.hpp"
+#include "../../led_feedback/service.hpp"
 #include "../../../ui/components/controls.hpp"
 #include "../../../ui/generated/design_tokens.h"
 
@@ -123,7 +124,7 @@ namespace {
         lv_obj_scroll_to_y(s_detail.body, 0, LV_ANIM_OFF);
     }
 
-    // Leaves the screen; the navigator returns to what was underneath.
+    // Leaves the notification and returns to Home.
     void close() {
         s_flow.dismiss();
         navigation::back();
@@ -239,8 +240,11 @@ namespace {
                 s_opened = navigation::open(navigation::Screen::notification);
         }
         // An untouched notification closes; one that never got to open just stops waiting.
-        if (s_flow.tick(now) && in_front)
-            navigation::back();
+        if (s_flow.tick(now)) {
+            led_feedback::acknowledge();
+            if (in_front)
+                navigation::back();
+        }
         // Keep "2 min ago" current while it's showing.
         if (s_flow.view() != Flow::View::none && std::time(nullptr) != s_aged_at) {
             s_aged_at = std::time(nullptr);

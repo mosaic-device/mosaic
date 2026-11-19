@@ -12,7 +12,7 @@ enum class Screen : uint8_t {
     setup,
     home,
     settings,
-    // Reserved for M3: shown above Home or Settings, and Back returns underneath.
+    // Can open from Home or Settings. Dismissing it returns to Home.
     notification,
 };
 
@@ -40,7 +40,8 @@ public:
     // Opens a screen above the active one. False when the map does not allow it
     // from here, and nothing changes.
     bool open(Screen screen);
-    // Returns to the screen underneath. False on a base screen, where Back does nothing.
+    // Returns to Home from a notification or to the screen underneath otherwise.
+    // False on a base screen, where Back does nothing.
     bool back();
 
 private:
