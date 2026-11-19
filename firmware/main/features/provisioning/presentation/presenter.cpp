@@ -5,7 +5,7 @@ ViewState present(StartupView startup, uint32_t session) {
     view.session = session;
     view.heading = "Mosaic";
     view.starting = startup == StartupView::starting;
-    view.recovery_prompt = "Enter setup mode";
+    view.recovery_prompt = kEnterSetup;
     view.message = startup == StartupView::starting
         ? "Starting Wi-Fi setup..."
         : "Setup unavailable. Restart the device or connect a service technician.";

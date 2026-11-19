@@ -130,6 +130,16 @@ bool online() {
 bool setup_open() {
     return showing_setup;
 }
+Recovery recovery() {
+    if (!has_rendered || credential_session)
+        return { };
+    return { .prompt = rendered.recovery_prompt.view(),
+        .available = rendered.recovery_visible && rendered.recovery_enabled };
+}
+void request_setup() {
+    if (status.action_callback)
+        status.action_callback(UiAction::SetupTapped, status.action_context);
+}
 esp_err_t publish_view(const ViewState& state) {
     if (!mosaic::ui::ready())
         return ESP_ERR_INVALID_STATE;
