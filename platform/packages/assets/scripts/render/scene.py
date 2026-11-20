@@ -372,6 +372,40 @@ MOSAIC_ON_PLATE = at(305, 0, 180)
 shadow = box("shadow", (4, 4, 0.001), (0, 0, 0), material("shadow", "#000000"))
 shadow.is_shadow_catcher = True
 
+
+def faded_desk(half_width, half_depth):
+    """A dark desk under the device that fades out all round, so its render
+    has no edges: a patch of surface, the page's background beyond it."""
+    m = bpy.data.materials.new("desk")
+    m.use_nodes = True
+    nodes, links = m.node_tree.nodes, m.node_tree.links
+    surface = nodes["Principled BSDF"]
+    surface.inputs["Base Color"].default_value = linear("#121314")
+    surface.inputs["Roughness"].default_value = 0.55
+    coord = nodes.new("ShaderNodeTexCoord")
+    scale = nodes.new("ShaderNodeMapping")
+    scale.inputs["Scale"].default_value = (1 / half_width, 1 / half_depth, 1)
+    falloff = nodes.new("ShaderNodeTexGradient")
+    falloff.gradient_type = "SPHERICAL"
+    ramp = nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.interpolation = "EASE"
+    ramp.color_ramp.elements[1].position = 0.65
+    clear = nodes.new("ShaderNodeBsdfTransparent")
+    mix = nodes.new("ShaderNodeMixShader")
+    links.new(coord.outputs["Object"], scale.inputs["Vector"])
+    links.new(scale.outputs[0], falloff.inputs[0])
+    links.new(falloff.outputs["Fac"], ramp.inputs[0])
+    links.new(ramp.outputs[0], mix.inputs[0])
+    links.new(clear.outputs[0], mix.inputs[1])
+    links.new(surface.outputs[0], mix.inputs[2])
+    links.new(mix.outputs[0], nodes["Material Output"].inputs["Surface"])
+    desk = box("desk", (2 * half_width, 2 * half_depth, 0.001), (0, 0.02, -0.0005), m)
+    desk.hide_render = True
+    return desk
+
+
+desk = faded_desk(0.17, 0.11)
+
 # ------------------------------------------------------------------ lights
 def area(name, energy, size, colour=(1, 1, 1)):
     data = bpy.data.lights.new(name, "AREA")
@@ -500,13 +534,18 @@ def mid():
 LEAN = math.degrees(front.angle(Vector((0, -1, 0)))) if front.z > 0 else 0
 
 if wanted("hero"):
-    stand()
-    resolution(1448, 905)
+    # Square on and a little above, on a rendered desk that fades out before
+    # the frame's edges, warm light from behind falling on it. The frame is
+    # wide so the fade fits; the page scales it to keep the device's size.
+    stand(on_desk=False)
+    desk.hide_render = False
+    resolution(2400, 1200)
     set_screen("calendar")
     set_ring(1)
-    d = frame_perspective(14, LEAN + 6, mid(), 0.94)
-    light_around(mid(), d * 0.9)
+    d = frame_perspective(0, LEAN + 12, mid(), 0.45)
+    light_around(mid(), d * 0.9, warm=0.6)
     render("hero.png")
+    desk.hide_render = True
 
 if wanted("waits"):
     # Straight on, square to the screen; floating, with no desk under it.

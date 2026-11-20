@@ -6,8 +6,6 @@ import { links } from './links'
 ---
 
 <section class="stage hero" aria-labelledby="hero-title">
-  <div class="desk desktop-only" aria-hidden="true"></div>
-  <div class="desk-edge desktop-only" aria-hidden="true"></div>
   <div class="pool" aria-hidden="true"></div>
 
   <nav class="nav" aria-label="Main">
@@ -105,30 +103,6 @@ import { links } from './links'
     margin-top: 36px;
   }
 
-  /* The desk: a surface that starts below the device and fades in from the left. */
-  .desk {
-    position: absolute;
-    inset: calc(590 * var(--u)) 0 0;
-    background: linear-gradient(180deg, #131415 0%, #0d0e0e 45%, #090a0a 100%);
-    mask-image: linear-gradient(
-      90deg,
-      transparent calc(520 * var(--u)),
-      #000 calc(820 * var(--u))
-    );
-  }
-  .desk-edge {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(590 * var(--u));
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      transparent calc(560 * var(--u)),
-      rgb(255 255 255 / 0.09) calc(860 * var(--u)),
-      rgb(255 255 255 / 0.06) 100%
-    );
-  }
   .pool {
     position: absolute;
     left: calc(640 * var(--u));
@@ -140,18 +114,24 @@ import { links } from './links'
     filter: blur(calc(60 * var(--u)));
   }
 
-  /* The render has room above and below the device; centre it on the slot. */
+  /*
+   * The slot is the device's box. The render is wider, with the desk fading
+   * out around the device (it fills 45% of the render's width, 94% of the
+   * slot's), so it overflows the slot, centred on it.
+   */
   .scene {
     z-index: 2;
     aspect-ratio: 724 / 358;
+    pointer-events: none;
   }
   .render {
     position: absolute;
-    left: 0;
+    left: 50%;
     top: 50%;
-    width: 100%;
+    width: calc(100% * 0.94 / 0.45);
+    max-width: none;
     height: auto;
-    transform: translateY(-50%);
+    transform: translate(-50%, -50%);
   }
 
   @media (min-width: 900px) {
@@ -175,19 +155,14 @@ import { links } from './links'
     .links {
       gap: 20px;
     }
+    /* Room below for the render's desk to fade out, which brings its own
+       warm light, so the pool isn't needed here. */
     .scene {
       position: relative;
-      margin-top: 64px;
-      padding-bottom: 48px;
+      margin: 64px 0 30%;
     }
     .pool {
-      left: 0;
-      right: 0;
-      top: auto;
-      bottom: 0;
-      width: auto;
-      height: 160px;
-      filter: blur(48px);
+      display: none;
     }
   }
 </style>
