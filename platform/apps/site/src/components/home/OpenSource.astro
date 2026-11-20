@@ -56,9 +56,6 @@ const parts = [
     padding: 0;
     list-style: none;
   }
-  .parts li {
-    border-top: 1px solid var(--hairline);
-  }
   .parts a {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 16px;
@@ -97,6 +94,9 @@ const parts = [
   /* Desktop: two columns of three on the 160–640 and 800–1280 lines, each row
      a name, its folder on the 160 line in from the name, and an arrow. */
   @media (min-width: 900px) {
+    .parts li {
+      border-top: 1px solid var(--hairline);
+    }
     .parts {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -123,27 +123,33 @@ const parts = [
     }
   }
 
-  /* Phones: one column, the folder under its name. */
+  /* Below 900px, like every other list here: the name, then its folder in a
+     muted line under it, with the arrow beside them. Two columns on a tablet. */
   @media (max-width: 899.98px) {
     .parts {
+      display: grid;
+      gap: 20px;
       margin-top: 40px;
-    }
-    .parts li:last-child {
-      border-bottom: 1px solid var(--hairline);
     }
     .parts a {
       grid-template-areas: 'name go' 'path go';
-      padding: 14px 0;
-      row-gap: 2px;
     }
     .name {
       grid-area: name;
+      line-height: 1.4;
     }
     .path {
       grid-area: path;
+      margin-top: 4px;
     }
     .go {
       grid-area: go;
+    }
+  }
+  @media (min-width: 600px) and (max-width: 899.98px) {
+    .parts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: 32px;
     }
   }
 </style>
