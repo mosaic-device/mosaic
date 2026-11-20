@@ -5,7 +5,7 @@
 import calm from '@mosaic/assets/renders/calm.avif'
 ---
 
-<section class="stage calm" style="--h: 960" aria-labelledby="calm-title">
+<section class="stage calm" style="--h: 1050" aria-labelledby="calm-title">
   <div class="copy">
     <h2 id="calm-title" class="display" style="--size: 48">
       Calm, until it matters.
@@ -17,7 +17,7 @@ import calm from '@mosaic/assets/renders/calm.avif'
 
   <div
     class="frame at"
-    style="--x: 240; --y: 240; --w: 960"
+    style="--x: 160; --y: 240; --w: 1120"
   >
     <img
       src={calm.src}
@@ -87,10 +87,13 @@ import calm from '@mosaic/assets/renders/calm.avif'
       position: absolute;
       left: calc(160 * var(--u));
       right: calc(160 * var(--u));
-      top: calc(860 * var(--u));
-      display: flex;
-      justify-content: space-between;
-      gap: 32px;
+      top: calc(950 * var(--u));
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+    /* Four equal columns across the block, each starting on its quarter. */
+    .promises li {
+      padding-right: calc(40 * var(--u));
     }
   }
 
