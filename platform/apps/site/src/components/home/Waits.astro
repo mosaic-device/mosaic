@@ -24,25 +24,25 @@ import waits from '@mosaic/assets/renders/waits.avif'
 
       <ol class="callouts">
         <li class="callout at" style="--x: 1040; --y: 100; --w: 240">
-          <h3>It arrives</h3>
-          <p>
+          <h3 class="list-name">It arrives</h3>
+          <p class="list-note">
             The ring turns blue and stays blue until you look. The glow beneath
             the device swells once.
           </p>
         </li>
-        <li class="callout at" style="--x: 160; --y: 371; --w: 240">
-          <h3>You glance</h3>
-          <p>From your chair: Avery wants your review on #194, two minutes ago.</p>
+        <li class="callout at" style="--x: 160; --y: 386; --w: 240">
+          <h3 class="list-name">You glance</h3>
+          <p class="list-note">From your chair: Avery wants your review on #194, two minutes ago.</p>
         </li>
-        <li class="callout at" style="--x: 160; --y: 539; --w: 240">
-          <h3>You decide</h3>
-          <p>Approve it, dismiss it, or open it on your laptop.</p>
+        <li class="callout at" style="--x: 160; --y: 554; --w: 240">
+          <h3 class="list-name">You decide</h3>
+          <p class="list-note">Approve it, dismiss it, or open it on your laptop.</p>
         </li>
       </ol>
 
       <!-- Leaders from each callout to the part it describes. -->
       <div class="leader desktop-only" aria-hidden="true">
-        <i class="line" style="--x: 1198; --y: 250; --w: 1; --h: 172"></i>
+        <i class="line" style="--x: 1198; --y: 215; --w: 1; --h: 207"></i>
         <i class="dot" style="--x: 1194; --y: 420"></i>
       </div>
       <div class="leader desktop-only" aria-hidden="true">
@@ -92,18 +92,6 @@ import waits from '@mosaic/assets/renders/waits.avif'
     padding: 0;
     list-style: none;
   }
-  .callout h3 {
-    font-size: 20px;
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    color: var(--color-foreground);
-  }
-  .callout p {
-    margin-top: 8px;
-    font-size: 15px;
-    line-height: 1.55;
-    color: var(--color-muted-foreground);
-  }
 
   .leader i {
     position: absolute;
@@ -137,19 +125,10 @@ import waits from '@mosaic/assets/renders/waits.avif'
       transform: none;
       margin: -10% 0 -7%;
     }
-    /* The same as every other list here: name, then one muted line. */
     .callouts {
       display: grid;
       gap: 20px;
       margin-top: 40px;
-    }
-    .callout h3 {
-      font-size: 17px;
-      line-height: 1.4;
-      letter-spacing: 0;
-    }
-    .callout p {
-      margin-top: 4px;
     }
   }
   @media (min-width: 600px) and (max-width: 899.98px) {
