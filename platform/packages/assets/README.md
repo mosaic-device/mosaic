@@ -14,7 +14,8 @@ Import `@mosaic/assets/fonts.css`; use `Manrope, system-ui, sans-serif` and
 - `tests/`: offline validation of committed assets.
 - `metadata/`: font coverage and output checksums (paths relative to this package root; no manifest self-hash).
 - `licenses/` and `web/`: finished distribution notices and web assets.
-- `models/`: the device model for the web, built from the CAD and PCB exports in `hardware/`.
+- `models/`: the device model, built from the CAD and PCB exports in `hardware/`.
+- `renders/`: the site's device images, rendered from the model.
 
 Firmware outputs remain in `firmware/main/ui/generated/assets/` at the repository root.
 Both generators resolve inputs and outputs from this package root regardless of invocation directory.
@@ -60,9 +61,8 @@ Commit sources, tooling, and finished assets together, not environments or
 
 ## Device model
 
-`models/mosaic-device.glb` is the device as a glTF model for the marketing site,
-imported as `@mosaic/assets/models/mosaic-device.glb`. It is built from two
-exports in `hardware/`:
+`models/mosaic-device.glb` is the device as a glTF model, the source of the
+site's renders (below). It is built from two exports in `hardware/`:
 
 - `hardware/cad/mosaic-device-cad.step`: the Onshape assembly, exported as one
   STEP file (uncheck "Export unique parts as individual files").
@@ -86,9 +86,30 @@ in CAD means updating `PARTS`; generation warns about parts it doesn't know.
 
 Materials named in `MATERIALS` (`case`, `aluminum`, `acrylic`, `diffuser`,
 `screen`) replace the CAD colours; other parts keep their CAD colours. The
-`screen` face has UVs covering it left to right and top to bottom, so the site
-can show a device screenshot on it as an emissive map. The output is
-meshopt-compressed: load it with three.js's `GLTFLoader` and `MeshoptDecoder`.
+`screen` face has UVs covering it left to right and top to bottom, so a
+screen image can be mapped onto it. The output is meshopt-compressed.
+
+## Site renders
+
+`renders/` holds the marketing site's device images, rendered from the model in
+Blender with Cycles: the hero, S2's three arrival states, S3's close-up, and
+the S5-to-S6 sequence (`journey/a-*` play on a timer, `journey/b-*` follow the
+scroll). `journey.json` gives the frame counts and, for every frame, where each
+labelled part sits, so the page can point labels at them. Every image is a
+transparent AVIF; the page supplies backgrounds and glows.
+
+After changing the model, the shots or the screens, re-render and commit the
+results (needs Blender; set `BLENDER` if it isn't in `/Applications`):
+
+```sh
+pnpm render-site
+```
+
+A full render takes a while; `pnpm render-site --quick` renders at half size
+with few samples to check framing, and `--only=hero,calm` limits the shots.
+Don't commit quick renders: the tests check that the images are full size.
+The shots, cameras and lighting are in `scripts/render/scene.py`; the device's
+screens are drawn by `scripts/render/screens.mjs` from the committed fonts.
 
 ## Distribution notices
 

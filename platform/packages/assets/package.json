@@ -6,14 +6,16 @@
   "exports": {
     "./fonts.css": "./web/fonts.css",
     "./web/*": "./web/*",
-    "./models/*": "./models/*"
+    "./models/*": "./models/*",
+    "./renders/*": "./renders/*"
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "build": "node --test tests/*.test.mjs",
     "generate": "python3 scripts/fonts.py && node scripts/generate.mjs && node scripts/cues.mjs",
     "generate:cues": "node scripts/cues.mjs",
-    "generate:model": "node scripts/device-model.mjs"
+    "generate:model": "node scripts/device-model.mjs",
+    "render": "node scripts/render/render.mjs"
   },
   "devDependencies": {
     "@gltf-transform/core": "4.5.1",

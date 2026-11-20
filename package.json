@@ -35,7 +35,8 @@
     "design:check": "pnpm --filter @mosaic/assets test && pnpm --filter @mosaic/tokens test && pnpm --filter @mosaic/admin test",
     "generate-protos": "pnpm --filter @mosaic/protocols generate",
     "build:admin-assets": "pnpm --filter @mosaic/admin build && node scripts/copy-admin-assets.mjs",
-    "generate-assets": "pnpm --filter @mosaic/assets generate"
+    "generate-assets": "pnpm --filter @mosaic/assets generate",
+    "render-site": "pnpm --filter @mosaic/assets render"
   },
   "devDependencies": {
     "prettier": "^3.9.10",

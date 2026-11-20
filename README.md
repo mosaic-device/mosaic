@@ -40,4 +40,5 @@ Do not hand-edit generated files.
 
 - **Design tokens** are generated automatically by web builds and firmware builds. To generate them by hand, run `pnpm generate-tokens`.
 - **Device protocol bindings** (C for the firmware, C# for the server) are committed, so builds don't need to generate them. After changing the schema, run `pnpm generate-protos` (needs access to `buf.build`) and commit the result. See [protocols](platform/packages/protocols/README.md).
+- **Site renders** of the device are committed. After changing the device model, run `pnpm render-site` (needs Blender); see [assets](platform/packages/assets/README.md#site-renders).
 - **Fonts, icons and sounds** are committed. Regenerate them only when their sources change; see [assets](platform/packages/assets/README.md#regenerate).
