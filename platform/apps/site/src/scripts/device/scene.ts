@@ -612,8 +612,16 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       p.lit = 0
       return p
     },
-    layers: () => {
-      const p = fit(rectOf(slots.layers), qFlat, apart)
+    layers: (held = false) => {
+      // While S6 is still coming up, the device holds at the middle of the
+      // screen and the section catches up to it; once its slot reaches the
+      // middle they move together.
+      let r = rectOf(slots.layers)
+      if (held) {
+        const below = r.top + r.height / 2 - innerHeight / 2
+        if (below > 0) r = new DOMRect(r.x, r.y - below, r.width, r.height)
+      }
+      const p = fit(r, qFlat, apart)
       p.explode = 1
       p.screen = 0
       return p
@@ -652,19 +660,32 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       // the screen until S6 does, the device lifts off the plate, travels and
       // comes apart on the way.
       const moveStart = top(sections.server) + innerHeight * 0.15
-      const moveEnd = Math.max(moveStart + 1, top(sections.layers))
-      const move = easeInOut(clamp((y - moveStart) / (moveEnd - moveStart)))
+      // The move ends near half a screen before S6 reaches the top; the
+      // settle below fills that stretch, finishing as S6 is fully in view.
+      const SETTLE = innerHeight * 0.45
+      const moveEnd = Math.max(moveStart + 1, top(sections.layers) - SETTLE)
+      // A gentle curve: the device should drift across, not dart.
+      const move = smooth(clamp((y - moveStart) / (moveEnd - moveStart)))
       // Scrolling into the move before S5 played finishes its reveal.
       if (move > 0 && revealed.server === undefined)
         revealed.server = performance.now() - LONGEST
       const ms5 = since('server')
 
+      // It only starts to open on the way; most of the pull is left for the
+      // last stretch, once it is in place, and ends as S6 settles.
+      const ON_THE_WAY = 0.35
+      const settled = clamp((y - moveEnd) / SETTLE)
+      // Eases right up to the end, so the pull finishes exactly as S6's text
+      // and its last label settle.
+      const settle = smooth(settled)
       let pose: Pose
       if (move <= 0) pose = serverPose(ms5)
-      else if (move >= 1) pose = poses.layers()
-      else {
-        pose = mixPose(serverPose(ms5), poses.layers(), move)
-        pose.explode = clamp((move - 0.1) / 0.75)
+      else if (move >= 1) {
+        pose = poses.layers(true)
+        pose.explode = ON_THE_WAY + (1 - ON_THE_WAY) * settle
+      } else {
+        pose = mixPose(serverPose(ms5), poses.layers(true), move)
+        pose.explode = ON_THE_WAY * clamp((move - 0.1) / 0.9)
       }
       devices.travel.apply(pose)
       setDiorama(ms5)
@@ -674,7 +695,8 @@ export async function mountScene(canvas: HTMLCanvasElement) {
         (section, i) =>
           section === 'server'
             ? easeOut(step(ms5, 600 + i * 60, 220)) * (1 - clamp(move / 0.2))
-            : easeOut(clamp((move - 0.85 - i * 0.03) / 0.1)),
+            : // One after another, the last landing as S6 settles.
+              easeOut(clamp((settled - 0.35 - i * 0.1) / 0.25)),
       )
       if (
         (revealed.waits !== undefined && since('waits') < LONGEST) ||

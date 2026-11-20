@@ -82,6 +82,28 @@ const labels = [
     color: var(--color-muted-foreground);
   }
 
+  /*
+   * Room for the device to travel here from S5 before this section arrives,
+   * and a short hold once everything has settled, so a little extra scroll
+   * doesn't carry it straight off the top.
+   */
+  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
+    .layers {
+      margin-top: 50vh;
+      height: 140vh;
+    }
+    .pin {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+    .pin .stage {
+      width: min(100%, 1440px, 160vh);
+    }
+  }
+
   @media (min-width: 900px) {
     .copy {
       position: absolute;
