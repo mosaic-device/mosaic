@@ -21,12 +21,13 @@ import { links } from './links'
     padding: 0 max(24px, min(160px, 11.111vw));
     box-sizing: border-box;
   }
+  /* No divider: the space above sets it apart from the section before. The
+     widest margin is below, as on the canon, so the page settles at the end. */
   .row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 104px;
-    border-top: 1px solid var(--hairline);
+    padding: clamp(24px, 2.778vw, 40px) 0 clamp(64px, 6.667vw, 96px);
   }
   .wordmark {
     font-family: var(--font-family-brand);
