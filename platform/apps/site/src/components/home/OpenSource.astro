@@ -1,0 +1,33 @@
+---
+// S7: open source, as a statement of its own. Centred, with room around it,
+// and the code one click away.
+import { links } from './links'
+---
+
+<section class="stage open" style="--h: 560" aria-labelledby="open-title">
+  <div class="copy">
+    <h2 id="open-title" class="display" style="--size: 56">
+      The firmware, server, apps and PCB<br class="desktop-only" /> are all open source.
+    </h2>
+    <a class="button" href={links.github}>View on GitHub</a>
+  </div>
+</section>
+
+<style>
+  .copy {
+    text-align: center;
+  }
+  .button {
+    margin-top: 40px;
+  }
+
+  @media (min-width: 900px) {
+    .copy {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+  }
+</style>

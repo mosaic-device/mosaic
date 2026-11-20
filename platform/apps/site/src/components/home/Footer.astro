@@ -1,148 +1,54 @@
 ---
-// S7: the page ends quietly. The open-source line and links, then the wordmark
-// large in flat grey across the foot.
-import wordmark from '@mosaic/assets/web/mosaic-wordmark.svg?raw'
+// The page ends on one quiet row: the wordmark, and where to go for more.
 import { links } from './links'
-
-const columns = [
-  {
-    title: 'Product',
-    items: [
-      { label: 'Features', href: '#features' },
-      { label: 'Integrations', href: '#integrations' },
-      { label: 'Hardware', href: '#hardware' },
-    ],
-  },
-  {
-    title: 'Build',
-    items: [
-      { label: 'Build guide', href: links.build },
-      { label: 'Docs', href: links.docs },
-      { label: 'Self-hosting', href: links.selfHosting },
-    ],
-  },
-  {
-    title: 'Source',
-    items: [
-      { label: 'GitHub', href: links.github },
-      { label: 'Firmware', href: links.firmware },
-      { label: 'PCB files', href: links.pcb },
-    ],
-  },
-]
-// The asset is white; draw it in the current colour instead.
-const mark = wordmark.replace('fill="white"', 'fill="currentColor"')
 ---
 
-<footer class="stage footer" style="--h: 760">
-  <div class="copy at" style="--x: 160; --y: 120; --w: 640">
-    <h2 class="display" style="--size: 48">
-      The firmware, server, apps and PCB are all open source.
-    </h2>
-    <div class="actions">
-      <a class="button" href={links.github}>View on GitHub</a>
-      <a class="arrow-link" href={links.build}>
-        Build guide
-        <svg
-          aria-hidden="true"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          ><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg
-        >
-      </a>
-    </div>
-  </div>
-
-  <nav class="columns" aria-label="Footer">
-    {
-      columns.map((c) => (
-        <div>
-          <h3>{c.title}</h3>
-          <ul>
-            {c.items.map((i) => (
-              <li>
-                <a href={i.href}>{i.label}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))
-    }
-  </nav>
-
-  <div class="rule" aria-hidden="true"></div>
-  <div class="mark at" style="--x: 160; --y: 520; --w: 1120" role="img" aria-label="Mosaic">
-    <Fragment set:html={mark} />
+<footer class="footer">
+  <div class="row">
+    <a class="wordmark" href="/">MOSAIC</a>
+    <nav class="links" aria-label="Footer">
+      <a href={links.docs}>Docs</a>
+      <a href={links.github}>GitHub</a>
+    </nav>
   </div>
 </footer>
 
 <style>
-  .actions {
+  /* On the page's 160 px margins, scaled with it, never under 24 px. */
+  .footer {
+    width: min(100%, 1440px);
+    margin: 0 auto;
+    padding: 0 max(24px, min(160px, 11.111vw));
+    box-sizing: border-box;
+  }
+  .row {
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 28px;
-    margin-top: 40px;
+    justify-content: space-between;
+    height: 104px;
+    border-top: 1px solid var(--hairline);
   }
-  .columns {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 120px));
-    column-gap: 32px;
-  }
-  h3 {
-    font-size: 13px;
+  .wordmark {
+    font-family: var(--font-family-brand);
+    font-size: 15px;
     font-weight: 500;
+    letter-spacing: 0.34em;
     color: var(--color-muted-foreground);
   }
-  ul {
+  .links {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-top: 16px;
-    padding: 0;
-    list-style: none;
-    font-size: 15px;
+    gap: 32px;
+    font-size: 14px;
   }
-  .rule {
-    height: 1px;
-    background: var(--hairline);
+  .links a,
+  .wordmark {
+    transition: color 150ms ease;
   }
-  .mark {
-    color: var(--color-surface-raised);
+  .links a {
+    color: var(--color-muted-foreground);
   }
-  .mark :global(svg) {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-
-  @media (min-width: 900px) {
-    .columns {
-      position: absolute;
-      left: calc(920 * var(--u));
-      top: calc(128 * var(--u));
-    }
-    .rule {
-      position: absolute;
-      left: calc(160 * var(--u));
-      right: calc(160 * var(--u));
-      top: calc(418 * var(--u));
-    }
-  }
-
-  @media (max-width: 899.98px) {
-    .columns {
-      margin-top: 64px;
-      column-gap: 16px;
-    }
-    .rule {
-      margin: 56px 0;
-    }
+  .links a:hover,
+  .wordmark:hover {
+    color: var(--color-foreground);
   }
 </style>
