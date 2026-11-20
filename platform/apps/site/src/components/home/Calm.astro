@@ -1,7 +1,7 @@
 ---
 // S3: the calm state, up close. A framed macro of the device's knob corner:
-// screen off, ring dark, only the warm light from the strip behind it. The 3D
-// scene renders the device cropped to the frame.
+// screen off, ring dark, only the warm light from the strip behind it.
+import calm from '@mosaic/assets/renders/calm.avif'
 ---
 
 <section class="stage calm" aria-labelledby="calm-title">
@@ -17,11 +17,15 @@
   <div
     class="frame at"
     style="--x: 240; --y: 260; --w: 960"
-    data-slot="macro"
-    role="img"
-    aria-label="Close-up of Mosaic's knob in its case, the screen off and the LED ring dark, warm light glowing from behind the device"
   >
     <div class="warmth" aria-hidden="true"></div>
+    <img
+      src={calm.src}
+      width={calm.width}
+      height={calm.height}
+      loading="lazy"
+      alt="Close-up of Mosaic's knob in its case, the screen off and the LED ring dark, warm light glowing from behind the device"
+    />
   </div>
 
   <ul class="promises" aria-label="What Mosaic doesn't do">
@@ -50,6 +54,13 @@
     border: 1px solid var(--color-surface-raised);
     border-radius: var(--radius-lg);
     background: #0b0c0c;
+  }
+  .frame img {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
   /* The LED strip's light on the surface behind the device. */
   .warmth {

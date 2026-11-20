@@ -1,7 +1,7 @@
 ---
 // Hero, direction 3c: the device on a desk, warm light pooling under it, its
 // ring blue because something is waiting.
-import Device from './Device.astro'
+import hero from '@mosaic/assets/renders/hero.avif'
 import { links } from './links'
 ---
 
@@ -35,15 +35,15 @@ import { links } from './links'
     </div>
   </div>
 
-  <div class="scene at" style="--x: 620; --y: 302; --w: 724" data-slot="hero">
-    <Device
-      class="stand-in"
-      screen="calendar"
-      ring="blue"
-      label="Mosaic display on a desk showing Firmware standup in 4 minutes, its knob ring lit blue because a notification is waiting, warm light pooling on the desk"
+  <div class="scene at" style="--x: 620; --y: 302; --w: 724">
+    <img
+      class="render"
+      src={hero.src}
+      width={hero.width}
+      height={hero.height}
+      alt="Mosaic display on a desk showing Firmware standup in 4 minutes, its knob ring lit blue because a notification is waiting"
+      fetchpriority="high"
     />
-    <div class="contact" aria-hidden="true"></div>
-    <div class="reflection" aria-hidden="true"></div>
   </div>
 </section>
 
@@ -140,37 +140,18 @@ import { links } from './links'
     filter: blur(calc(60 * var(--u)));
   }
 
+  /* The render has room above and below the device; centre it on the slot. */
   .scene {
     z-index: 2;
+    aspect-ratio: 724 / 358;
   }
-  .scene :global(.device) {
-    position: relative;
-    z-index: 2;
-  }
-  /* The shadow where the device meets the desk, and its faint reflection. */
-  .contact {
+  .render {
     position: absolute;
-    left: 2.8%;
-    right: 2.8%;
-    top: calc(100% - 4px);
-    height: 14px;
-    border-radius: 50%;
-    background: rgb(0 0 0 / 0.95);
-    filter: blur(6px);
-    z-index: 1;
-  }
-  .reflection {
-    position: absolute;
-    left: 2.3%;
-    width: 79%;
-    top: 100%;
-    aspect-ratio: 572 / 120;
-    background: linear-gradient(
-      180deg,
-      rgb(242 242 239 / 0.035) 0%,
-      transparent 100%
-    );
-    z-index: 1;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: auto;
+    transform: translateY(-50%);
   }
 
   @media (min-width: 900px) {

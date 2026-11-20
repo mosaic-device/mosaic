@@ -185,39 +185,16 @@ ul {
   }
 }
 
-/* ------------------------------------------------------------- 3D device */
-.device-scene {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  pointer-events: none;
-}
-/* The drawn stand-ins give way once the 3D device is in its slot. */
-.stand-in {
-  transition: opacity 500ms ease;
-}
-.scene-ready .stand-in {
-  opacity: 0;
-}
-
+/* ------------------------------------------------- labels on a render */
 /*
- * Labels that follow a point in the 3D scene. The scene moves them into this
- * layer above the canvas and sets --ax and --ay (the point, in the viewport),
- * --sx (their section's left edge) and --u (one canon pixel).
+ * Labels that point at a part of a rendered frame. Script sets --ax and --ay,
+ * the point in stage pixels.
  */
-.scene-labels {
-  position: fixed;
-  inset: 0;
-  z-index: 11;
-  pointer-events: none;
-}
 .anchored {
   position: absolute;
+  z-index: 3;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 300ms ease;
 }
 .anchored .name {
   display: block;
@@ -233,7 +210,7 @@ ul {
 }
 /* In a column at --col, with a dotted leader back to the point. */
 .anchored.column {
-  left: calc(var(--sx) + var(--col) * var(--u));
+  left: calc(var(--col) * var(--u));
   top: var(--ay);
   transform: translateY(-0.7em);
 }
@@ -242,7 +219,7 @@ ul {
   position: absolute;
   right: calc(100% + 8px);
   top: 0.7em;
-  width: max(0px, calc(var(--sx) + var(--col) * var(--u) - var(--ax) - 16px));
+  width: max(0px, calc(var(--col) * var(--u) - var(--ax) - 16px));
   border-top: 1px dashed var(--color-border);
 }
 /* Centred on the point, nudged by --dx and --dy (in ems). */
@@ -255,9 +232,4 @@ ul {
     calc(-50% + var(--dx, 0) * 1em),
     calc(-50% + var(--dy, 0) * 1em)
   );
-}
-@media (max-width: 899.98px) {
-  .anchored {
-    display: none;
-  }
 }

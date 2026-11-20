@@ -1,7 +1,10 @@
 ---
-// S2: one notification, annotated. The device arrives from the hero as you
-// scroll and settles here; the three callouts show what it does.
-import Device from './Device.astro'
+// S2: one notification, annotated. As the device comes into view the
+// notification arrives once: the ring turns blue, then the review request
+// replaces the calendar (three renders crossfaded).
+import dark from '@mosaic/assets/renders/waits-dark.avif'
+import ring from '@mosaic/assets/renders/waits-ring.avif'
+import review from '@mosaic/assets/renders/waits-review.avif'
 ---
 
 <section id="features" class="waits" data-step="all" aria-labelledby="waits-title">
@@ -12,12 +15,15 @@ import Device from './Device.astro'
       </h2>
 
       <div class="glow desktop-only" aria-hidden="true"></div>
-      <div class="scene at" style="--x: 400; --y: 290; --w: 859" data-slot="waits">
-        <Device
-          class="stand-in"
-          screen="review"
-          ring="blue"
-          label="Mosaic display showing a GitHub review request: Avery requested your review on #194. Its knob ring is lit blue."
+      <div class="scene at" style="--x: 400; --y: 290; --w: 859">
+        <img class="render" src={dark.src} loading="lazy" width={dark.width} height={dark.height} alt="" />
+        <img class="render ring" src={ring.src} width={ring.width} height={ring.height} alt="" />
+        <img
+          class="render review"
+          src={review.src}
+          width={review.width}
+          height={review.height}
+          alt="Mosaic display showing a GitHub review request: Avery requested your review on #194. Its knob ring is lit blue."
         />
       </div>
 
@@ -56,7 +62,56 @@ import Device from './Device.astro'
   </div>
 </section>
 
+<script>
+  // The notification arrives once, when the device is well in view.
+  const section = document.querySelector<HTMLElement>('.waits')
+  const scene = section?.querySelector('.scene')
+  if (section && scene) {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return
+        observer.disconnect()
+        section.setAttribute('data-arrived', '')
+      },
+      { threshold: 0.4 },
+    )
+    observer.observe(scene)
+  }
+</script>
+
 <style>
+  /* The renders have room above and below the device; centre them. */
+  .scene {
+    aspect-ratio: 859 / 425;
+  }
+  .render {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: auto;
+    transform: translateY(-50%);
+  }
+  .ring,
+  .review {
+    opacity: 0;
+  }
+  .waits[data-arrived] .ring {
+    opacity: 1;
+    transition: opacity 600ms cubic-bezier(0.23, 1, 0.32, 1) 150ms;
+  }
+  .waits[data-arrived] .review {
+    opacity: 1;
+    transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1) 650ms;
+  }
+  @media (prefers-reduced-motion: reduce), (max-width: 899.98px) {
+    .ring,
+    .review {
+      opacity: 1;
+      transition: none;
+    }
+  }
+
   .quiet {
     color: var(--color-low-emphasis);
   }

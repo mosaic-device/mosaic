@@ -1,0 +1,302 @@
+---
+// S5 and S6 as one pinned shot, from rendered frames (pnpm render-site).
+// It opens on your server's world: the device lands on the plate and your
+// server and laptop rise (played once, on a timer). Then scroll pushes in on
+// the device; it lifts off, lies down and comes apart, finishing as S6's copy
+// and labels settle, and holds. Phones and reduced motion get two stills.
+import journey from '@mosaic/assets/renders/journey.json'
+import { links } from './links'
+
+const files = import.meta.glob<string>(
+  '../../../../../packages/assets/renders/journey/*.avif',
+  { eager: true, query: '?url', import: 'default' },
+)
+// Version the frames by the render data, so a re-render is never mixed with
+// frames the browser cached from the last one (built files are hashed anyway).
+let hash = 0
+for (const c of JSON.stringify(journey.anchors)) hash = (hash * 31 + c.charCodeAt(0)) | 0
+const version = (hash >>> 0).toString(36)
+const url = (name: string) => {
+  const key = Object.keys(files).find((k) => k.endsWith(`/${name}.avif`))
+  if (!key) throw new Error(`missing render journey/${name}.avif`)
+  const file = files[key]!
+  return `${file}${file.includes('?') ? '&' : '?'}v=${version}`
+}
+const pad = (n: number) => String(n).padStart(2, '0')
+const frames = {
+  a: Array.from({ length: journey.a }, (_, i) => url(`a-${pad(i)}`)),
+  ring: url('a-ring'),
+  b: Array.from({ length: journey.b }, (_, i) => url(`b-${pad(i)}`)),
+}
+const data = { ...journey, frames }
+
+const parts = [
+  { part: 'dial', name: 'Push knob', note: 'With an LED ring' },
+  { part: 'acrylic', name: 'Acrylic front', note: 'Over the screen' },
+  { part: 'display-board', name: '5" touch display', note: 'ESP32-P4, Wi-Fi 6' },
+  { part: 'carrier-pcb', name: 'Carrier PCB', note: 'Open KiCad files' },
+  { part: 'case-outer', name: 'Case', note: '3D-printed' },
+]
+
+const serverCopy = {
+  title: ['Your server.', 'Your tokens.'],
+  body: [
+    "Mosaic runs on a server you host, in Docker or as a single binary. Your tokens and your activity never pass through anyone else's servers.",
+    "There's no Mosaic cloud and nothing to sign up for.",
+  ],
+}
+const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>`
+---
+
+<section id="hardware" class="journey" aria-labelledby="server-title layers-title">
+  <!-- Desktop with motion: one pinned shot. -->
+  <div class="pin motion-only">
+    <div class="stage">
+      <img class="poster" src={frames.ring} alt="" />
+      <canvas
+        role="img"
+        aria-label="Your server, Mosaic and your laptop on a plate marked Yours; then Mosaic lifts off, lies down and comes apart into its layers: push knob, acrylic front, 5-inch touch display, carrier PCB and 3D-printed case"
+      ></canvas>
+
+      <div class="copy server-copy at" style="--x: 160; --y: 100; --w: 360">
+        <h2 id="server-title" class="display">
+          {serverCopy.title[0]}<br />{serverCopy.title[1]}
+        </h2>
+        {serverCopy.body.map((p) => <p class="lede">{p}</p>)}
+        <a class="arrow-link" href={links.selfHosting}
+          >Read the self-hosting guide <Fragment set:html={arrow} /></a
+        >
+      </div>
+
+      <div class="copy layers-copy">
+        <h2 id="layers-title" class="display">
+          Built by you,<br />from open parts.
+        </h2>
+        <p class="lede">
+          An off-the-shelf display board, a small carrier PCB, a few modules and
+          a 3D-printed case. Every file is open.
+        </p>
+        <a class="button primary" href={links.build}>Read the build guide</a>
+      </div>
+
+      <div class="anchored column" style="--col: 1170" data-anchor="server" data-group="server" aria-hidden="true">
+        <span class="name">Your server</span>
+        <span class="note">Docker or a single binary</span>
+        <span class="note accent">Your tokens live here</span>
+        <span class="note">Admin app: connect accounts, pair</span>
+      </div>
+      <div class="anchored column" style="--col: 1170" data-anchor="mosaic" data-group="server" aria-hidden="true">
+        <span class="name">Mosaic</span>
+        <span class="note">On your desk</span>
+      </div>
+      <div class="anchored at" style="--dy: 2.4" data-anchor="laptop" data-group="server" aria-hidden="true">
+        <span class="name">Companion app</span>
+        <span class="note">On your laptop</span>
+      </div>
+      <div class="anchored at" style="--dy: -1.6" data-anchor="accounts" data-group="server" aria-hidden="true">
+        <span class="note">Your accounts</span>
+      </div>
+      <div class="anchored at yours" style="--dx: -1.8; --dy: -1" data-anchor="yours" data-group="server" aria-hidden="true">
+        Yours
+      </div>
+      <div class="pill" aria-hidden="true"><i></i>Review request</div>
+      {
+        parts.map((p) => (
+          <div class="anchored column" style="--col: 1190" data-anchor={p.part} data-group="layers" aria-hidden="true">
+            <span class="name">{p.name}</span>
+            <span class="note">{p.note}</span>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+
+  <!-- Phones and reduced motion: the two moments as stills. -->
+  <div class="stills still-only">
+    <div class="stage">
+      <h2 class="display">{serverCopy.title[0]}<br />{serverCopy.title[1]}</h2>
+      {serverCopy.body.map((p) => <p class="lede">{p}</p>)}
+      <a class="arrow-link" href={links.selfHosting}
+        >Read the self-hosting guide <Fragment set:html={arrow} /></a
+      >
+      <img
+        src={frames.ring}
+        loading="lazy"
+        alt="Your server, Mosaic and your laptop on a plate marked Yours; your accounts float outside it"
+      />
+    </div>
+    <div class="stage">
+      <img
+        src={frames.b[frames.b.length - 1]}
+        loading="lazy"
+        alt="Mosaic pulled apart into its layers"
+      />
+      <ul class="parts" aria-label="Parts">
+        {
+          parts.map((p) => (
+            <li>
+              <span class="name">{p.name}</span> <span class="note">{p.note}</span>
+            </li>
+          ))
+        }
+      </ul>
+      <h2 class="display">Built by you,<br />from open parts.</h2>
+      <p class="lede">
+        An off-the-shelf display board, a small carrier PCB, a few modules and a
+        3D-printed case. Every file is open.
+      </p>
+      <a class="button primary" href={links.build}>Read the build guide</a>
+    </div>
+  </div>
+
+  <script type="application/json" id="journey-data" set:html={JSON.stringify(data)} />
+</section>
+
+<script>
+  import { playJourney } from '../../scripts/journey'
+
+  const section = document.querySelector<HTMLElement>('.journey')
+  const motion = matchMedia(
+    '(min-width: 900px) and (prefers-reduced-motion: no-preference)',
+  )
+  if (section && motion.matches) playJourney(section)
+</script>
+
+<style>
+  .motion-only {
+    display: none;
+  }
+  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
+    .motion-only {
+      display: flex;
+    }
+    .still-only {
+      display: none;
+    }
+    .journey {
+      height: 340vh;
+    }
+    .pin {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      align-items: center;
+    }
+    .pin .stage {
+      width: min(100%, 1440px, 160vh);
+      aspect-ratio: 1440 / 900;
+    }
+  }
+
+  canvas,
+  .poster {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .poster {
+    object-fit: cover;
+  }
+  .loaded .poster {
+    visibility: hidden;
+  }
+
+  .server-copy .lede {
+    margin-top: 24px;
+  }
+  .server-copy .lede + .lede {
+    margin-top: 16px;
+  }
+  .arrow-link {
+    margin-top: 32px;
+  }
+  .layers-copy {
+    position: absolute;
+    left: calc(160 * var(--u));
+    bottom: calc(120 * var(--u));
+    width: calc(360 * var(--u));
+    opacity: 0;
+  }
+  .layers-copy .lede {
+    margin-top: 24px;
+  }
+  .layers-copy .button {
+    margin-top: 32px;
+  }
+  .accent {
+    color: var(--color-focus);
+  }
+  .yours {
+    font-size: max(13px, calc(14 * var(--u)));
+    font-weight: 500;
+    color: var(--color-focus);
+  }
+
+  .pill {
+    position: absolute;
+    left: var(--ax);
+    top: var(--ay);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    padding: 0 12px 0 10px;
+    border: 1px solid rgb(var(--ring-blue) / 0.6);
+    border-radius: 13px;
+    background: var(--color-surface);
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+  }
+  .pill i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgb(var(--ring-blue));
+  }
+
+  /* Stills for phones and reduced motion. */
+  .stills .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .stills .lede {
+    margin-top: 20px;
+  }
+  /* The frames leave room for the desktop copy; crop to the subject. */
+  .stills img {
+    width: 100%;
+    height: auto;
+    margin-top: 40px;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    object-position: 62% 72%;
+  }
+  .stills .stage + .stage img {
+    aspect-ratio: 1;
+    object-position: 58% 50%;
+  }
+  .stills .stage + .stage img {
+    margin: 0 0 24px;
+  }
+  .stills .button {
+    margin-top: 28px;
+  }
+  .parts {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 48px;
+    padding: 0;
+    list-style: none;
+  }
+  .parts .name {
+    font-weight: 500;
+  }
+  .parts .note {
+    color: var(--color-muted-foreground);
+  }
+</style>
