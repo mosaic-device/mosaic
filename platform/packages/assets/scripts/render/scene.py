@@ -28,6 +28,8 @@ from mathutils import Matrix, Quaternion, Vector
 config = json.loads(sys.argv[sys.argv.index("--") + 1])
 OUT = config["out"]
 QUICK = config.get("quick", False)
+# Only the label anchors in journey.json: set everything up, render nothing.
+ANCHORS_ONLY = config.get("anchorsOnly", False)
 ONLY = set(config.get("only") or [])
 os.makedirs(os.path.join(OUT, "journey"), exist_ok=True)
 
@@ -430,6 +432,8 @@ def frame_perspective(azimuth, elevation, focus, fill_width, at_x=0.5, at_y=0.5,
 
 
 def render(path):
+    if ANCHORS_ONLY:
+        return
     scene.render.filepath = os.path.join(OUT, path)
     bpy.ops.render.render(write_still=True)
 

@@ -3,6 +3,7 @@
 //   pnpm render-site            every shot, full quality (tens of minutes)
 //   pnpm render-site --quick    low samples at half size, to check framing
 //   pnpm render-site --only=hero,calm
+//   pnpm render-site --anchors   journey.json's label anchors only, no images
 //
 // Needs Blender (set BLENDER to its executable if it isn't in the usual
 // place). Draws the device's screens, renders in Blender with Cycles
@@ -24,6 +25,7 @@ const MODEL = here('../../models/mosaic-device.glb')
 const OUT = here('../../renders/')
 const args = process.argv.slice(2)
 const quick = args.includes('--quick')
+const anchorsOnly = args.includes('--anchors')
 const only = args
   .find((a) => a.startsWith('--only='))
   ?.slice('--only='.length)
@@ -65,7 +67,14 @@ const model = path.join(work, 'device.glb')
 await io.write(model, doc)
 
 const screens = await drawScreens(path.join(work, 'screens'))
-const config = JSON.stringify({ model, screens, out: frames, quick, only })
+const config = JSON.stringify({
+  model,
+  screens,
+  out: frames,
+  quick,
+  only: anchorsOnly ? ['journey'] : only,
+  anchorsOnly,
+})
 console.log(`Rendering with ${blender}${quick ? ' (quick)' : ''}…`)
 const run = spawnSync(
   blender,
