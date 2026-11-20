@@ -107,7 +107,7 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
     </div>
   </div>
 
-  <!-- Phones and reduced motion: the two moments as stills. -->
+  <!-- Reduced motion: the two moments as stills, each cropped to its subject. -->
   <div class="stills still-only">
     <div class="stage">
       <h2 class="display">{serverCopy.title[0]}<br />{serverCopy.title[1]}</h2>
@@ -115,33 +115,37 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
       <a class="arrow-link" href={links.selfHosting}
         >Read the self-hosting guide <Fragment set:html={arrow} /></a
       >
-      <img
-        src={frames.ring}
-        loading="lazy"
-        alt="Your server, Mosaic and your laptop together on one plate, your accounts outside it"
-      />
+      <div class="crop plate">
+        <img
+          src={frames.ring}
+          loading="lazy"
+          alt="Your server, Mosaic and your laptop together on one plate, your accounts outside it"
+        />
+      </div>
     </div>
     <div class="stage">
-      <img
-        src={frames.b[frames.b.length - 1]}
-        loading="lazy"
-        alt="Mosaic pulled apart into its layers"
-      />
-      <ul class="parts" aria-label="Parts">
-        {
-          parts.map((p) => (
-            <li>
-              <span class="name">{p.name}</span> <span class="note">{p.note}</span>
-            </li>
-          ))
-        }
-      </ul>
       <h2 class="display">Built by you.</h2>
       <p class="lede">
         Order the carrier PCB, print the case, wire it up and flash the
         firmware. The build guide takes you from parts list to first boot.
       </p>
       <a class="button primary" href={links.build}>Read the build guide</a>
+      <div class="crop layers">
+        <img
+          src={frames.b[frames.b.length - 1]}
+          loading="lazy"
+          alt="Mosaic pulled apart into its layers"
+        />
+      </div>
+      <ul class="parts list" aria-label="Parts">
+        {
+          parts.map((p) => (
+            <li>
+              <span class="list-name">{p.name}</span> <span class="list-note">{p.note}</span>
+            </li>
+          ))
+        }
+      </ul>
     </div>
   </div>
 
@@ -152,9 +156,7 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
   import { playJourney } from '../../scripts/journey'
 
   const section = document.querySelector<HTMLElement>('.journey')
-  const motion = matchMedia(
-    '(min-width: 900px) and (prefers-reduced-motion: no-preference)',
-  )
+  const motion = matchMedia('(prefers-reduced-motion: no-preference)')
   if (section && motion.matches) playJourney(section)
 </script>
 
@@ -162,7 +164,7 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
   .motion-only {
     display: none;
   }
-  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
+  @media (prefers-reduced-motion: no-preference) {
     .motion-only {
       display: flex;
     }
@@ -176,8 +178,11 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
       position: sticky;
       top: 0;
       height: 100vh;
+      height: 100svh;
       align-items: center;
     }
+  }
+  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
     .pin .stage {
       width: min(100%, 1440px, 160vh);
       aspect-ratio: 1440 / 900;
@@ -221,45 +226,131 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
     margin-top: 32px;
   }
 
-  /* Stills for phones and reduced motion. */
+  /*
+   * The pinned shot below 900px fills the screen: S5's copy holds the top and
+   * the script frames the plate in the room beneath it; S6's copy holds the
+   * bottom, with the device above it and its labels in a column at the right.
+   */
+  @media (max-width: 899.98px) {
+    .pin .stage {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+    }
+    .poster {
+      display: none;
+    }
+    .server-copy,
+    .layers-copy {
+      position: absolute;
+      left: var(--gutter);
+      right: var(--gutter);
+      width: auto;
+    }
+    .server-copy {
+      top: 40px;
+    }
+    .layers-copy {
+      bottom: 40px;
+    }
+    .server-copy .lede,
+    .layers-copy .lede {
+      margin-top: 16px;
+    }
+    .arrow-link,
+    .layers-copy .button {
+      margin-top: 24px;
+    }
+    .anchored.column {
+      left: auto;
+      right: var(--gutter);
+      width: max-content;
+    }
+  }
+  @media (min-width: 600px) and (max-width: 899.98px) {
+    .server-copy {
+      top: var(--gutter);
+    }
+    .layers-copy {
+      bottom: var(--gutter);
+    }
+  }
+  /* Phones: names only, and the labels under a point sit centred beneath it,
+     so none runs off the edge or into its neighbour. */
+  @media (max-width: 599.98px) {
+    .anchored .name + .note {
+      display: none;
+    }
+    .anchored.at.below-left,
+    .anchored.at.below-right {
+      text-align: center;
+      transform: translate(-50%, 12px);
+    }
+  }
+
+  /* Stills, for reduced motion: each frame cropped to its subject. */
   .stills .stage {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    aspect-ratio: auto;
+  }
+  @media (min-width: 900px) {
+    .stills .stage {
+      padding: calc(120 * var(--u)) calc(160 * var(--u));
+    }
+    .stills .stage > * {
+      max-width: calc(560 * var(--u));
+    }
+    .stills .stage > .crop {
+      max-width: none;
+      width: calc(800 * var(--u));
+      align-self: flex-end;
+    }
   }
   .stills .lede {
     margin-top: 20px;
   }
-  /* The frames leave room for the desktop copy; crop to the subject. */
-  .stills img {
-    width: 100%;
-    height: auto;
-    margin-top: 40px;
-    aspect-ratio: 4 / 3;
-    object-fit: cover;
-    object-position: 62% 72%;
-  }
-  .stills .stage + .stage img {
-    aspect-ratio: 1;
-    object-position: 58% 50%;
-  }
-  .stills .stage + .stage img {
-    margin: 0 0 24px;
-  }
+  .stills .arrow-link,
   .stills .button {
     margin-top: 28px;
   }
+  /*
+   * A window onto part of a frame: --x, --y, --w and --h are the subject's box
+   * as fractions of the 1600 × 900 frame, so the frame is scaled and shifted
+   * to fill the window with just that box.
+   */
+  .crop {
+    position: relative;
+    width: 100%;
+    margin-top: 40px;
+    overflow: hidden;
+    aspect-ratio: calc(var(--w) * 1600) / calc(var(--h) * 900);
+  }
+  .crop img {
+    position: absolute;
+    left: calc(var(--x) / var(--w) * -100%);
+    top: calc(var(--y) / var(--h) * -100%);
+    width: calc(100% / var(--w));
+    max-width: none;
+    height: auto;
+  }
+  .crop.plate {
+    --x: 0.405;
+    --y: 0.287;
+    --w: 0.443;
+    --h: 0.604;
+  }
+  .crop.layers {
+    --x: 0.421;
+    --y: 0.103;
+    --w: 0.358;
+    --h: 0.81;
+  }
+  .stills .crop.layers {
+    max-width: 480px;
+  }
   .parts {
-    display: grid;
-    gap: 12px;
-    margin: 0 0 48px;
-    padding: 0;
-    list-style: none;
-  }
-  .parts .name {
-    font-weight: 500;
-  }
-  .parts .note {
-    color: var(--color-muted-foreground);
+    margin-top: 40px;
   }
 </style>

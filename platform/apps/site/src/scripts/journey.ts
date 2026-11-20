@@ -48,6 +48,21 @@ const LAPTOP_RUN = [2250, 1000] as const
 const RING_DOWN = [3300, 700] as const
 // The light's colour, the ring's blue.
 const BLUE = '40 110 255'
+// Below 900px the frames are framed, not cropped to cover: each moment's
+// subject, as fractions of the frame (x, y, width, height), is fitted into
+// the room its copy leaves. S5's plate, then S6's pulled-apart device.
+const COMPACT = '(max-width: 899.98px)'
+const PLATE = [0.405, 0.287, 0.443, 0.604] as const
+const LAYERS = [0.421, 0.103, 0.358, 0.81] as const
+// Space between the copy, or the labels, and the picture.
+const ROOM = 24
+
+type Fit = { scale: number; x: number; y: number }
+const mix = (a: Fit, b: Fit, t: number): Fit => ({
+  scale: a.scale + (b.scale - a.scale) * t,
+  x: a.x + (b.x - a.x) * t,
+  y: a.y + (b.y - a.y) * t,
+})
 
 export function playJourney(section: HTMLElement) {
   const data = JSON.parse(
@@ -86,8 +101,8 @@ export function playJourney(section: HTMLElement) {
       b: data.frames.b.map(load),
     }
     Promise.all(
-      [...images.a, images.ring, images.pipes, ...images.b.slice(0, 1)].map((i) =>
-        i.decode(),
+      [...images.a, images.ring, images.pipes, ...images.b.slice(0, 1)].map(
+        (i) => i.decode(),
       ),
     )
       .then(() => {
@@ -123,19 +138,63 @@ export function playJourney(section: HTMLElement) {
     if (inView) request()
   }).observe(stage)
 
-  let fit = { scale: 1, x: 0, y: 0 }
+  const compact = matchMedia(COMPACT)
+  let fit: Fit = { scale: 1, x: 0, y: 0 }
+  let fits = { plate: fit, layers: fit }
+  /** Fits a subject box from the frame into a box on the stage, centred. */
+  function frameBox(
+    [fx, fy, fw, fh]: readonly number[],
+    box: { left: number; top: number; right: number; bottom: number },
+  ): Fit {
+    const [w, h] = data.size
+    const scale = Math.min(
+      (box.right - box.left) / (fw! * w),
+      (box.bottom - box.top) / (fh! * h),
+    )
+    return {
+      scale,
+      x: (box.left + box.right) / 2 - (fx! + fw! / 2) * w * scale,
+      y: (box.top + box.bottom) / 2 - (fy! + fh! / 2) * h * scale,
+    }
+  }
   function size() {
     const { width, height } = stage.getBoundingClientRect()
     const dpr = Math.min(devicePixelRatio, 2)
     canvas.width = Math.round(width * dpr)
     canvas.height = Math.round(height * dpr)
-    // Cover the stage, centred.
-    const scale = Math.max(width / data.size[0], height / data.size[1])
-    fit = {
-      scale,
-      x: (width - data.size[0] * scale) / 2,
-      y: (height - data.size[1] * scale) / 2,
+    if (!compact.matches) {
+      // Cover the stage, centred.
+      const scale = Math.max(width / data.size[0], height / data.size[1])
+      fit = {
+        scale,
+        x: (width - data.size[0] * scale) / 2,
+        y: (height - data.size[1] * scale) / 2,
+      }
+      fits = { plate: fit, layers: fit }
+      return
     }
+    // The plate beneath S5's copy; the device above S6's, left of its labels.
+    const gutter = serverCopy.offsetLeft
+    const column = labels.filter((l) => l.classList.contains('column'))
+    const labelsLeft = Math.min(
+      width - gutter,
+      ...column.map((l) => l.offsetLeft),
+    )
+    fits = {
+      plate: frameBox(PLATE, {
+        left: gutter,
+        right: width - gutter,
+        top: serverCopy.offsetTop + serverCopy.offsetHeight + ROOM,
+        bottom: height - gutter,
+      }),
+      layers: frameBox(LAYERS, {
+        left: gutter,
+        right: labelsLeft - ROOM,
+        top: gutter,
+        bottom: layersCopy.offsetTop - ROOM,
+      }),
+    }
+    fit = fits.plate
   }
 
   function draw(img: HTMLImageElement, alpha = 1) {
@@ -197,7 +256,10 @@ export function playJourney(section: HTMLElement) {
     }))
     const at = [0]
     for (let i = 1; i < pts.length; i++)
-      at.push(at[i - 1]! + Math.hypot(pts[i]!.x - pts[i - 1]!.x, pts[i]!.y - pts[i - 1]!.y))
+      at.push(
+        at[i - 1]! +
+          Math.hypot(pts[i]!.x - pts[i - 1]!.x, pts[i]!.y - pts[i - 1]!.y),
+      )
     const trail = 90 * fit.scale * dpr
     const front = head * (at[at.length - 1]! + trail)
     lightCtx.lineCap = 'round'
@@ -253,6 +315,13 @@ export function playJourney(section: HTMLElement) {
     if (q > MOVE_START && revealedAt === null)
       revealedAt = performance.now() - 5000
     const ms = revealedAt === null ? -1 : performance.now() - revealedAt
+
+    // Below 900px, the view moves from the plate to the device with the shot.
+    fit = mix(
+      fits.plate,
+      fits.layers,
+      smooth((q - MOVE_START) / (SETTLE_END - MOVE_START)),
+    )
 
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     let anchors: Record<string, [number, number]>
@@ -324,18 +393,36 @@ export function playJourney(section: HTMLElement) {
       if (el.classList.contains('column') && group === 'layers')
         columns.push({ el, x: p.x, y: p.y })
     }
-    // Keep S6's column of labels from overlapping, each leader running from
-    // its label back to its point.
+    // Keep S6's column of labels from overlapping, each as level with its
+    // point as it can be: labels that would touch are eased apart around
+    // their points, so any slant is shared rather than piling up at the
+    // bottom. Each leader runs from its label back to its point. Below 900px
+    // the parts sit closer together, so the labels pack tighter.
     columns.sort((a, b) => a.y - b.y)
-    let last = -Infinity
-    for (const c of columns) {
-      const y = Math.max(c.y, last + c.el.offsetHeight + 12)
+    const gap = compact.matches ? 4 : 12
+    const ys = columns.map((c) => c.y)
+    for (let pass = 0; pass < 40; pass++) {
+      let moved = false
+      for (let i = 1; i < ys.length; i++) {
+        const need =
+          columns[i - 1]!.el.offsetHeight + gap - (ys[i]! - ys[i - 1]!)
+        if (need <= 0.5) continue
+        ys[i - 1]! -= need / 2
+        ys[i]! += need / 2
+        moved = true
+      }
+      if (!moved) break
+    }
+    for (const [i, c] of columns.entries()) {
+      const y = ys[i]!
       c.el.style.setProperty('--ly', `${y}px`)
-      last = y
       const fromX = c.el.offsetLeft - 8
       const dx = c.x - fromX
       const dy = c.y - y
-      c.el.style.setProperty('--len', `${Math.max(0, Math.hypot(dx, dy) - 8)}px`)
+      c.el.style.setProperty(
+        '--len',
+        `${Math.max(0, Math.hypot(dx, dy) - 8)}px`,
+      )
       c.el.style.setProperty('--angle', `${Math.atan2(dy, dx) - Math.PI}rad`)
     }
 
@@ -345,6 +432,16 @@ export function playJourney(section: HTMLElement) {
 
   addEventListener('scroll', request, { passive: true })
   addEventListener('resize', () => {
+    size()
+    request()
+  })
+  compact.addEventListener('change', () => {
+    size()
+    request()
+  })
+  // The room left for the picture depends on the copy's height, so measure
+  // again once the fonts have loaded.
+  document.fonts?.ready.then(() => {
     size()
     request()
   })
