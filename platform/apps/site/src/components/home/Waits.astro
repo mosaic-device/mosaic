@@ -122,14 +122,40 @@ import waits from '@mosaic/assets/renders/waits.avif'
     background: var(--color-foreground);
   }
 
+  /* One column: the render in flow, trimmed of the empty room above and below
+     the device (it fills 19% to 86% of the render's height), then the three
+     moments, side by side once there's room. */
   @media (max-width: 899.98px) {
     .scene {
+      position: relative;
+      aspect-ratio: auto;
       margin-top: 40px;
     }
+    .render {
+      position: static;
+      display: block;
+      transform: none;
+      margin: -10% 0 -7%;
+    }
+    /* The same as every other list here: name, then one muted line. */
     .callouts {
       display: grid;
-      gap: 28px;
-      margin-top: 48px;
+      gap: 20px;
+      margin-top: 40px;
+    }
+    .callout h3 {
+      font-size: 17px;
+      line-height: 1.4;
+      letter-spacing: 0;
+    }
+    .callout p {
+      margin-top: 4px;
+    }
+  }
+  @media (min-width: 600px) and (max-width: 899.98px) {
+    .callouts {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 24px;
     }
   }
 </style>
