@@ -21,6 +21,11 @@ import { links } from './links'
     padding: 0 max(24px, min(160px, 11.111vw));
     box-sizing: border-box;
   }
+  @media (max-width: 899.98px) {
+    .footer {
+      padding: 0 var(--gutter);
+    }
+  }
   /* No divider: the space above sets it apart from the section before. The
      widest margin is below, as on the canon, so the page settles at the end. */
   .row {
