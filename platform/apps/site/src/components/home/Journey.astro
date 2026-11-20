@@ -1,9 +1,10 @@
 ---
 // S5 and S6 as one pinned shot, from rendered frames (pnpm render-site).
 // It opens on your server's world: the device lands on the plate and your
-// server and laptop rise (played once, on a timer). Then scroll pushes in on
-// the device; it lifts off, lies down and comes apart, finishing as S6's copy
-// and labels settle, and holds. Phones and reduced motion get two stills.
+// server and laptop rise (played once, on a timer), then light runs through
+// the pipes joining them, on a loop. Then scroll pushes in on the device; it
+// lifts off, lies down and comes apart, finishing as S6's copy and labels
+// settle, and holds. Phones and reduced motion get two stills.
 import journey from '@mosaic/assets/renders/journey.json'
 import { links } from './links'
 
@@ -14,7 +15,7 @@ const files = import.meta.glob<string>(
 // Version the frames by the render data, so a re-render is never mixed with
 // frames the browser cached from the last one (built files are hashed anyway).
 let hash = 0
-for (const c of JSON.stringify(journey.anchors)) hash = (hash * 31 + c.charCodeAt(0)) | 0
+for (const c of JSON.stringify([journey.anchors, journey.pipes])) hash = (hash * 31 + c.charCodeAt(0)) | 0
 const version = (hash >>> 0).toString(36)
 const url = (name: string) => {
   const key = Object.keys(files).find((k) => k.endsWith(`/${name}.avif`))
@@ -26,6 +27,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
 const frames = {
   a: Array.from({ length: journey.a }, (_, i) => url(`a-${pad(i)}`)),
   ring: url('a-ring'),
+  pipes: url('pipes'),
   b: Array.from({ length: journey.b }, (_, i) => url(`b-${pad(i)}`)),
 }
 const data = { ...journey, frames }
@@ -94,7 +96,6 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
       <div class="anchored at above" data-anchor="accounts" data-group="server" aria-hidden="true">
         <span class="note">Your accounts</span>
       </div>
-      <div class="pill" aria-hidden="true"><i></i>Review request</div>
       {
         parts.map((p) => (
           <div class="anchored column" style="--col: 1190" data-anchor={p.part} data-group="layers" aria-hidden="true">
@@ -218,31 +219,6 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
   }
   .layers-copy .button {
     margin-top: 32px;
-  }
-
-  .pill {
-    position: absolute;
-    left: var(--ax);
-    top: var(--ay);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 26px;
-    padding: 0 12px 0 10px;
-    border: 1px solid rgb(var(--ring-blue) / 0.6);
-    border-radius: 13px;
-    background: var(--color-surface);
-    font-size: 12px;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(-50%, -50%);
-  }
-  .pill i {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: rgb(var(--ring-blue));
   }
 
   /* Stills for phones and reduced motion. */

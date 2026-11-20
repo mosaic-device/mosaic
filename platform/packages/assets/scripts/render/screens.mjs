@@ -81,14 +81,10 @@ function buttons(labels) {
     .join('')
 }
 
+// The service and its detail, on the screen's left margin.
 function sourceRow(name, detail) {
-  const name_ = text(name, 64, 89, 13, { weight: 500 })
-  return (
-    rect(26, 70, 28, 28, 8, C.raised) +
-    `<rect x="34" y="78" width="12" height="12" fill="none" stroke="${C.fg}" stroke-width="1.5"/>` +
-    name_.svg +
-    text(detail, 64 + name_.width + 10, 89, 13, { fill: C.muted }).svg
-  )
+  const name_ = text(name, 26, 89, 13, { weight: 500 })
+  return name_.svg + text(detail, 26 + name_.width + 10, 89, 13, { fill: C.muted }).svg
 }
 
 const variants = {

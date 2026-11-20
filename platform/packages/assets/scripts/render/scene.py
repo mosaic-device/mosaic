@@ -126,13 +126,14 @@ def empty(name, location=(0, 0, 0)):
     return obj
 
 
-def material(name, colour, roughness=0.85, metallic=0.0, emission=None, strength=0.0):
+def material(name, colour, roughness=0.85, metallic=0.0, emission=None, strength=0.0, specular=0.5):
     m = bpy.data.materials.new(name)
     m.use_nodes = True
     p = m.node_tree.nodes["Principled BSDF"]
     p.inputs["Base Color"].default_value = linear(colour)
     p.inputs["Roughness"].default_value = roughness
     p.inputs["Metallic"].default_value = metallic
+    p.inputs["Specular IOR Level"].default_value = specular
     if emission:
         p.inputs["Emission Color"].default_value = linear(emission)
         p.inputs["Emission Strength"].default_value = strength
@@ -211,6 +212,18 @@ bpy.ops.import_scene.gltf(filepath=config["model"])
 tops = [o for o in bpy.context.selected_objects if o.parent is None]
 parts = {o.name.split(".")[0]: o for o in tops}
 
+# The model's normals smooth across flat faces, which shades them in
+# triangles (the acrylic, the case around the knob). Drop them and smooth
+# only across gentle angles: flat faces render flat, curves stay round.
+for top in tops:
+    for o in descendants(top):
+        if o.type != "MESH":
+            continue
+        with bpy.context.temp_override(object=o, active_object=o, selected_objects=[o], selected_editable_objects=[o]):
+            if o.data.has_custom_normals:
+                bpy.ops.mesh.customdata_custom_splitnormals_clear()
+        o.data.set_sharp_from_angle(angle=math.radians(30))
+
 # Pivot at the device's centre so it can turn in place.
 lo = Vector((1e9, 1e9, 1e9))
 hi = Vector((-1e9, -1e9, -1e9))
@@ -281,6 +294,9 @@ for poly in display.data.polygons:
 front = (display.matrix_world.to_3x3() @ normal).normalized()
 # Turned so the screen faces straight up, for S6.
 flat = front.rotation_difference(Vector((0, 0, 1)))
+# The acrylic sits exactly on the case's front, and two surfaces in one plane
+# render in flickering triangles. Lift it off by a fraction of a millimetre.
+home["acrylic"] = home["acrylic"] + front * 0.0004
 
 
 def explode(e):
@@ -290,24 +306,16 @@ def explode(e):
 
 # ------------------------------------------------------------ S5's world
 diorama = empty("diorama")
-matte = {c: material(f"matte{c}", c) for c in ("#0D0E0E", "#18191B", "#303335", "#111213", "#222426")}
-box("plate", (420 * UNIT, 320 * UNIT, 12 * UNIT), at(210, -6, 160), matte["#0D0E0E"], diorama)
-dash = material("dash", "#7540B5", emission="#7540B5", strength=1.2)
-for (a0, b0), (a1, b1) in [((0, 0), (420, 0)), ((420, 0), (420, 320)), ((420, 320), (0, 320)), ((0, 320), (0, 0))]:
-    length = math.hypot(a1 - a0, b1 - b0)
-    for s in range(0, int(length), 11):
-        t = (s + 2.5) / length
-        a, b = a0 + (a1 - a0) * t, b0 + (b1 - b0) * t
-        size = (5 * UNIT, 1.2 * UNIT, 0.6 * UNIT) if b0 == b1 else (1.2 * UNIT, 5 * UNIT, 0.6 * UNIT)
-        box("dash", size, at(a, 0.4, b), dash, diorama)
+matte = {c: material(f"matte{c}", c) for c in ("#18191B", "#303335", "#111213", "#222426")}
+# The plate barely reflects, so it stays darker than everything on it.
+plate_material = material("plate", "#070808", roughness=1.0, specular=0.25)
+box("plate", (420 * UNIT, 320 * UNIT, 12 * UNIT), at(210, -6, 160), plate_material, diorama)
 
 server = empty("server")
 server.parent = diorama
 box("server-body", (110 * UNIT, 110 * UNIT, 64 * UNIT), at(95, 32, 115), matte["#18191B"], server)
 for b in (80, 100, 120):
     box("vent", (70 * UNIT, 3 * UNIT, 1.5 * UNIT), at(95, 64.6, b), matte["#303335"], server)
-status = material("status", "#92979B", emission="#92979B", strength=0.6)
-box("status", (5 * UNIT, 1 * UNIT, 5 * UNIT), at(140, 56, 170.5), status, server)
 
 laptop = empty("laptop")
 laptop.parent = diorama
@@ -325,8 +333,39 @@ for i, (a, b) in enumerate([(-65, 125), (-35, 125), (-50, 155), (-20, 155)]):
     tile.parent = diorama
     make_fadable(tile.material_slots[0].material, f"account{i}")
     accounts.append((tile, tile.location.copy()))
+
+# Square pipes joining everything up: your accounts into your server, your
+# server into Mosaic, and out of Mosaic's far side into the back of your
+# laptop. On the page, light runs
+# along them in that order. Routes are (A, height, B) corners, through the
+# pipe's middle.
+PIPES = {
+    "accounts": [(-42, 117, 140), (-42, 40, 140), (40, 40, 140)],
+    "mosaic": [(150, 5, 165), (230, 5, 165)],
+    "laptop": [(230, 5, 200), (100, 5, 200), (100, 5, 224)],
+}
+PIPE = 10  # across, each way
+pipe_material = material("pipe", "#1A1C1E", specular=0.4)
+for name, route in PIPES.items():
+    for i, (p0, p1) in enumerate(zip(route, route[1:])):
+        # Each length runs half a pipe past its far end, filling the corner
+        # block (or burying its end in what it joins). Only the first also
+        # runs half a pipe back past its start; the rest start where the
+        # corner block ends, so no two lengths share a face.
+        axis = next(k for k in range(3) if p0[k] != p1[k])
+        sign = 1 if p1[axis] > p0[axis] else -1
+        run_start = list(p0)
+        run_end = list(p1)
+        run_start[axis] -= sign * PIPE / 2 * (1 if i == 0 else -1)
+        run_end[axis] += sign * PIPE / 2
+        run_lo = [min(u, v) for u, v in zip(run_start, run_end)]
+        run_hi = [max(u, v) for u, v in zip(run_start, run_end)]
+        size = [(h - l) if k == axis else PIPE for k, (l, h) in enumerate(zip(run_lo, run_hi))]
+        middle = [(u + v) / 2 for u, v in zip(run_lo, run_hi)]
+        box(f"pipe-{name}-{i}", (size[0] * UNIT, size[2] * UNIT, size[1] * UNIT), at(*middle), pipe_material, diorama)
+make_fadable(pipe_material, "pipes")
 for mat in materials_of(descendants(diorama)):
-    if not mat.name.startswith("account"):
+    if not mat.name.startswith(("account", "pipe")):
         make_fadable(mat, "diorama")
 MOSAIC_ON_PLATE = at(305, 0, 180)
 
@@ -470,9 +509,10 @@ if wanted("hero"):
     render("hero.png")
 
 if wanted("waits"):
-    stand()
+    # Straight on, square to the screen; floating, with no desk under it.
+    stand(on_desk=False)
     resolution(1718, 1074)
-    d = frame_perspective(24, LEAN + 6, mid(), 0.94)
+    d = frame_perspective(0, LEAN, mid(), 0.94)
     light_around(mid(), d * 0.9)
     for name, variant, ring in (("waits-dark", "calendar", 0), ("waits-ring", "calendar", 1), ("waits-review", "review", 1)):
         set_screen(variant)
@@ -553,7 +593,6 @@ def anchors():
     # Label points: above the server's top corner, and on the plate's front
     # edges below the laptop and Mosaic, so labels sit off the plate.
     named = {
-        "serverFront": at(95, 64, 170),
         "serverTop": at(40, 64, 60),
         "accounts": at(-42, 135, 140),
         "laptopBelow": at(110, -12, 320),
@@ -562,10 +601,6 @@ def anchors():
     for name, p in named.items():
         v = project([p])[0]
         out[name] = [round(v.x, 4), round(1 - v.y, 4)]
-    corners = device_corners()
-    top = max(corners, key=lambda c: c.z)
-    v = project([top])[0]
-    out["mosaicTop"] = [round(v.x, 4), round(1 - v.y, 4)]
     for name, (obj, co) in label_points.items():
         v = project([obj.matrix_world @ co])[0]
         out[name] = [round(v.x, 4), round(1 - v.y, 4)]
@@ -675,6 +710,57 @@ def choose_label_points():
         label_points[name] = (o, co)
 
 
+def flat_colour(name, colour):
+    """A material that is only light of one colour: no shading at all."""
+    m = bpy.data.materials.new(name)
+    m.use_nodes = True
+    nodes = m.node_tree.nodes
+    nodes.clear()
+    emit = nodes.new("ShaderNodeEmission")
+    emit.inputs["Color"].default_value = linear(colour)
+    out = nodes.new("ShaderNodeOutputMaterial")
+    m.node_tree.links.new(emit.outputs[0], out.inputs["Surface"])
+    return m
+
+
+def render_pipe_mask(path):
+    """Where the pipes show in S5's settled frame: the pipes white, everything
+    else black, so the page can keep its light inside them."""
+    white, black = flat_colour("mask-white", "#FFFFFF"), flat_colour("mask-black", "#000000")
+    saved = {}
+    for o in scene.objects:
+        if o.type != "MESH":
+            continue
+        saved[o] = [slot.material for slot in o.material_slots]
+        for slot in o.material_slots:
+            slot.material = white if o.name.startswith("pipe-") else black
+    view = scene.view_settings.view_transform
+    scene.view_settings.view_transform = "Standard"
+    render(path)
+    scene.view_settings.view_transform = view
+    for o, materials in saved.items():
+        for slot, m in zip(o.material_slots, materials):
+            slot.material = m
+
+
+def pipe_paths():
+    """Each pipe's route through its middle as frame points, every 2 design
+    units, for the light the page runs along them (the mask hides it where
+    something stands in front)."""
+    out = {}
+    for name, route in PIPES.items():
+        points = []
+        for p0, p1 in zip(route, route[1:]):
+            length = max(abs(u - v) for u, v in zip(p0, p1))
+            steps = max(1, round(length / 2))
+            for i in range(steps + (1 if p1 == route[-1] else 0)):
+                t = i / steps
+                v = project([at(*(u + (w - u) * t for u, w in zip(p0, p1)))])[0]
+                points.append([round(v.x, 4), round(1 - v.y, 4)])
+        out[name] = points
+    return out
+
+
 A_FRAMES, B_FRAMES, B_MOVE = 21, 90, 60
 journey = {"size": [1600, 900], "a": A_FRAMES, "b": B_FRAMES, "bMove": B_MOVE, "anchors": {"a": [], "b": []}}
 
@@ -708,10 +794,13 @@ if wanted("journey"):
             t = ease_out(span(f, 7 + i, 12))
             tile.location = rest + Vector((0, 0, 20 * UNIT * (1 - t)))
             set_fade(f"account{i}", t)
+        set_fade("pipes", ease_out(span(f, 13, 7)))
         journey["anchors"]["a"].append(anchors())
         render(f"journey/a-{f:02d}.png")
     set_ring(1)
     render("journey/a-ring.png")
+    render_pipe_mask("journey/pipes.png")
+    journey["pipes"] = pipe_paths()
 
     # S5 to S6: scroll-driven. The move takes B_MOVE frames and opens the
     # device a third of the way; the rest is the final pull, in place.
@@ -731,6 +820,7 @@ if wanted("journey"):
         set_fade("diorama", fade)
         for i in range(len(accounts)):
             set_fade(f"account{i}", fade)
+        set_fade("pipes", fade)
         hide(diorama, fade <= 0.001)
         e = 0.35 * smooth(span(f, 15, B_MOVE - 15)) + 0.65 * settle
         place_device(0.06 * smooth(span(f, 4, 20)), smooth(span(f, 10, 40)), e)
