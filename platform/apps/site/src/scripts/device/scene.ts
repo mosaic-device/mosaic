@@ -69,6 +69,8 @@ interface Pose {
   solo: number
   /** The whole device's opacity. */
   fade: number
+  /** How bright the screen is: 0 off, 1 on. */
+  lit: number
 }
 
 function mixPose(a: Pose, b: Pose, t: number): Pose {
@@ -81,6 +83,7 @@ function mixPose(a: Pose, b: Pose, t: number): Pose {
     ring: MathUtils.lerp(a.ring, b.ring, t),
     solo: MathUtils.lerp(a.solo, b.solo, t),
     fade: MathUtils.lerp(a.fade, b.fade, t),
+    lit: MathUtils.lerp(a.lit, b.lit, t),
   }
 }
 
@@ -89,6 +92,7 @@ class Device {
   readonly root = new Group()
   readonly screen = new ScreenTexture()
   private readonly ring: MeshStandardMaterial
+  private screenMaterial?: MeshStandardMaterial
   private readonly parts: { node: Object3D; home: Vector3; layer: number }[] =
     []
   /** Every material, and whether it belongs to the knob (S3 keeps those). */
@@ -109,12 +113,17 @@ class Device {
       while (part && part.parent !== model) part = part.parent
       const inKnob = !!part && knob.has(part.name)
       let own: MeshStandardMaterial
-      if (m.name === 'diffuser') own = ring ??= m.clone()
-      else own = m.clone()
+      if (m.name === 'diffuser') {
+        // Frosted plastic over the LEDs: dark when off, glowing when lit.
+        own = ring ??= m.clone()
+        own.color = new Color('#2b2d30')
+        own.roughness = 0.55
+      } else own = m.clone()
       if (m.name === 'screen') {
         own.emissiveMap = this.screen.texture
         own.emissive = new Color(1, 1, 1)
         own.emissiveIntensity = 1
+        this.screenMaterial = own
       }
       own.userData.baseOpacity = own.opacity
       own.userData.baseTransparent = own.transparent
@@ -144,6 +153,7 @@ class Device {
     for (const { node, home, layer } of this.parts)
       node.position.copy(home).addScaledVector(this.up, layer * LAYER_GAP * e)
     this.screen.set(pose.screen)
+    if (this.screenMaterial) this.screenMaterial.emissiveIntensity = pose.lit
     this.ring.emissive.copy(RING_BLUE).multiplyScalar(pose.ring * 1.6)
     const solo = Math.round(pose.solo * 50) / 50
     const fade = Math.round(pose.fade * 50) / 50
@@ -212,6 +222,18 @@ export async function mountScene(canvas: HTMLCanvasElement) {
   warm.position.set(0.4, -0.6, 0.5)
   scene.add(warm)
 
+  // S3's macro has its own scene, cropped to its frame on screen: a dim key
+  // light and the LED strip's warm light coming from behind the device.
+  const macro = new Scene()
+  macro.environment = scene.environment
+  macro.environmentIntensity = 0.3
+  const macroKey = new DirectionalLight(0xffffff, 0.6)
+  macroKey.position.set(-0.6, 0.8, 0.9)
+  macro.add(macroKey)
+  const strip = new DirectionalLight(0xffa050, 1.2)
+  strip.position.set(1, 0.35, -1)
+  macro.add(strip)
+
   await document.fonts.ready
   const gltf = await new GLTFLoader()
     .setMeshoptDecoder(MeshoptDecoder)
@@ -271,7 +293,8 @@ export async function mountScene(canvas: HTMLCanvasElement) {
   const qHero = turn(-14, 6)
   // S2 is a closer three-quarter view, so it doesn't repeat the hero's shot.
   const qWaits = turn(-24, 6)
-  const qKnob = turn(-8, 2)
+  // S3's macro looks across the knob from the right, close to its edge.
+  const qMacro = turn(-34, 10)
   const qIso = new Quaternion().setFromEuler(
     new Euler(MathUtils.degToRad(35.264), MathUtils.degToRad(-45), 0, 'XYZ'),
   )
@@ -324,6 +347,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       ring: 1,
       solo: 0,
       fade: 1,
+      lit: 1,
     }
   }
 
@@ -333,7 +357,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
   const slots = {
     hero: slot('hero'),
     waits: slot('waits'),
-    knob: slot('knob'),
+    macro: slot('macro'),
     server: slot('server'),
     layers: slot('layers'),
   }
@@ -388,6 +412,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       ring: easeOut(step(ms, 1650, 500)),
       solo: 0,
       fade: ms < 0 ? 0 : easeOut(step(ms, 0, 300)),
+      lit: 1,
     }
   }
 
@@ -518,7 +543,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
     travel: new Device(model, front),
     hero: new Device(model, front),
     waits: new Device(model, front),
-    knob: new Device(model, front),
+    macro: new Device(model, front),
     server: new Device(model, front),
     layers: new Device(model, front),
   }
@@ -564,10 +589,27 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       p.screen = 1 - easeOut(step(ms, 250, 400))
       return p
     },
-    knob: () => {
-      const p = fit(rectOf(slots.knob), qKnob, dial)
+    macro: () => {
+      // The knob a fifth of the frame wide, right of centre: the dark screen
+      // runs off to the left and the device's edge, with the glow behind
+      // it, shows on the right.
+      const r = rectOf(slots.macro)
+      const size = dial.getSize(new Vector3())
+      const scale = (r.width * 0.21 * k) / Math.max(size.x, size.y)
+      const centre = dial
+        .getCenter(new Vector3())
+        .applyQuaternion(qMacro)
+        .multiplyScalar(scale)
+      const position = toWorld(
+        r.left + r.width * 0.58,
+        r.top + r.height * 0.5,
+      ).sub(centre)
+      const p = fit(r, qMacro, whole)
+      p.position = position
+      p.scale = scale
       p.ring = 0
-      p.solo = 1
+      p.screen = 1
+      p.lit = 0
       return p
     },
     layers: () => {
@@ -594,7 +636,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
 
     // Each section's still: the hero, S2 and S3 are always their own copy.
     devices.hero.apply(poses.hero())
-    devices.knob.apply(poses.knob())
+    devices.macro.apply(poses.macro())
     placeDiorama()
 
     if (motion.matches) {
@@ -653,6 +695,18 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       )
     }
     renderer.render(scene, camera)
+
+    // S3's macro, cropped to its frame.
+    const r = rectOf(slots.macro)
+    if (r.bottom > 0 && r.top < innerHeight && r.width > 0) {
+      renderer.autoClear = false
+      renderer.clearDepth()
+      renderer.setScissorTest(true)
+      renderer.setScissor(r.left, innerHeight - r.bottom, r.width, r.height)
+      renderer.render(macro, camera)
+      renderer.setScissorTest(false)
+      renderer.autoClear = true
+    }
   }
 
   function request() {
@@ -664,7 +718,8 @@ export async function mountScene(canvas: HTMLCanvasElement) {
   addEventListener('scroll', request, { passive: true })
   addEventListener('resize', request)
   motion.addEventListener('change', request)
-  for (const d of Object.values(devices)) scene.add(d.root)
+  for (const [name, d] of Object.entries(devices))
+    (name === 'macro' ? macro : scene).add(d.root)
   frame()
   document.documentElement.classList.add('scene-ready')
 }

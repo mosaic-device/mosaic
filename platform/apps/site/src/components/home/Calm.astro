@@ -1,25 +1,27 @@
 ---
-// S3: the knob up close, its ring dark and a warm glow around it.
+// S3: the calm state, up close. A framed macro of the device's knob corner:
+// screen off, ring dark, only the warm light from the strip behind it. The 3D
+// scene renders the device cropped to the frame.
 ---
 
 <section class="stage calm" aria-labelledby="calm-title">
-  <div class="warmth" aria-hidden="true"></div>
-  <div
-    class="knob at stand-in"
-    data-slot="knob"
-    style="--x: 610; --y: 190; --w: 220"
-    role="img"
-    aria-label="Close-up of the Mosaic knob, its LED ring dark, a warm glow around it"
-  >
-  </div>
-
   <div class="copy">
-    <h2 id="calm-title" class="display" style="--size: 64">
+    <h2 id="calm-title" class="display" style="--size: 48">
       Calm, until it matters.
     </h2>
     <p class="lede">
       When nothing needs you, all you see is a warm glow behind the device.
     </p>
+  </div>
+
+  <div
+    class="frame at"
+    style="--x: 240; --y: 260; --w: 960"
+    data-slot="macro"
+    role="img"
+    aria-label="Close-up of Mosaic's knob in its case, the screen off and the LED ring dark, warm light glowing from behind the device"
+  >
+    <div class="warmth" aria-hidden="true"></div>
   </div>
 
   <ul class="promises" aria-label="What Mosaic doesn't do">
@@ -31,39 +33,36 @@
 </section>
 
 <style>
-  .warmth {
-    position: absolute;
-    left: calc(370 * var(--u));
-    top: calc(100 * var(--u));
-    width: calc(700 * var(--u));
-    height: calc(420 * var(--u));
-    border-radius: 50%;
-    background: rgb(var(--warm) / 0.1);
-    filter: blur(calc(90 * var(--u)));
-  }
-  .knob {
-    --k: calc(var(--w) * var(--u) / 220);
-    aspect-ratio: 1;
-    border-radius: 50%;
-    background: radial-gradient(
-      circle at 36% 30%,
-      #4a4d50 0%,
-      #232426 55%,
-      #161718 100%
-    );
-    box-shadow:
-      0 0 0 calc(24 * var(--k)) #111213,
-      0 0 0 calc(25 * var(--k)) #222426,
-      0 0 0 calc(29 * var(--k)) #1a1b1d,
-      0 calc(40 * var(--k)) calc(80 * var(--k)) rgb(0 0 0 / 0.7);
-  }
   .copy {
     text-align: center;
   }
   .lede {
-    max-width: 640px;
-    margin: 20px auto 0;
+    max-width: 560px;
+    margin: 16px auto 0;
   }
+
+  /* A crisp window onto the device; the scene crops to the same rectangle. */
+  .frame {
+    position: relative;
+    aspect-ratio: 960 / 440;
+    overflow: hidden;
+    box-sizing: border-box;
+    border: 1px solid var(--color-surface-raised);
+    border-radius: var(--radius-lg);
+    background: #0b0c0c;
+  }
+  /* The LED strip's light on the surface behind the device. */
+  .warmth {
+    position: absolute;
+    right: -8%;
+    top: 4%;
+    width: 62%;
+    height: 92%;
+    border-radius: 50%;
+    background: rgb(var(--warm) / 0.22);
+    filter: blur(70px);
+  }
+
   .promises {
     padding: 22px 0 0;
     list-style: none;
@@ -82,16 +81,13 @@
       position: absolute;
       left: 0;
       right: 0;
-      top: calc(618 * var(--u));
-    }
-    .lede {
-      font-size: max(16px, calc(18 * var(--u)));
+      top: calc(100 * var(--u));
     }
     .promises {
       position: absolute;
       left: calc(160 * var(--u));
       right: calc(160 * var(--u));
-      top: calc(790 * var(--u));
+      top: calc(780 * var(--u));
       display: flex;
       justify-content: space-between;
       gap: 32px;
@@ -99,29 +95,13 @@
   }
 
   @media (max-width: 899.98px) {
-    .calm {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .warmth {
-      left: 10%;
-      top: 40px;
-      width: 80%;
-      height: 260px;
-      filter: blur(60px);
-    }
-    .knob {
-      position: relative;
-      width: 150px;
-      --k: calc(150px / 220);
-      margin: 40px 0 72px;
+    .frame {
+      margin-top: 40px;
     }
     .promises {
       display: grid;
       gap: 14px;
-      margin-top: 48px;
-      align-self: stretch;
+      margin-top: 40px;
     }
   }
 </style>
