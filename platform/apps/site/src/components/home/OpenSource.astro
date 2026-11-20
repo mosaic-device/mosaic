@@ -1,33 +1,141 @@
 ---
-// S7: open source, as a statement of its own. Centred, with room around it,
-// and the code one click away.
-import { links } from './links'
+// S7: open source, read top to bottom. The line, then each part as a link to
+// its folder in the repository, listed in two columns across the block.
+import { source } from './links'
+
+const parts = [
+  { name: 'Firmware', path: 'firmware' },
+  { name: 'Server', path: 'platform/apps/server' },
+  { name: 'Admin app', path: 'platform/apps/admin' },
+  { name: 'Companion app', path: 'platform/apps/companion' },
+  { name: 'Carrier PCB', path: 'hardware/pcb' },
+  { name: 'Case', path: 'hardware/cad' },
+]
 ---
 
-<section class="stage open" style="--h: 560" aria-labelledby="open-title">
-  <div class="copy">
-    <h2 id="open-title" class="display" style="--size: 56">
-      The firmware, server, apps and PCB<br class="desktop-only" /> are all open source.
-    </h2>
-    <a class="button" href={links.github}>View on GitHub</a>
-  </div>
+<section class="stage open" style="--h: 520" aria-labelledby="open-title">
+  <h2 id="open-title" class="display at" style="--x: 160; --y: 40; --w: 1120; --size: 56">
+    Every part is open source.
+  </h2>
+
+  <ul class="parts at" style="--x: 160; --y: 168; --w: 1120" aria-label="Source for each part">
+    {
+      parts.map((p) => (
+        <li>
+          <a href={source(p.path)}>
+            <span class="name">{p.name}</span>
+            <span class="path">{p.path}/</span>
+            <svg
+              class="go"
+              aria-hidden="true"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 12h14" />
+              <path d="m13 6 6 6-6 6" />
+            </svg>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
 </section>
 
 <style>
-  .copy {
-    text-align: center;
+  h2 {
+    text-wrap: balance;
   }
-  .button {
-    margin-top: 40px;
+  .parts {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .parts li {
+    border-top: 1px solid var(--hairline);
+  }
+  .parts a {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 16px;
+    align-items: center;
+    column-gap: 16px;
+    transition: color 150ms ease;
+  }
+  .name {
+    font-size: 17px;
+    font-weight: 500;
+  }
+  .path {
+    font-family: var(--font-family-mono);
+    font-size: 14px;
+    color: var(--color-muted-foreground);
+    overflow-wrap: anywhere;
+    transition: color 150ms ease;
+  }
+  .go {
+    color: var(--color-low-emphasis);
+    transition:
+      color 150ms ease,
+      transform 150ms ease;
+  }
+  .parts a:hover {
+    color: var(--color-foreground);
+  }
+  .parts a:hover .path,
+  .parts a:hover .go {
+    color: var(--color-foreground);
+  }
+  .parts a:hover .go {
+    transform: translateX(3px);
   }
 
+  /* Desktop: two columns of three on the 160–640 and 800–1280 lines, each row
+     a name, its folder on the 160 line in from the name, and an arrow. */
   @media (min-width: 900px) {
-    .copy {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
+    .parts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(3, auto);
+      grid-auto-flow: column;
+      column-gap: calc(160 * var(--u));
+    }
+    .parts li:nth-child(3n) {
+      border-bottom: 1px solid var(--hairline);
+    }
+    .parts a {
+      grid-template-columns: calc(160 * var(--u)) minmax(0, 1fr) 16px;
+      column-gap: 0;
+      height: calc(64 * var(--u));
+      min-height: 48px;
+    }
+  }
+
+  /* Phones: one column, the folder under its name. */
+  @media (max-width: 899.98px) {
+    .parts {
+      margin-top: 40px;
+    }
+    .parts li:last-child {
+      border-bottom: 1px solid var(--hairline);
+    }
+    .parts a {
+      grid-template-areas: 'name go' 'path go';
+      padding: 14px 0;
+      row-gap: 2px;
+    }
+    .name {
+      grid-area: name;
+    }
+    .path {
+      grid-area: path;
+    }
+    .go {
+      grid-area: go;
     }
   }
 </style>
