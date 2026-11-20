@@ -12,19 +12,20 @@ const services = [
 ] as const
 const shades = [0.2, 0.3, 0.25, 0.36, 0.17]
 
-// 16 × 7 tiles on a 96 px pitch, leaving a hole for the headline tile. Each row
+// Tiles on the canon's 80 px half-steps, each gap centred on a line, leaving
+// a hole for the headline tile: columns 320 to 1120, rows 200 to 520. Each row
 // shifts the marks and shades so no two neighbours match.
 const tiles = []
-for (let row = 0; row < 7; row++)
-  for (let col = 0; col < 16; col++) {
-    const x = -42 + col * 96
-    const y = 6 + row * 96
-    if (row >= 2 && row <= 4 && x >= 342 && x <= 1014) continue
+for (let row = 0; row < 10; row++)
+  for (let col = -1; col < 18; col++) {
+    const x = col * 80 + 5
+    const y = row * 80 - 35
+    if (row >= 3 && row <= 6 && col >= 4 && col <= 13) continue
     tiles.push({
       x,
       y,
-      mark: services[(((col - row) % 5) + 5) % 5]!.id,
-      shade: shades[(col + 2 * row) % 5],
+      mark: services[(((col - row) % 5) + 10) % 5]!.id,
+      shade: shades[(((col + 2 * row) % 5) + 5) % 5],
     })
   }
 ---
@@ -32,7 +33,7 @@ for (let row = 0; row < 7; row++)
 <section
   id="integrations"
   class="stage works"
-  style="--h: 672"
+  style="--h: 720"
   aria-labelledby="works-title"
 >
   <svg width="0" height="0" class="visually-hidden" aria-hidden="true">
@@ -137,23 +138,23 @@ for (let row = 0; row < 7; row++)
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    width: calc(84 * var(--u));
-    height: calc(84 * var(--u));
+    width: calc(70 * var(--u));
+    height: calc(70 * var(--u));
     border: 1px solid #161718;
-    border-radius: calc(16 * var(--u));
+    border-radius: calc(14 * var(--u));
     background: #0d0e0e;
   }
   .tile svg {
-    width: calc(30 * var(--u));
-    height: calc(30 * var(--u));
+    width: calc(26 * var(--u));
+    height: calc(26 * var(--u));
     fill: var(--color-foreground);
   }
   .centre {
     position: absolute;
-    left: calc(342 * var(--u));
-    top: calc(198 * var(--u));
-    width: calc(756 * var(--u));
-    height: calc(276 * var(--u));
+    left: calc(325 * var(--u));
+    top: calc(205 * var(--u));
+    width: calc(790 * var(--u));
+    height: calc(310 * var(--u));
     box-sizing: border-box;
     border: 1px solid var(--color-surface-raised);
     border-radius: calc(20 * var(--u));
