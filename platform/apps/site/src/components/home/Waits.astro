@@ -6,12 +6,12 @@ import waits from '@mosaic/assets/renders/waits.avif'
 
 <section id="features" class="waits" aria-labelledby="waits-title">
   <div class="stage">
-      <h2 id="waits-title" class="display at" style="--x: 160; --y: 96; --w: 700">
+      <h2 id="waits-title" class="display at" style="--x: 160; --y: 100; --w: 700">
         <span class="quiet">Your laptop interrupts.</span><br />Mosaic waits.
       </h2>
 
       <div class="glow desktop-only" aria-hidden="true"></div>
-      <div class="scene at" style="--x: 400; --y: 290; --w: 859">
+      <div class="scene at" style="--x: 434; --y: 255; --w: 892">
         <img
           class="render"
           src={waits.src}
@@ -23,18 +23,18 @@ import waits from '@mosaic/assets/renders/waits.avif'
       </div>
 
       <ol class="callouts">
-        <li class="callout at" style="--x: 1080; --y: 132; --w: 280">
+        <li class="callout at" style="--x: 1040; --y: 100; --w: 240">
           <h3>It arrives</h3>
           <p>
             The ring turns blue and the glow beneath the device swells once.
             Nothing pops up on your laptop.
           </p>
         </li>
-        <li class="callout at" style="--x: 160; --y: 400; --w: 210">
+        <li class="callout at" style="--x: 160; --y: 371; --w: 240">
           <h3>You glance</h3>
           <p>From your chair: Avery wants your review on #194, two minutes ago.</p>
         </li>
-        <li class="callout at" style="--x: 160; --y: 562; --w: 210">
+        <li class="callout at" style="--x: 160; --y: 539; --w: 240">
           <h3>You decide</h3>
           <p>Approve it here, press the knob to dismiss, or send it to your laptop.</p>
         </li>
@@ -42,22 +42,24 @@ import waits from '@mosaic/assets/renders/waits.avif'
 
       <!-- Leaders from each callout to the part it describes. -->
       <div class="leader desktop-only" aria-hidden="true">
-        <i class="line" style="--x: 1136; --y: 262; --w: 1; --h: 189"></i>
-        <i class="dot" style="--x: 1132; --y: 449"></i>
+        <i class="line" style="--x: 1198; --y: 250; --w: 1; --h: 172"></i>
+        <i class="dot" style="--x: 1194; --y: 420"></i>
       </div>
       <div class="leader desktop-only" aria-hidden="true">
-        <i class="line" style="--x: 380; --y: 452; --w: 120; --h: 1"></i>
-        <i class="dot" style="--x: 498; --y: 448"></i>
+        <i class="line" style="--x: 416; --y: 423; --w: 124; --h: 1"></i>
+        <i class="dot" style="--x: 536; --y: 420"></i>
       </div>
       <div class="leader desktop-only" aria-hidden="true">
-        <i class="line" style="--x: 380; --y: 615; --w: 120; --h: 1"></i>
-        <i class="dot" style="--x: 498; --y: 611"></i>
+        <i class="line" style="--x: 416; --y: 591; --w: 124; --h: 1"></i>
+        <i class="dot" style="--x: 536; --y: 588"></i>
       </div>
   </div>
 </section>
 
 <style>
-  /* The renders have room above and below the device; centre them. */
+  /* The render has room above and below the device; centre it. The scene is
+     sized so the device's case runs from x 480 to the block's edge at 1280,
+     its top on the row at 300. */
   .scene {
     aspect-ratio: 859 / 425;
   }
@@ -76,8 +78,8 @@ import waits from '@mosaic/assets/renders/waits.avif'
   /* The LED strip's light beneath the device, at its blue swell. */
   .glow {
     position: absolute;
-    left: calc(470 * var(--u));
-    top: calc(660 * var(--u));
+    left: calc(520 * var(--u));
+    top: calc(640 * var(--u));
     width: calc(720 * var(--u));
     height: calc(120 * var(--u));
     border-radius: 50%;
