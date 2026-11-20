@@ -6,9 +6,7 @@ transparent PNG; the page supplies the background, desk and glows.
 
 Shots
   hero.png                 the device on the desk, calendar on screen, ring blue
-  waits-dark.png           S2 before it arrives: calendar, ring dark
-  waits-ring.png           S2 as it arrives: ring blue
-  waits-review.png         S2 arrived: review request, ring blue
+  waits.png                S2: the review request arrived, ring blue
   calm.png                 S3's macro: the knob corner, screen off, warm light
   journey/a-NN.png         S5's reveal: the device lands, server and laptop rise
   journey/a-ring.png       S5 revealed, its ring blue (crossfaded in)
@@ -566,10 +564,9 @@ if wanted("waits"):
     resolution(1718, 1074)
     d = frame_perspective(0, LEAN, mid(), 0.94)
     light_around(mid(), d * 0.9)
-    for name, variant, ring in (("waits-dark", "calendar", 0), ("waits-ring", "calendar", 1), ("waits-review", "review", 1)):
-        set_screen(variant)
-        set_ring(ring)
-        render(f"{name}.png")
+    set_screen("review")
+    set_ring(1)
+    render("waits.png")
 
 if wanted("calm"):
     # Square on to the knob's half of the device, screen off. The only light

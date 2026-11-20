@@ -1,83 +1,60 @@
 ---
-// S2: one notification, annotated. As the device comes into view the
-// notification arrives once: the ring turns blue, then the review request
-// replaces the calendar (three renders crossfaded).
-import dark from '@mosaic/assets/renders/waits-dark.avif'
-import ring from '@mosaic/assets/renders/waits-ring.avif'
-import review from '@mosaic/assets/renders/waits-review.avif'
+// S2: one notification, annotated. A still of the moment it arrives: the
+// review request on screen, the ring blue, the strip beneath swelling blue.
+import waits from '@mosaic/assets/renders/waits.avif'
 ---
 
-<section id="features" class="waits" data-step="all" aria-labelledby="waits-title">
-  <div class="pin">
-    <div class="stage">
+<section id="features" class="waits" aria-labelledby="waits-title">
+  <div class="stage">
       <h2 id="waits-title" class="display at" style="--x: 160; --y: 96; --w: 700">
         <span class="quiet">Your laptop interrupts.</span><br />Mosaic waits.
       </h2>
 
       <div class="glow desktop-only" aria-hidden="true"></div>
       <div class="scene at" style="--x: 400; --y: 290; --w: 859">
-        <img class="render" src={dark.src} loading="lazy" width={dark.width} height={dark.height} alt="" />
-        <img class="render ring" src={ring.src} width={ring.width} height={ring.height} alt="" />
         <img
-          class="render review"
-          src={review.src}
-          width={review.width}
-          height={review.height}
+          class="render"
+          src={waits.src}
+          width={waits.width}
+          height={waits.height}
+          loading="lazy"
           alt="Mosaic display showing a GitHub review request: Avery requested your review on #194. Its knob ring is lit blue."
         />
       </div>
 
       <ol class="callouts">
-        <li class="callout at" data-for="1" style="--x: 1080; --y: 132; --w: 280">
+        <li class="callout at" style="--x: 1080; --y: 132; --w: 280">
           <h3>It arrives</h3>
           <p>
             The ring turns blue and the glow beneath the device swells once.
             Nothing pops up on your laptop.
           </p>
         </li>
-        <li class="callout at" data-for="2" style="--x: 160; --y: 400; --w: 210">
+        <li class="callout at" style="--x: 160; --y: 400; --w: 210">
           <h3>You glance</h3>
           <p>From your chair: Avery wants your review on #194, two minutes ago.</p>
         </li>
-        <li class="callout at" data-for="3" style="--x: 160; --y: 562; --w: 210">
+        <li class="callout at" style="--x: 160; --y: 562; --w: 210">
           <h3>You decide</h3>
           <p>Approve it here, press the knob to dismiss, or send it to your laptop.</p>
         </li>
       </ol>
 
       <!-- Leaders from each callout to the part it describes. -->
-      <div class="leader desktop-only" data-for="1" aria-hidden="true">
+      <div class="leader desktop-only" aria-hidden="true">
         <i class="line" style="--x: 1136; --y: 262; --w: 1; --h: 189"></i>
         <i class="dot" style="--x: 1132; --y: 449"></i>
       </div>
-      <div class="leader desktop-only" data-for="2" aria-hidden="true">
+      <div class="leader desktop-only" aria-hidden="true">
         <i class="line" style="--x: 380; --y: 452; --w: 120; --h: 1"></i>
         <i class="dot" style="--x: 498; --y: 448"></i>
       </div>
-      <div class="leader desktop-only" data-for="3" aria-hidden="true">
+      <div class="leader desktop-only" aria-hidden="true">
         <i class="line" style="--x: 380; --y: 615; --w: 120; --h: 1"></i>
         <i class="dot" style="--x: 498; --y: 611"></i>
       </div>
-    </div>
   </div>
 </section>
-
-<script>
-  // The notification arrives once, when the device is well in view.
-  const section = document.querySelector<HTMLElement>('.waits')
-  const scene = section?.querySelector('.scene')
-  if (section && scene) {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return
-        observer.disconnect()
-        section.setAttribute('data-arrived', '')
-      },
-      { threshold: 0.4 },
-    )
-    observer.observe(scene)
-  }
-</script>
 
 <style>
   /* The renders have room above and below the device; centre them. */
@@ -92,30 +69,11 @@ import review from '@mosaic/assets/renders/waits-review.avif'
     height: auto;
     transform: translateY(-50%);
   }
-  .ring,
-  .review {
-    opacity: 0;
-  }
-  .waits[data-arrived] .ring {
-    opacity: 1;
-    transition: opacity 600ms cubic-bezier(0.23, 1, 0.32, 1) 150ms;
-  }
-  .waits[data-arrived] .review {
-    opacity: 1;
-    transition: opacity 400ms cubic-bezier(0.23, 1, 0.32, 1) 650ms;
-  }
-  @media (prefers-reduced-motion: reduce), (max-width: 899.98px) {
-    .ring,
-    .review {
-      opacity: 1;
-      transition: none;
-    }
-  }
-
   .quiet {
     color: var(--color-low-emphasis);
   }
 
+  /* The LED strip's light beneath the device, at its blue swell. */
   .glow {
     position: absolute;
     left: calc(470 * var(--u));
@@ -125,32 +83,6 @@ import review from '@mosaic/assets/renders/waits-review.avif'
     border-radius: 50%;
     background: rgb(var(--ring-blue) / 0.16);
     filter: blur(calc(60 * var(--u)));
-    opacity: 0;
-    transition: opacity 600ms cubic-bezier(0.23, 1, 0.32, 1) 150ms;
-  }
-  /* The scene sets data-arrived when the notification arrives. Played once. */
-  .waits[data-arrived] .glow {
-    opacity: 1;
-    animation: swell 1200ms cubic-bezier(0.23, 1, 0.32, 1) 150ms;
-  }
-  @keyframes swell {
-    40% {
-      background: rgb(var(--ring-blue) / 0.3);
-      transform: scale(1.08);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .waits .glow {
-      opacity: 1;
-      transition: none;
-      animation: none;
-    }
-  }
-
-  .scene :global(.body) {
-    box-shadow:
-      0 40px 80px rgb(0 0 0 / 0.6),
-      inset 0 1px 0 rgb(255 255 255 / 0.07);
   }
 
   .callouts {
@@ -162,8 +94,7 @@ import review from '@mosaic/assets/renders/waits-review.avif'
     font-size: 20px;
     font-weight: 500;
     letter-spacing: -0.01em;
-    color: var(--color-muted-foreground);
-    transition: color 400ms ease;
+    color: var(--color-foreground);
   }
   .callout p {
     margin-top: 8px;
@@ -176,37 +107,16 @@ import review from '@mosaic/assets/renders/waits-review.avif'
     position: absolute;
     left: calc(var(--x) * var(--u));
     top: calc(var(--y) * var(--u));
-    transition: background-color 400ms ease;
   }
   .leader .line {
     width: max(1px, calc(var(--w) * var(--u)));
     height: max(1px, calc(var(--h) * var(--u)));
-    background: var(--color-border);
+    background: var(--color-muted-foreground);
   }
   .leader .dot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
-    background: #3a3d40;
-  }
-
-  /* The lit callout and its leader. */
-  .waits[data-step='1'] [data-for='1'] h3,
-  .waits[data-step='2'] [data-for='2'] h3,
-  .waits[data-step='3'] [data-for='3'] h3,
-  .waits[data-step='all'] .callout h3 {
-    color: var(--color-foreground);
-  }
-  .waits[data-step='1'] .leader[data-for='1'] .line,
-  .waits[data-step='2'] .leader[data-for='2'] .line,
-  .waits[data-step='3'] .leader[data-for='3'] .line,
-  .waits[data-step='all'] .leader .line {
-    background: var(--color-muted-foreground);
-  }
-  .waits[data-step='1'] .leader[data-for='1'] .dot,
-  .waits[data-step='2'] .leader[data-for='2'] .dot,
-  .waits[data-step='3'] .leader[data-for='3'] .dot,
-  .waits[data-step='all'] .leader .dot {
     background: var(--color-foreground);
   }
 
