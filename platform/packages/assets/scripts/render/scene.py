@@ -280,7 +280,8 @@ def set_screen(variant, lit=1.0):
     p.inputs["Emission Strength"].default_value = lit * 1.15
 
 
-def set_ring(on):
+def set_ring(on, colour=RING_BLUE):
+    ring_material.inputs["Emission Color"].default_value = colour
     ring_material.inputs["Emission Strength"].default_value = on * 3.0
 
 
@@ -373,15 +374,16 @@ shadow = box("shadow", (4, 4, 0.001), (0, 0, 0), material("shadow", "#000000"))
 shadow.is_shadow_catcher = True
 
 
-def faded_desk(half_width, half_depth):
-    """A dark desk under the device that fades out all round, so its render
-    has no edges: a patch of surface, the page's background beyond it."""
-    m = bpy.data.materials.new("desk")
+def faded_surface(name, half_width, half_depth, roughness=0.55):
+    """A dark flat surface that fades out all round, so its render has no
+    edges: a patch of desk or wall, the page's background beyond it. Lies
+    flat at the origin; place and turn it after."""
+    m = bpy.data.materials.new(name)
     m.use_nodes = True
     nodes, links = m.node_tree.nodes, m.node_tree.links
     surface = nodes["Principled BSDF"]
     surface.inputs["Base Color"].default_value = linear("#121314")
-    surface.inputs["Roughness"].default_value = 0.55
+    surface.inputs["Roughness"].default_value = roughness
     coord = nodes.new("ShaderNodeTexCoord")
     scale = nodes.new("ShaderNodeMapping")
     scale.inputs["Scale"].default_value = (1 / half_width, 1 / half_depth, 1)
@@ -399,12 +401,15 @@ def faded_desk(half_width, half_depth):
     links.new(clear.outputs[0], mix.inputs[1])
     links.new(surface.outputs[0], mix.inputs[2])
     links.new(mix.outputs[0], nodes["Material Output"].inputs["Surface"])
-    desk = box("desk", (2 * half_width, 2 * half_depth, 0.001), (0, 0.02, -0.0005), m)
-    desk.hide_render = True
-    return desk
+    patch = box(name, (2 * half_width, 2 * half_depth, 0.001), (0, 0, 0), m)
+    patch.hide_render = True
+    return patch
 
 
-desk = faded_desk(0.17, 0.11)
+# The hero's desk, its top at the desk's height, a little behind the device.
+desk = faded_surface("desk", 0.17, 0.11)
+desk.location = (0, 0.02, -0.0005)
+
 
 # ------------------------------------------------------------------ lights
 def area(name, energy, size, colour=(1, 1, 1)):
@@ -422,6 +427,14 @@ def area(name, energy, size, colour=(1, 1, 1)):
 key = area("key", 60, 0.9)
 fill = area("fill", 12, 1.2)
 rim = area("rim", 40, 0.5, WARM)
+# The LED strip on the device's underside, out of sight, washing the desk
+# beneath and in front of it. Off unless a shot turns it on.
+strip = area("strip", 0, 0.17, WARM)
+strip.data.shape = "RECTANGLE"
+strip.data.size_y = 0.004
+strip.visible_camera = False
+strip_target = empty("strip-target")
+strip.constraints[0].target = strip_target
 # The camera and the lights aim at separate points: moving the lights with
 # the device must never turn the camera.
 target = empty("target")
@@ -559,14 +572,44 @@ if wanted("waits"):
         render(f"{name}.png")
 
 if wanted("calm"):
-    stand()
-    resolution(1920, 880)
+    # Square on to the knob's half of the device, screen off. The only light
+    # that matters is the LED strip on the underside, out of sight: a warm
+    # pool on the desk around the base, spilling out in front.
+    stand(on_desk=False)
+    resolution(1920, 1080)
     set_screen("calendar", lit=0)
-    set_ring(0)
+    # The ring glows softly with the strip's warm white.
+    set_ring(0.35, (*WARM, 1.0))
+    # The page shows this shot in a cropped frame, so the desk can run past
+    # its edges.
+    desk.hide_render = False
+    desk.scale = (3, 3, 1)
+    corners = device_corners()
+    front_edge = min(c.y for c in corners if c.z < 0.004)
+    strip_x = (min(c.x for c in device_corners(["display-board"])) + max(c.x for c in device_corners(["ring-diffuser"]))) / 2
+    # Tucked under the case and pointed mostly down, so the case shapes the
+    # spill into a soft pool rather than a beam.
+    strip.data.size_y = 0.03
+    strip.location = (strip_x, front_edge + 0.02, 0.003)
+    strip_target.location = (strip_x, front_edge - 0.015, 0)
+    strip.data.energy = 1.2
     dial_centre = sum(device_corners(["dial"]), Vector()) / 8
-    d = frame_perspective(34, LEAN + 10, dial_centre, 0.21, at_x=0.58, names=["dial"])
-    light_around(dial_centre, d * 0.5, warm=1.0, key_energy=18)
+    # Straight down the knob's axis: the ring sits just behind the knob and
+    # barely wider, so only an on-axis view shows it as an even halo.
+    d = frame_perspective(0, LEAN, dial_centre, 0.18, at_x=0.5, at_y=0.5, names=["dial"])
+    # A faint front light so the knob reads, and a faint neutral edge light
+    # from behind and above to draw the case's top and right edges.
+    light_around(dial_centre, d * 0.5, key_energy=4)
+    key.location = dial_centre + Vector((0.3, -1.2, -0.2)) * d * 0.5
+    fill.data.energy = 0
+    rim.location = dial_centre + Vector((0.5, 0.8, 1.4)) * d * 0.5
+    rim.data.energy *= 0.12
     render("calm.png")
+    set_ring(0)
+    desk.hide_render = True
+    desk.scale = (1, 1, 1)
+    strip.data.energy = 0
+    strip.data.size_y = 0.004
 
 # ------------------------------------------------------------- the journey
 # One fixed isometric camera; S5's framing pushes in to S6's.

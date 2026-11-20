@@ -37,7 +37,7 @@ Five blocks, each with a device screenshot or render.
 - **Glance:** each notification shows where it's from, who sent it and what it's about, readable from your chair.
 - **Act:** approve a PR, re-run a failed CI job, join the next meeting, without opening a browser.
 - **Pick up on your laptop:** the companion app runs on your computer, so a press on the device can open the PR in your browser or the file in your editor.
-- **Ambient:** the LED strip glows warm white behind the device while it's paired. The ring around the knob stays dark until a notification arrives, then turns blue and holds until you interact with the device, and the strip swells blue once. The ring turns amber when the server can't be reached. Nothing blinks or spins; every change fades. The light sensor dims everything at night.
+- **Ambient:** the LED strip on the underside glows warm white onto the desk beneath the device while it's paired. The ring around the knob stays dark until a notification arrives, then turns blue and holds until you interact with the device, and the strip swells blue once. The ring turns amber when the server can't be reached. Nothing blinks or spins; every change fades. The light sensor dims everything at night.
 - **Calm:** "Calm, until it matters." Turn the knob to scroll and set the volume, press it to dismiss. Quiet hours or a focus mode hold non-urgent notifications. The visual is a close-up of the knob, its ring dark, blue or amber.
 
 ### 4. Integrations
