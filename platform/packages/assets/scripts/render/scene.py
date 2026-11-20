@@ -384,16 +384,9 @@ def light_around(point, scale, warm=0.0, key_energy=60):
 
 
 def project(points):
-    """Points as fractions of the frame (x right, y up). Blender's
-    world_to_camera_view ignores lens shift, so apply it here."""
+    """Points as fractions of the frame (x right, y up), lens shift included."""
     bpy.context.view_layer.update()
-    aspect = scene.render.resolution_y / scene.render.resolution_x
-    sx, sy = camera_data.shift_x, camera_data.shift_y / aspect
-    out = []
-    for p in points:
-        v = world_to_camera_view(scene, camera, p)
-        out.append(Vector((v.x - sx, v.y - sy, v.z)))
-    return out
+    return [world_to_camera_view(scene, camera, p) for p in points]
 
 
 def device_corners(names=None):
