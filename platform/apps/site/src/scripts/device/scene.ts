@@ -67,6 +67,8 @@ interface Pose {
   ring: number
   /** 0 the whole device, 1 only the knob. */
   solo: number
+  /** The whole device's opacity. */
+  fade: number
 }
 
 function mixPose(a: Pose, b: Pose, t: number): Pose {
@@ -78,6 +80,7 @@ function mixPose(a: Pose, b: Pose, t: number): Pose {
     screen: MathUtils.lerp(a.screen, b.screen, t),
     ring: MathUtils.lerp(a.ring, b.ring, t),
     solo: MathUtils.lerp(a.solo, b.solo, t),
+    fade: MathUtils.lerp(a.fade, b.fade, t),
   }
 }
 
@@ -88,9 +91,9 @@ class Device {
   private readonly ring: MeshStandardMaterial
   private readonly parts: { node: Object3D; home: Vector3; layer: number }[] =
     []
-  /** Materials of everything but the knob, which fade out for S3. */
-  private readonly rest: MeshStandardMaterial[] = []
-  private solo = -1
+  /** Every material, and whether it belongs to the knob (S3 keeps those). */
+  private readonly materials: { m: MeshStandardMaterial; knob: boolean }[] = []
+  private faded = ''
 
   constructor(
     source: Object3D,
@@ -104,23 +107,20 @@ class Device {
       const m = o.material as MeshStandardMaterial
       let part: Object3D | null = o
       while (part && part.parent !== model) part = part.parent
-      if (part && !knob.has(part.name) && m.name !== 'screen') {
-        const own = m.clone()
-        o.material = own
-        this.rest.push(own)
-        return
-      }
+      const inKnob = !!part && knob.has(part.name)
+      let own: MeshStandardMaterial
+      if (m.name === 'diffuser') own = ring ??= m.clone()
+      else own = m.clone()
       if (m.name === 'screen') {
-        const own = m.clone()
         own.emissiveMap = this.screen.texture
         own.emissive = new Color(1, 1, 1)
         own.emissiveIntensity = 1
-        o.material = own
-        this.rest.push(own)
-      } else if (m.name === 'diffuser') {
-        ring ??= m.clone()
-        o.material = ring
       }
+      own.userData.baseOpacity = own.opacity
+      own.userData.baseTransparent = own.transparent
+      o.material = own
+      if (!this.materials.some((x) => x.m === own))
+        this.materials.push({ m: own, knob: inKnob })
     })
     this.ring = ring ?? new MeshStandardMaterial()
     for (const node of model.children)
@@ -146,23 +146,48 @@ class Device {
     this.screen.set(pose.screen)
     this.ring.emissive.copy(RING_BLUE).multiplyScalar(pose.ring * 1.6)
     const solo = Math.round(pose.solo * 50) / 50
-    if (solo !== this.solo) {
-      this.solo = solo
-      for (const m of this.rest) {
-        const fading = solo > 0
-        if (m.transparent !== fading || m.userData.baseOpacity === undefined) {
-          m.userData.baseOpacity ??= m.opacity
-          m.userData.baseTransparent ??= m.transparent
-          m.transparent = fading || (m.userData.baseTransparent as boolean)
-          m.needsUpdate = true
-        }
-        m.opacity = (m.userData.baseOpacity as number) * (1 - solo)
-        m.depthWrite = !fading
-        m.visible = solo < 0.99
+    const fade = Math.round(pose.fade * 50) / 50
+    const key = `${solo} ${fade}`
+    if (key === this.faded) return
+    this.faded = key
+    for (const { m, knob } of this.materials) {
+      const opacity = fade * (knob ? 1 : 1 - solo)
+      const fading = opacity < 1
+      const transparent = fading || (m.userData.baseTransparent as boolean)
+      if (m.transparent !== transparent) {
+        m.transparent = transparent
+        m.needsUpdate = true
       }
+      m.opacity = (m.userData.baseOpacity as number) * opacity
+      m.depthWrite = !fading
+      m.visible = opacity > 0.01
     }
   }
 }
+
+/** A cubic Bézier easing, as in CSS. */
+function bezier(x1: number, y1: number, x2: number, y2: number) {
+  const at = (a: number, b: number, t: number) =>
+    3 * a * t * (1 - t) ** 2 + 3 * b * t * t * (1 - t) + t ** 3
+  return (x: number) => {
+    if (x <= 0) return 0
+    if (x >= 1) return 1
+    let lo = 0
+    let hi = 1
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2
+      if (at(x1, x2, mid) < x) lo = mid
+      else hi = mid
+    }
+    return at(y1, y2, (lo + hi) / 2)
+  }
+}
+/** Entrances: a strong ease-out. Movement on screen: a strong ease-in-out. */
+const easeOut = bezier(0.23, 1, 0.32, 1)
+const easeInOut = bezier(0.77, 0, 0.175, 1)
+/** How far through a step that starts at `delay` ms and lasts `duration` ms. */
+const step = (ms: number, delay: number, duration: number) =>
+  clamp((ms - delay) / duration)
 
 export async function mountScene(canvas: HTMLCanvasElement) {
   const motion = matchMedia(
@@ -244,7 +269,8 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       )
       .multiply(face)
   const qHero = turn(-14, 6)
-  const qWaits = turn(-10, 4)
+  // S2 is a closer three-quarter view, so it doesn't repeat the hero's shot.
+  const qWaits = turn(-24, 6)
   const qKnob = turn(-8, 2)
   const qIso = new Quaternion().setFromEuler(
     new Euler(MathUtils.degToRad(35.264), MathUtils.degToRad(-45), 0, 'XYZ'),
@@ -297,6 +323,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       screen: 1,
       ring: 1,
       solo: 0,
+      fade: 1,
     }
   }
 
@@ -318,11 +345,6 @@ export async function mountScene(canvas: HTMLCanvasElement) {
   }
   const rectOf = (el: HTMLElement | null) =>
     el?.getBoundingClientRect() ?? new DOMRect()
-  const progressOf = (el: HTMLElement | null) => {
-    if (!el) return 0
-    const { top, height } = el.getBoundingClientRect()
-    return clamp(-top / Math.max(1, height - innerHeight))
-  }
 
   const diorama: Diorama = buildDiorama()
   scene.add(diorama.root)
@@ -342,44 +364,57 @@ export async function mountScene(canvas: HTMLCanvasElement) {
     return scale
   }
 
-  /** S5's pose for the device at section progress `p`. */
-  function serverPose(p: number, still: boolean): Pose {
+  /**
+   * S5's pose for the device, `ms` into its reveal: it fades in 12 cm above
+   * the plate and settles onto it, then its ring turns blue as the review
+   * request arrives. Negative `ms`: the reveal hasn't started.
+   */
+  function serverPose(ms: number): Pose {
     const scale = placeDiorama()
-    const land = still ? 1 : range(p, 0, 0.2)
+    const land = easeOut(step(ms, 0, 600))
     const local = diorama.mosaic
       .clone()
-      .add(new Vector3(0, (1 - land) * 0.35, 0))
+      .add(new Vector3(0, (1 - land) * 0.12, 0))
     const position = local
       .multiplyScalar(scale)
       .applyQuaternion(qIso)
       .add(diorama.root.position)
-    const ring = still ? 1 : range(p, 0.6, 0.66)
     return {
       position,
       quaternion: qIso.clone(),
       scale,
       explode: 0,
       screen: 0,
-      ring,
+      ring: easeOut(step(ms, 1650, 500)),
       solo: 0,
+      fade: ms < 0 ? 0 : easeOut(step(ms, 0, 300)),
     }
   }
 
-  /** Shows the server, laptop and accounts by `rise`, the pill along its path. */
-  function setDiorama(rise: number, presence: number, pillAt: number | null) {
-    diorama.root.visible = presence > 0.001
-    diorama.root.children[0]!.scale.setScalar(Math.max(0.001, presence))
-    diorama.root.children[1]!.visible = presence > 0.5
-    for (const r of diorama.risers)
-      r.scale.set(1, Math.max(0.001, rise * presence), 1)
-    for (const a of diorama.accounts)
-      a.scale.setScalar(Math.max(0.001, rise * presence))
+  /**
+   * S5's scene, `ms` into its reveal: the server, then the laptop, rise out of
+   * the plate; your accounts settle in; the review request travels across.
+   */
+  function setDiorama(ms: number) {
+    const height = 70 * UNIT
+    diorama.risers.forEach((r, i) => {
+      r.position.y = -(1 - easeOut(step(ms, 150 + i * 80, 500))) * height
+    })
+    diorama.accounts.forEach((a, i) => {
+      const t = easeOut(step(ms, 300 + i * 50, 500))
+      a.position.y = a.userData.homeY + (1 - t) * 20 * UNIT
+      const m = (a as Mesh).material as MeshStandardMaterial
+      m.transparent = true
+      m.opacity = t
+      a.visible = t > 0.01
+    })
     if (pill) {
-      pill.style.opacity = pillAt === null ? '0' : String(presence)
-      if (pillAt !== null) {
+      const shown = Math.min(step(ms, 750, 150), 1 - step(ms, 1650, 150))
+      pill.style.opacity = String(shown)
+      if (shown > 0) {
         const from = diorama.anchors.serverFront!
         const to = diorama.mosaic.clone().add(new Vector3(0, 84 * UNIT, 0))
-        const p = from.clone().lerp(to, pillAt)
+        const p = from.clone().lerp(to, easeInOut(step(ms, 750, 900)))
         place(pill, diorama.root.localToWorld(p))
       }
     }
@@ -447,16 +482,19 @@ export async function mountScene(canvas: HTMLCanvasElement) {
 
   function updateLabels(
     device: (section: string) => Device,
-    shown: (section: string) => number,
+    shown: (section: string, index: number) => number,
   ) {
     scene.updateMatrixWorld(true)
     const columns = new Map<string, { el: HTMLElement; y: number }[]>()
+    const count = new Map<string, number>()
     for (const el of labels) {
       const section = el.dataset.section!
+      const index = count.get(section) ?? 0
+      count.set(section, index + 1)
       const world = anchorFor(el.dataset.anchor!, device(section))
       if (!world) continue
       place(el, world)
-      el.style.opacity = String(shown(section))
+      el.style.opacity = String(shown(section, index))
       if (el.classList.contains('column')) {
         const list = columns.get(section) ?? []
         list.push({ el, y: parseFloat(el.style.getPropertyValue('--ay')) })
@@ -484,34 +522,46 @@ export async function mountScene(canvas: HTMLCanvasElement) {
     server: new Device(model, front),
     layers: new Device(model, front),
   }
-  const stills = [
-    devices.hero,
-    devices.waits,
-    devices.knob,
-    devices.server,
-    devices.layers,
-  ]
-
-  const waitsStep = () => {
-    const step = sections.waits?.dataset.step
-    return step === '3' ? 3 : step === '2' ? 2 : 1
+  for (const a of diorama.accounts) {
+    a.userData.homeY = a.position.y
+    const mesh = a as Mesh
+    mesh.material = (mesh.material as MeshStandardMaterial).clone()
   }
-  // Screen and ring ease towards their targets over time, like the real device.
-  const shown = { screen: 1, ring: 1 }
 
-  // S2's loop changes the step on a timer, not on scroll.
-  if (sections.waits)
-    new MutationObserver(() => request()).observe(sections.waits, {
-      attributes: true,
-      attributeFilter: ['data-step'],
-    })
+  // The two reveals play once, on a timer, from when their slot is in view.
+  const revealed: { waits?: number; server?: number } = {}
+  const LONGEST = 2400
+  function reveal(
+    name: 'waits' | 'server',
+    el: HTMLElement | null,
+    share: number,
+  ) {
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return
+        observer.disconnect()
+        revealed[name] ??= performance.now()
+        if (name === 'waits') sections.waits?.setAttribute('data-arrived', '')
+        request()
+      },
+      { threshold: share },
+    )
+    observer.observe(el)
+  }
+  reveal('waits', slots.waits, 0.4)
+  reveal('server', slots.server, 0.3)
+  const since = (name: 'waits' | 'server') =>
+    revealed[name] === undefined ? -1 : performance.now() - revealed[name]!
 
   const poses = {
     hero: () => fit(rectOf(slots.hero), qHero, whole, true),
-    waits: () => {
+    waits: (ms: number) => {
       const p = fit(rectOf(slots.waits), qWaits, whole, true)
-      p.screen = waitsStep() === 3 ? 1 : 0
-      p.ring = waitsStep() === 3 ? 0 : 1
+      // It arrives: the ring turns blue, then the review request fades in
+      // over the calendar.
+      p.ring = easeOut(step(ms, 150, 600))
+      p.screen = 1 - easeOut(step(ms, 250, 400))
       return p
     },
     knob: () => {
@@ -520,9 +570,8 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       p.solo = 1
       return p
     },
-    layers: (still: boolean) => {
+    layers: () => {
       const p = fit(rectOf(slots.layers), qFlat, apart)
-      // Fully apart by the time it arrives; the move itself opens it.
       p.explode = 1
       p.screen = 0
       return p
@@ -543,93 +592,61 @@ export async function mountScene(canvas: HTMLCanvasElement) {
       (2 * camera.position.z * Math.tan(MathUtils.degToRad(camera.fov / 2))) /
       innerHeight
 
+    // Each section's still: the hero, S2 and S3 are always their own copy.
+    devices.hero.apply(poses.hero())
+    devices.knob.apply(poses.knob())
+    placeDiorama()
+
     if (motion.matches) {
-      for (const d of stills) d.root.visible = false
+      devices.server.root.visible = false
+      devices.layers.root.visible = false
       devices.travel.root.visible = true
       const y = scrollY
       const top = (el: HTMLElement | null) =>
         el ? el.getBoundingClientRect().top + y : 0
-      const waitsStart = top(sections.waits)
-      // S2 holds for the first third of its pin; the rest zooms in on the knob.
-      const waitsEnd =
-        waitsStart + ((sections.waits?.offsetHeight ?? 0) - innerHeight) * 0.35
-      const calmStart = top(sections.calm)
-      const serverStart = top(sections.server)
-      const serverEnd =
-        serverStart + (sections.server?.offsetHeight ?? 0) - innerHeight
-      const layersStart = top(sections.layers)
-      // S5 plays from when its section is half way up the screen, so the
-      // device has landed and the scene has risen soon after it pins.
-      const entry = serverStart - innerHeight * 0.5
-      const p5 = clamp((y - entry) / Math.max(1, serverEnd - entry))
+      devices.waits.apply(poses.waits(since('waits')))
+
+      // The one scroll-driven moment: from just after S5 reaches the top of
+      // the screen until S6 does, the device lifts off the plate, travels and
+      // comes apart on the way.
+      const moveStart = top(sections.server) + innerHeight * 0.15
+      const moveEnd = Math.max(moveStart + 1, top(sections.layers))
+      const move = easeInOut(clamp((y - moveStart) / (moveEnd - moveStart)))
+      // Scrolling into the move before S5 played finishes its reveal.
+      if (move > 0 && revealed.server === undefined)
+        revealed.server = performance.now() - LONGEST
+      const ms5 = since('server')
 
       let pose: Pose
-      let presence = 0
-      let move = 0
-      if (y <= waitsStart) {
-        pose = mixPose(
-          poses.hero(),
-          poses.waits(),
-          smooth(y / Math.max(1, waitsStart)),
-        )
-      } else if (y <= waitsEnd) {
-        pose = poses.waits()
-      } else if (y <= calmStart) {
-        const t = smooth((y - waitsEnd) / (calmStart - waitsEnd))
-        pose = mixPose(poses.waits(), poses.knob(), t)
-        pose.solo = range(t, 0.45, 0.95)
-      } else if (y < entry) {
-        // The knob scrolls away with its section; the device leaves with it,
-        // and the diorama's plate is already waiting as S5 comes up.
-        pose = poses.knob()
-        presence = 1
-      } else if (y <= serverEnd) {
-        pose = serverPose(p5, false)
-        presence = 1
-      } else {
-        move = smooth((y - serverEnd) / Math.max(1, layersStart - serverEnd))
-        pose = mixPose(serverPose(1, false), poses.layers(false), move)
-        // It comes apart on the way, finishing just before it arrives.
-        // (Device.apply eases it, so this stays linear.)
-        pose.explode = clamp(move / 0.8)
-        presence = 1 - move
+      if (move <= 0) pose = serverPose(ms5)
+      else if (move >= 1) pose = poses.layers()
+      else {
+        pose = mixPose(serverPose(ms5), poses.layers(), move)
+        pose.explode = clamp((move - 0.1) / 0.75)
       }
-      if (y >= entry || presence) placeDiorama()
-      const rise = y < entry ? 0 : range(p5, 0.08, 0.28)
-      const pillAt =
-        y >= entry && p5 > 0.3 && p5 < 0.66 ? range(p5, 0.32, 0.62) : null
       devices.travel.apply(pose)
-      setDiorama(rise, presence, pillAt)
-
-      // The screen and ring follow their targets smoothly.
-      shown.screen += (pose.screen - shown.screen) * 0.18
-      shown.ring += (pose.ring - shown.ring) * 0.12
-      if (
-        Math.abs(pose.screen - shown.screen) > 0.01 ||
-        Math.abs(pose.ring - shown.ring) > 0.01
-      )
-        request()
-      devices.travel.apply({ ...pose, screen: shown.screen, ring: shown.ring })
+      setDiorama(ms5)
 
       updateLabels(
         () => devices.travel,
-        (section) =>
+        (section, i) =>
           section === 'server'
-            ? y >= entry
-              ? range(p5, 0.22, 0.32) * (1 - range(move, 0, 0.25))
-              : 0
-            : range(move, 0.85, 1) * (y > serverEnd ? 1 : 0),
+            ? easeOut(step(ms5, 600 + i * 60, 220)) * (1 - clamp(move / 0.2))
+            : easeOut(clamp((move - 0.85 - i * 0.03) / 0.1)),
       )
+      if (
+        (revealed.waits !== undefined && since('waits') < LONGEST) ||
+        (revealed.server !== undefined && ms5 < LONGEST)
+      )
+        request()
     } else {
       devices.travel.root.visible = false
-      for (const d of stills) d.root.visible = true
-      devices.hero.apply(poses.hero())
-      const waits = fit(rectOf(slots.waits), qWaits, whole, true)
-      devices.waits.apply({ ...waits, screen: 0, ring: 1 })
-      devices.knob.apply(poses.knob())
-      devices.server.apply(serverPose(1, true))
-      setDiorama(1, 1, 0.5)
-      devices.layers.apply(poses.layers(true))
+      devices.server.root.visible = true
+      devices.layers.root.visible = true
+      devices.waits.apply(poses.waits(Infinity))
+      devices.server.apply(serverPose(Infinity))
+      setDiorama(Infinity)
+      devices.layers.apply(poses.layers())
       updateLabels(
         (section) => (section === 'server' ? devices.server : devices.layers),
         () => 1,
@@ -647,7 +664,7 @@ export async function mountScene(canvas: HTMLCanvasElement) {
   addEventListener('scroll', request, { passive: true })
   addEventListener('resize', request)
   motion.addEventListener('change', request)
-  for (const d of [devices.travel, ...stills]) scene.add(d.root)
+  for (const d of Object.values(devices)) scene.add(d.root)
   frame()
   document.documentElement.classList.add('scene-ready')
 }

@@ -1,11 +1,10 @@
 ---
-// S2: one notification's life. On desktop the section pins while you scroll and
-// the three callouts light up in turn: it arrives, you glance, you decide.
-// Phones and reduced motion get one still frame with all three callouts.
+// S2: one notification, annotated. The device arrives from the hero as you
+// scroll and settles here; the three callouts show what it does.
 import Device from './Device.astro'
 ---
 
-<section id="features" class="waits" data-step="1" aria-labelledby="waits-title">
+<section id="features" class="waits" data-step="all" aria-labelledby="waits-title">
   <div class="pin">
     <div class="stage">
       <h2 id="waits-title" class="display at" style="--x: 160; --y: 96; --w: 700">
@@ -57,48 +56,6 @@ import Device from './Device.astro'
   </div>
 </section>
 
-<script>
-  // Plays the notification's life on a loop while the section is on screen:
-  // it arrives, you glance, you decide, then the next one arrives. Without
-  // motion all three callouts show at once.
-  const section = document.querySelector<HTMLElement>('.waits')
-  const still = matchMedia('(prefers-reduced-motion: reduce)')
-  const STEP_MS = 3200
-  if (section) {
-    const device = section.querySelector<HTMLElement>('.device')
-    const screen = section.querySelector<HTMLElement>('.screen')
-    const show = (step: string) => {
-      section.dataset.step = step
-      // Deciding moves the screen on to the next item and the ring goes dark.
-      device?.setAttribute('data-ring', step === '3' ? 'dark' : 'blue')
-      screen?.setAttribute('data-variant', step === '3' ? 'calendar' : 'review')
-    }
-    let timer: number | undefined
-    let visible = false
-    const stop = () => {
-      clearInterval(timer)
-      timer = undefined
-    }
-    const start = () => {
-      stop()
-      if (still.matches || !visible) {
-        show(still.matches ? 'all' : '1')
-        return
-      }
-      show('1')
-      timer = window.setInterval(() => {
-        show(String((Number(section.dataset.step) % 3) + 1))
-      }, STEP_MS)
-    }
-    new IntersectionObserver(([entry]) => {
-      visible = entry?.isIntersecting ?? false
-      start()
-    }).observe(section)
-    still.addEventListener('change', start)
-    start()
-  }
-</script>
-
 <style>
   .quiet {
     color: var(--color-low-emphasis);
@@ -113,18 +70,25 @@ import Device from './Device.astro'
     border-radius: 50%;
     background: rgb(var(--ring-blue) / 0.16);
     filter: blur(calc(60 * var(--u)));
-    transition: opacity 800ms ease;
-  }
-  .waits[data-step='1'] .glow {
-    animation: swell 1600ms ease-out;
-  }
-  .waits[data-step='3'] .glow {
     opacity: 0;
+    transition: opacity 600ms cubic-bezier(0.23, 1, 0.32, 1) 150ms;
+  }
+  /* The scene sets data-arrived when the notification arrives. Played once. */
+  .waits[data-arrived] .glow {
+    opacity: 1;
+    animation: swell 1200ms cubic-bezier(0.23, 1, 0.32, 1) 150ms;
   }
   @keyframes swell {
     40% {
-      background: rgb(var(--ring-blue) / 0.34);
-      transform: scale(1.12);
+      background: rgb(var(--ring-blue) / 0.3);
+      transform: scale(1.08);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .waits .glow {
+      opacity: 1;
+      transition: none;
+      animation: none;
     }
   }
 
@@ -189,23 +153,6 @@ import Device from './Device.astro'
   .waits[data-step='3'] .leader[data-for='3'] .dot,
   .waits[data-step='all'] .leader .dot {
     background: var(--color-foreground);
-  }
-
-  @media (min-width: 900px) and (prefers-reduced-motion: no-preference) {
-    .waits {
-      height: 200vh;
-    }
-    .pin {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-    }
-    /* Fit the whole canon in the viewport while pinned. */
-    .pin .stage {
-      width: min(100%, 1440px, 160vh);
-    }
   }
 
   @media (max-width: 899.98px) {
