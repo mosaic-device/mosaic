@@ -36,7 +36,7 @@ const parts = [
   { part: 'dial', name: 'Push knob', note: 'Lit by an LED ring' },
   { part: 'acrylic', name: 'Acrylic front', note: 'Over the screen' },
   { part: 'display-board', name: '5" touch display', note: 'ESP32-P4, Wi-Fi 6' },
-  { part: 'carrier-pcb', name: 'Carrier PCB', note: 'Open KiCad files' },
+  { part: 'carrier-pcb', name: 'Carrier PCB', note: 'Links knob and LEDs' },
   { part: 'encoder', name: 'Rotary encoder', note: 'Turn and press' },
   { part: 'case-outer', name: 'Case', note: '3D-printed' },
 ]
@@ -44,7 +44,7 @@ const parts = [
 const serverCopy = {
   title: ['Your server.', 'Your tokens.'],
   body: [
-    "Mosaic runs on a server you host, in Docker or as a single binary. Your tokens stay there, and nothing sits between it and your accounts. There's no Mosaic cloud and nothing to sign up for.",
+    "Mosaic runs on a server you host, in Docker or as a single binary, and talks to your accounts directly. There's no Mosaic cloud and nothing to sign up for.",
   ],
 }
 const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>`
@@ -72,11 +72,11 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
 
       <div class="copy layers-copy">
         <h2 id="layers-title" class="display">
-          Built by you,<br />from open parts.
+          Built by you.
         </h2>
         <p class="lede">
-          An off-the-shelf display board, a small carrier PCB, a few modules and
-          a 3D-printed case. Every file is open.
+          Order the carrier PCB, print the case, wire it up and flash the
+          firmware. The build guide takes you from parts list to first boot.
         </p>
         <a class="button primary" href={links.build}>Read the build guide</a>
       </div>
@@ -136,10 +136,10 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
           ))
         }
       </ul>
-      <h2 class="display">Built by you,<br />from open parts.</h2>
+      <h2 class="display">Built by you.</h2>
       <p class="lede">
-        An off-the-shelf display board, a small carrier PCB, a few modules and a
-        3D-printed case. Every file is open.
+        Order the carrier PCB, print the case, wire it up and flash the
+        firmware. The build guide takes you from parts list to first boot.
       </p>
       <a class="button primary" href={links.build}>Read the build guide</a>
     </div>
