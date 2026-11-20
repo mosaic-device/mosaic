@@ -48,6 +48,9 @@ export function playJourney(section: HTMLElement) {
   const layersCopy = stage.querySelector<HTMLElement>('.layers-copy')!
   const pill = stage.querySelector<HTMLElement>('.pill')!
   const labels = [...stage.querySelectorAll<HTMLElement>('[data-anchor]')]
+  // S6's labels arrive one after another, the last landing as the pull ends.
+  const layerCount = labels.filter((l) => l.dataset.group === 'layers').length
+  const layerStagger = 0.4 / Math.max(1, layerCount - 1)
 
   const load = (src: string) => {
     const img = new Image()
@@ -205,7 +208,7 @@ export function playJourney(section: HTMLElement) {
 
     // Labels: S5's arrive after the landing; S6's one after another, the last
     // landing as the pull ends.
-    const columns: { el: HTMLElement; y: number }[] = []
+    const columns: { el: HTMLElement; x: number; y: number }[] = []
     const index = { server: 0, layers: 0 }
     for (const el of labels) {
       const group = el.dataset.group as 'server' | 'layers'
@@ -214,22 +217,28 @@ export function playJourney(section: HTMLElement) {
       const opacity =
         group === 'server'
           ? easeOut(step(ms, 600 + i * 60, 220)) * (1 - leaving)
-          : easeOut(clamp((settled - 0.35 - i * 0.1) / 0.25))
+          : easeOut(clamp((settled - 0.35 - i * layerStagger) / 0.25))
       el.style.opacity = String(opacity)
       el.style.visibility = opacity > 0 ? '' : 'hidden'
       if (!p) continue
       el.style.setProperty('--ax', `${p.x}px`)
       el.style.setProperty('--ay', `${p.y}px`)
       if (el.classList.contains('column') && group === 'layers')
-        columns.push({ el, y: p.y })
+        columns.push({ el, x: p.x, y: p.y })
     }
-    // Keep S6's column of labels from overlapping.
+    // Keep S6's column of labels from overlapping, each leader running from
+    // its label back to its point.
     columns.sort((a, b) => a.y - b.y)
     let last = -Infinity
     for (const c of columns) {
       const y = Math.max(c.y, last + c.el.offsetHeight + 12)
-      c.el.style.setProperty('--ay', `${y}px`)
+      c.el.style.setProperty('--ly', `${y}px`)
       last = y
+      const fromX = c.el.offsetLeft - 8
+      const dx = c.x - fromX
+      const dy = c.y - y
+      c.el.style.setProperty('--len', `${Math.max(0, Math.hypot(dx, dy) - 8)}px`)
+      c.el.style.setProperty('--angle', `${Math.atan2(dy, dx) - Math.PI}rad`)
     }
 
     // Keep playing while the reveal runs.

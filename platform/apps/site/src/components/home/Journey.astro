@@ -31,10 +31,11 @@ const frames = {
 const data = { ...journey, frames }
 
 const parts = [
-  { part: 'dial', name: 'Push knob', note: 'With an LED ring' },
+  { part: 'dial', name: 'Push knob', note: 'Lit by an LED ring' },
   { part: 'acrylic', name: 'Acrylic front', note: 'Over the screen' },
   { part: 'display-board', name: '5" touch display', note: 'ESP32-P4, Wi-Fi 6' },
   { part: 'carrier-pcb', name: 'Carrier PCB', note: 'Open KiCad files' },
+  { part: 'encoder', name: 'Rotary encoder', note: 'Turn and press' },
   { part: 'case-outer', name: 'Case', note: '3D-printed' },
 ]
 
@@ -55,7 +56,7 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
       <img class="poster" src={frames.ring} alt="" />
       <canvas
         role="img"
-        aria-label="Your server, Mosaic and your laptop on a plate marked Yours; then Mosaic lifts off, lies down and comes apart into its layers: push knob, acrylic front, 5-inch touch display, carrier PCB and 3D-printed case"
+        aria-label="Your server, Mosaic and your laptop together on one plate, your accounts outside it; then Mosaic lifts off, lies down and comes apart into its layers: push knob and its LED ring, acrylic front, 5-inch touch display, carrier PCB, rotary encoder and 3D-printed case"
       ></canvas>
 
       <div class="copy server-copy at" style="--x: 160; --y: 100; --w: 360">
@@ -79,25 +80,20 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
         <a class="button primary" href={links.build}>Read the build guide</a>
       </div>
 
-      <div class="anchored column" style="--col: 1170" data-anchor="server" data-group="server" aria-hidden="true">
+      <div class="anchored at above" data-anchor="serverTop" data-group="server" aria-hidden="true">
         <span class="name">Your server</span>
-        <span class="note">Docker or a single binary</span>
-        <span class="note accent">Your tokens live here</span>
-        <span class="note">Admin app: connect accounts, pair</span>
+        <span class="note">Connects your accounts</span>
       </div>
-      <div class="anchored column" style="--col: 1170" data-anchor="mosaic" data-group="server" aria-hidden="true">
+      <div class="anchored at below-right" data-anchor="mosaicBelow" data-group="server" aria-hidden="true">
         <span class="name">Mosaic</span>
         <span class="note">On your desk</span>
       </div>
-      <div class="anchored at" style="--dy: 2.4" data-anchor="laptop" data-group="server" aria-hidden="true">
+      <div class="anchored at below-left" data-anchor="laptopBelow" data-group="server" aria-hidden="true">
         <span class="name">Companion app</span>
         <span class="note">On your laptop</span>
       </div>
-      <div class="anchored at" style="--dy: -1.6" data-anchor="accounts" data-group="server" aria-hidden="true">
+      <div class="anchored at above" data-anchor="accounts" data-group="server" aria-hidden="true">
         <span class="note">Your accounts</span>
-      </div>
-      <div class="anchored at yours" style="--dx: -1.8; --dy: -1" data-anchor="yours" data-group="server" aria-hidden="true">
-        Yours
       </div>
       <div class="pill" aria-hidden="true"><i></i>Review request</div>
       {
@@ -122,7 +118,7 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
       <img
         src={frames.ring}
         loading="lazy"
-        alt="Your server, Mosaic and your laptop on a plate marked Yours; your accounts float outside it"
+        alt="Your server, Mosaic and your laptop together on one plate, your accounts outside it"
       />
     </div>
     <div class="stage">
@@ -223,14 +219,6 @@ const arrow = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24
   }
   .layers-copy .button {
     margin-top: 32px;
-  }
-  .accent {
-    color: var(--color-focus);
-  }
-  .yours {
-    font-size: max(13px, calc(14 * var(--u)));
-    font-weight: 500;
-    color: var(--color-focus);
   }
 
   .pill {

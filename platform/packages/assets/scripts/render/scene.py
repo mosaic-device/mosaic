@@ -50,7 +50,7 @@ LAYERS = {
     "case-outer": 0,
 }
 LAYER_GAP = 0.032
-LABELLED = ["dial", "acrylic", "display-board", "carrier-pcb", "case-outer"]
+LABELLED = ["dial", "acrylic", "display-board", "carrier-pcb", "encoder", "case-outer"]
 # S5's world is laid out in the design's drawing units: Mosaic is 150 wide.
 UNIT = 0.19 / 150
 RING_BLUE = (0.12, 0.39, 1.0, 1.0)
@@ -229,6 +229,7 @@ for top in tops:
     top.parent = device
     top.location -= centre
 home = {name: obj.location.copy() for name, obj in parts.items()}
+owner = {o.name: name for name, top in parts.items() for o in descendants(top)}
 
 # Materials: the page's look. The case colour in the model is a placeholder.
 screen_material = ring_material = None
@@ -549,12 +550,14 @@ def place_device(lift, turn, e):
 
 def anchors():
     out = {}
+    # Label points: above the server's top corner, and on the plate's front
+    # edges below the laptop and Mosaic, so labels sit off the plate.
     named = {
-        "server": at(150, 64, 60),
         "serverFront": at(95, 64, 170),
-        "laptop": at(95, 0, 290),
+        "serverTop": at(40, 64, 60),
         "accounts": at(-42, 135, 140),
-        "yours": at(0, 0, 0),
+        "laptopBelow": at(110, -12, 320),
+        "mosaicBelow": at(420, -12, 180),
     }
     for name, p in named.items():
         v = project([p])[0]
@@ -563,13 +566,113 @@ def anchors():
     top = max(corners, key=lambda c: c.z)
     v = project([top])[0]
     out["mosaicTop"] = [round(v.x, 4), round(1 - v.y, 4)]
-    for name in ["mosaic"] + LABELLED:
-        pts = device_corners(None if name == "mosaic" else [name])
-        view = project(pts)
-        right = max(view, key=lambda p: p.x)
-        mid_y = (min(p.y for p in view) + max(p.y for p in view)) / 2
-        out[name] = [round(right.x, 4), round(1 - mid_y, 4)]
+    for name, (obj, co) in label_points.items():
+        v = project([obj.matrix_world @ co])[0]
+        out[name] = [round(v.x, 4), round(1 - v.y, 4)]
     return out
+
+
+# Where S6's labels start on the page (stage x 1190 of 1440), as a fraction
+# of the frame.
+LABEL_X = stage_x(1190 / 1440)
+# A label's height and gap, as a fraction of the frame's height, so each
+# label sits level with its point and its leader runs flat.
+LABEL_GAP = 53 / 900
+label_points = {}
+
+
+# Parts you see through: they hide nothing behind them.
+CLEAR = {"acrylic"}
+# The case is the backdrop the other parts float over; a leader may lie on
+# it, but not across another part.
+BACKDROP = {"case-outer", "case-inner"}
+
+
+def part_at(x, y, looking_for):
+    """The device part seen at frame point (x, y), or None. Looks through
+    clear parts unless it is looking for one."""
+    tr, br, bl, tl = camera_data.view_frame(scene=scene)
+    local = bl + (br - bl) * x + (tl - bl) * y
+    forward = (camera.matrix_world.to_3x3() @ Vector((0, 0, -1))).normalized()
+    origin = camera.matrix_world @ local - forward * 10
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    for _ in range(8):
+        hit, location, _, _, obj, _ = scene.ray_cast(depsgraph, origin, forward)
+        if not hit:
+            return None
+        name = owner.get(obj.original.name)
+        if name not in CLEAR or name == looking_for:
+            return name
+        origin = location + forward * 1e-4
+    return None
+
+
+def clear_points(name):
+    """Points on a part the camera sees, each with a clear run right to the
+    label column (over nothing but the case): the right-most in each thin
+    band of the frame's height, right-most first. As (down, x, object, co),
+    `down` measured from the frame's top."""
+    candidates = []
+    for o in descendants(parts[name]):
+        if o.type != "MESH":
+            continue
+        verts = list(o.data.vertices)
+        for v in verts[:: max(1, len(verts) // 400)]:
+            p = project([o.matrix_world @ v.co])[0]
+            candidates.append((p.x, p.y, o, v.co.copy()))
+    candidates.sort(key=lambda c: -c[0])
+    best = {}
+    for x, y, o, co in candidates:
+        band = round((1 - y) * 225)
+        if band in best:
+            continue
+        # Just inside the point, it must be this part; from there to the
+        # column, nothing but this part, the case or empty space.
+        if part_at(x - 0.003, y, name) != name:
+            continue
+        steps = 24
+        run = [part_at(x + (LABEL_X - x) * i / steps, y, name) for i in range(1, steps)]
+        if all(r in (None, name) or r in BACKDROP for r in run):
+            best[band] = (1 - y, x, o, co)
+    return sorted(best.values(), key=lambda c: -c[1])
+
+
+def choose_label_points():
+    """A point on each labelled part, each a label's height from the others,
+    so every label sits level with its point and its leader runs flat to it
+    without crossing another part, the leaders as short as they can be.
+    Picked once, in S6's final pose, then followed through every frame."""
+    others = descendants(diorama) + [shadow]
+    for o in others:
+        o.hide_viewport = True
+    bpy.context.view_layer.update()
+    options = {name: clear_points(name) for name in LABELLED}
+    for o in others:
+        o.hide_viewport = False
+    bpy.context.view_layer.update()
+
+    # The set with the shortest leaders in all, by branch and bound.
+    # Squared, so one long leader costs more than a few middling ones.
+    shortest = {name: (LABEL_X - opts[0][1]) ** 2 for name, opts in options.items() if opts}
+    best = {"cost": math.inf, "chosen": None}
+
+    def search(i, chosen, cost):
+        if cost + sum(shortest[n] for n in LABELLED[i:]) >= best["cost"]:
+            return
+        if i == len(LABELLED):
+            best["cost"], best["chosen"] = cost, chosen
+            return
+        name = LABELLED[i]
+        for option in options[name]:
+            if all(abs(option[0] - c[0]) >= LABEL_GAP for c in chosen.values()):
+                search(i + 1, {**chosen, name: option}, cost + (LABEL_X - option[1]) ** 2)
+
+    search(0, {}, 0.0)
+    chosen = best["chosen"]
+    if not chosen:
+        raise RuntimeError("No way to label every part without crossings")
+    for name, (_, _, o, co) in chosen.items():
+        label_points[name] = (o, co)
 
 
 A_FRAMES, B_FRAMES, B_MOVE = 21, 90, 60
@@ -584,6 +687,8 @@ if wanted("journey"):
     place_device(0.06, 1, 1)
     # Right of centre: the copy sits left, the labels in a column right.
     end = frame_ortho(device_corners(), 0.84, stage_x(0.62), 0.5, by="height")
+    set_camera(end)
+    choose_label_points()
     # S5's framing: the plate where the design drew it.
     place_device(0, 0, 0)
     start = frame_ortho(plate_points(), 0.4, stage_x(0.64), 0.64)

@@ -208,10 +208,14 @@ ul {
   line-height: 1.5;
   color: var(--color-muted-foreground);
 }
-/* In a column at --col, with a dotted leader back to the point. */
+/*
+ * In a column at --col, at --ly (script sets it; the point's height unless
+ * labels would overlap), with a dashed leader back to the point. Script sets
+ * the leader's --len and --angle.
+ */
 .anchored.column {
   left: calc(var(--col) * var(--u));
-  top: var(--ay);
+  top: var(--ly, var(--ay));
   transform: translateY(-0.7em);
 }
 .anchored.column::before {
@@ -219,8 +223,10 @@ ul {
   position: absolute;
   right: calc(100% + 8px);
   top: 0.7em;
-  width: max(0px, calc(var(--col) * var(--u) - var(--ax) - 16px));
+  width: var(--len, 0px);
   border-top: 1px dashed var(--color-border);
+  transform: rotate(var(--angle, 0rad));
+  transform-origin: right center;
 }
 /* Centred on the point, nudged by --dx and --dy (in ems). */
 .anchored.at {
@@ -232,4 +238,17 @@ ul {
     calc(-50% + var(--dx, 0) * 1em),
     calc(-50% + var(--dy, 0) * 1em)
   );
+}
+/* Centred just above the point, or below it and running away from an edge
+ * that slopes down to the left or right. */
+.anchored.at.above {
+  transform: translate(-50%, calc(-100% - 12px));
+}
+.anchored.at.below-left {
+  text-align: right;
+  transform: translate(-100%, 12px);
+}
+.anchored.at.below-right {
+  text-align: left;
+  transform: translate(0, 12px);
 }
