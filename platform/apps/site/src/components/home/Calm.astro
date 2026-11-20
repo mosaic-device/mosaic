@@ -5,7 +5,7 @@
 import calm from '@mosaic/assets/renders/calm.avif'
 ---
 
-<section class="stage calm" style="--h: 1050" aria-labelledby="calm-title">
+<section class="stage calm" style="--h: 1080" aria-labelledby="calm-title">
   <div class="copy">
     <h2 id="calm-title" class="display" style="--size: 48">
       Calm, until it matters.
@@ -28,11 +28,11 @@ import calm from '@mosaic/assets/renders/calm.avif'
     />
   </div>
 
-  <ul class="promises" aria-label="How Mosaic stays calm">
-    <li><strong>Nothing blinks or spins.</strong> Every change fades.</li>
-    <li><strong>Quiet hours.</strong> Only what's urgent gets through.</li>
-    <li><strong>Dims with the room.</strong> A light sensor sets the brightness.</li>
-    <li><strong>Amber means trouble.</strong> Like losing your server.</li>
+  <ul class="promises list" aria-label="How Mosaic stays calm">
+    <li><strong class="list-name">Nothing blinks or spins.</strong> <span class="list-note">Every change fades.</span></li>
+    <li><strong class="list-name">Quiet hours.</strong> <span class="list-note">Only what's urgent gets through.</span></li>
+    <li><strong class="list-name">Dims with the room.</strong> <span class="list-note">A light sensor sets the brightness.</span></li>
+    <li><strong class="list-name">Amber means trouble.</strong> <span class="list-note">Like losing your server.</span></li>
   </ul>
 </section>
 
@@ -63,18 +63,6 @@ import calm from '@mosaic/assets/renders/calm.avif'
     object-fit: cover;
   }
 
-  .promises {
-    padding: 22px 0 0;
-    list-style: none;
-    border-top: 1px solid var(--hairline);
-    font-size: 15px;
-    line-height: 1.5;
-    color: var(--color-muted-foreground);
-  }
-  .promises strong {
-    color: var(--color-foreground);
-    font-weight: 500;
-  }
 
   @media (min-width: 900px) {
     .copy {
@@ -88,7 +76,6 @@ import calm from '@mosaic/assets/renders/calm.avif'
       left: calc(160 * var(--u));
       right: calc(160 * var(--u));
       top: calc(950 * var(--u));
-      display: grid;
       grid-template-columns: repeat(4, 1fr);
     }
     /* Four equal columns across the block, each starting on its quarter. */
@@ -102,9 +89,13 @@ import calm from '@mosaic/assets/renders/calm.avif'
       margin-top: 40px;
     }
     .promises {
-      display: grid;
-      gap: 14px;
       margin-top: 40px;
+    }
+  }
+  @media (min-width: 600px) and (max-width: 899.98px) {
+    .promises {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px 32px;
     }
   }
 </style>
