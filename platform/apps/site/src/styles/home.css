@@ -3,6 +3,11 @@
  * that canon's proportions: --u is one canon pixel at the current width, so a
  * section looks the same at any desktop width. Below 900px the stages turn into
  * ordinary stacked flow.
+ *
+ * The canon divides the frame into ninths: columns every 160 and rows every 100.
+ * Every section shares one content block, x 160 to 1280; nothing reaches past
+ * it but full-bleed fields and the light. Inside the block, edges sit on the
+ * 160 lines, or on the 80 half-steps where a piece needs finer placement.
  */
 @import '@mosaic/assets/fonts.css';
 @import '@mosaic/tokens/css/dark.css';
