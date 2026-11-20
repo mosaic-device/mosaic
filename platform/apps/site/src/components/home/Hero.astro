@@ -19,7 +19,7 @@ import { links } from './links'
     </div>
   </nav>
 
-  <div class="copy at" style="--x: 96; --y: 291; --w: 470">
+  <div class="copy at" style="--x: 160; --y: 300; --w: 420">
     <h1 id="hero-title" class="display" style="--size: 60">
       Everything that<br />needs you,<br />in one view.
     </h1>
@@ -33,7 +33,7 @@ import { links } from './links'
     </div>
   </div>
 
-  <div class="scene at" style="--x: 620; --y: 302; --w: 724">
+  <div class="scene at" style="--x: 640; --y: 334; --w: 640">
     <img
       class="render"
       src={hero.src}
@@ -57,7 +57,7 @@ import { links } from './links'
     align-items: center;
     justify-content: space-between;
     height: 88px;
-    padding: 0 max(24px, calc(96 * var(--u)));
+    padding: 0 max(24px, calc(160 * var(--u)));
   }
   .wordmark {
     font-family: var(--font-family-brand);
@@ -106,8 +106,8 @@ import { links } from './links'
   .pool {
     position: absolute;
     left: calc(640 * var(--u));
-    top: calc(590 * var(--u));
-    width: calc(690 * var(--u));
+    top: calc(580 * var(--u));
+    width: calc(640 * var(--u));
     height: calc(200 * var(--u));
     border-radius: 50%;
     background: rgb(var(--warm) / 0.16);
@@ -115,9 +115,9 @@ import { links } from './links'
   }
 
   /*
-   * The slot is the device's box. The render is wider, with the desk fading
-   * out around the device (it fills 45% of the render's width, 94% of the
-   * slot's), so it overflows the slot, centred on it.
+   * The slot is the device's box, on the content block's right half. The
+   * render is wider, with the desk fading out around the device (it fills 44%
+   * of the render's width), so it overflows the slot, centred on it.
    */
   .scene {
     z-index: 2;
@@ -128,7 +128,7 @@ import { links } from './links'
     position: absolute;
     left: 50%;
     top: 50%;
-    width: calc(100% * 0.94 / 0.45);
+    width: calc(100% / 0.44);
     max-width: none;
     height: auto;
     transform: translate(-50%, -50%);
