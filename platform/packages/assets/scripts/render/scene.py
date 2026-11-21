@@ -53,6 +53,13 @@ LABELLED = ["dial", "acrylic", "display-board", "carrier-pcb", "encoder", "case-
 UNIT = 0.19 / 150
 RING_BLUE = (0.12, 0.39, 1.0, 1.0)
 WARM = (1.0, 0.63, 0.31)
+# The hero's LED strip, in watts: a warm pool on the desk under the case.
+STRIP_ENERGY = 1.2
+# The hero's desk: its size as a share of the patch (past the frame's edges),
+# and a colour that, lit only by the ambient light, renders as the page's
+# background, so the desk runs the full width without an edge showing.
+HERO_DESK_COLOUR = "#b6b8b4"
+HERO_DESK = (4, 4)
 
 
 def linear(hex_colour):
@@ -407,6 +414,9 @@ def faded_surface(name, half_width, half_depth, roughness=0.55):
 # The hero's desk, its top at the desk's height, a little behind the device.
 desk = faded_surface("desk", 0.17, 0.11)
 desk.location = (0, 0.02, -0.0005)
+# A collection holding just the desk, for leaving it out of lights.
+desk_only = bpy.data.collections.new("desk-only")
+desk_only.objects.link(desk)
 
 
 # ------------------------------------------------------------------ lights
@@ -546,17 +556,52 @@ LEAN = math.degrees(front.angle(Vector((0, -1, 0)))) if front.z > 0 else 0
 
 if wanted("hero"):
     # Square on and a little above, on a rendered desk that fades out before
-    # the frame's edges, warm light from behind falling on it. The frame is
-    # wide so the fade fits; the page scales it to keep the device's size.
+    # the frame's edges. The warm light on the desk is the device's own: the
+    # LED strip on its underside, as when it's paired, pooling under the case
+    # and spilling a little in front, centred on the device. The product
+    # lights stay neutral. The frame is wide so the fade fits; the page
+    # scales it to keep the device's size.
     stand(on_desk=False)
     desk.hide_render = False
+    # A wide desk that runs most of the frame and fades out before its
+    # edges, dark and matte so the product lights barely show on it and the
+    # strip's warm pool is the light you see.
+    desk.scale = (*HERO_DESK, 1)
+    desk_surface = desk.active_material.node_tree.nodes["Principled BSDF"]
+    desk_surface.inputs["Base Color"].default_value = linear(HERO_DESK_COLOUR)
+    desk_surface.inputs["Roughness"].default_value = 0.95
+    # The product lights skip the desk, so only the even ambient light and
+    # the strip fall on it: away from the pool it renders one flat colour,
+    # matched to the page's, and its edges never show.
+    for light in (key, fill, rim):
+        light.light_linking.receiver_collection = desk_only
+    desk_only.collection_objects[0].light_linking.link_state = "EXCLUDE"
     resolution(2400, 1200)
     set_screen("calendar")
     set_ring(1)
+    corners = device_corners()
+    front_edge = min(c.y for c in corners if c.z < 0.004)
+    centre_x = (min(c.x for c in corners) + max(c.x for c in corners)) / 2
+    # Tucked under the case, along its length, pointed mostly down.
+    strip.data.size = (max(c.x for c in corners) - min(c.x for c in corners)) * 0.8
+    strip.data.size_y = 0.03
+    strip.location = (centre_x, front_edge + 0.02, 0.003)
+    # Aimed a little further forward than the close-up's, so the pool spills
+    # out in front of the case as well as under it.
+    strip_target.location = (centre_x, front_edge - 0.025, 0)
+    strip.data.energy = STRIP_ENERGY
     d = frame_perspective(0, LEAN + 12, mid(), 0.45)
-    light_around(mid(), d * 0.9, warm=0.6)
+    light_around(mid(), d * 0.9)
     render("hero.png")
     desk.hide_render = True
+    desk.scale = (1, 1, 1)
+    desk_surface.inputs["Base Color"].default_value = linear("#121314")
+    desk_surface.inputs["Roughness"].default_value = 0.55
+    for light in (key, fill, rim):
+        light.light_linking.receiver_collection = None
+    strip.data.energy = 0
+    strip.data.size = 0.17
+    strip.data.size_y = 0.004
 
 if wanted("waits"):
     # Straight on, square to the screen; floating, with no desk under it.
