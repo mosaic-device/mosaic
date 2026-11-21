@@ -1,13 +1,13 @@
 ---
-// Hero, direction 3c: the device on a desk, warm light pooling under it, its
-// ring blue because something is waiting.
+// Hero: the device leads, high and centred on a desk, the warm light of its
+// LED strip pooling under it, its ring blue because something is waiting.
+// The copy runs along the foot like a caption: the headline and line from the
+// 160 line, the button on the block's right edge, level with the line's end.
 import hero from '@mosaic/assets/renders/hero.avif'
 import { links } from './links'
 ---
 
 <section class="stage hero" aria-labelledby="hero-title">
-  <div class="pool" aria-hidden="true"></div>
-
   <nav class="nav" aria-label="Main">
     <a class="wordmark" href="/">MOSAIC</a>
     <div class="links">
@@ -23,28 +23,29 @@ import { links } from './links'
     </div>
   </nav>
 
-  <div class="copy at" style="--x: 160; --y: 300; --w: 420">
-    <h1 id="hero-title" class="display" style="--size: 60">
-      Everything that<br />needs you,<br />in one view.
-    </h1>
-    <p class="lede">
-      A 5-inch desk display for GitHub, Slack, Jira, Discord and your calendar.
-      Glance, dismiss or act without leaving your editor.
-    </p>
-    <div class="actions">
-      <a class="button primary" href={links.build}>Build your own</a>
-    </div>
-  </div>
-
-  <div class="scene at" style="--x: 640; --y: 334; --w: 640">
+  <div class="scene at" style="--x: 400; --y: 137; --w: 640">
     <img
       class="render"
       src={hero.src}
       width={hero.width}
       height={hero.height}
-      alt="Mosaic display on a desk showing Firmware standup in 4 minutes, its knob ring lit blue because a notification is waiting"
+      alt="Mosaic display on a desk showing Firmware standup in 4 minutes, its knob ring lit blue because a notification is waiting, warm light from its LED strip pooling beneath it"
       fetchpriority="high"
     />
+  </div>
+
+  <div class="copy">
+    <h1 id="hero-title" class="display" style="--size: 60">
+      What needs you, <br class="break" />in one view.
+    </h1>
+    <div class="row">
+      <p class="lede">
+        Mosaic puts GitHub, Slack, Jira, Discord and your calendar on a small
+        display beside your laptop.
+        Open source, <span class="nowrap">self-hosted</span> and built by you.
+      </p>
+      <a class="button primary" href={links.build}>Build your own</a>
+    </div>
   </div>
 </section>
 
@@ -96,30 +97,26 @@ import { links } from './links'
   .copy {
     z-index: 3;
   }
-  .lede {
-    max-width: 420px;
-    margin-top: 24px;
+  .nowrap {
+    white-space: nowrap;
   }
-  .actions {
+  .row {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 36px;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 28px 40px;
+    margin-top: 20px;
   }
-
-  .pool {
-    position: absolute;
-    left: calc(640 * var(--u));
-    top: calc(580 * var(--u));
-    width: calc(640 * var(--u));
-    height: calc(200 * var(--u));
-    border-radius: 50%;
-    background: rgb(var(--warm) / 0.16);
-    filter: blur(calc(60 * var(--u)));
+  .lede {
+    max-width: 560px;
+  }
+  .row .button {
+    flex: none;
   }
 
   /*
-   * The slot is the device's box, on the content block's right half. The
+   * The slot is the device's box, centred (400–1040), its case from y 180. The
    * render is wider, with the desk fading out around the device (it fills 44%
    * of the render's width), so it overflows the slot, centred on it.
    */
@@ -136,11 +133,49 @@ import { links } from './links'
     max-width: none;
     height: auto;
     transform: translate(-50%, -50%);
+    /* The desk renders as the page's own colour, so fading the render in and
+       out only touches what's on it. At the top, its far edge (a shade off
+       the page, and banded) is faded out, whole by the case's top (34%). At
+       the foot, the tail of the strip's light ends (87%) well above the
+       copy rather than running under it. */
+    mask-image: linear-gradient(
+      transparent 22%,
+      #000 32%,
+      #000 76%,
+      transparent 87%
+    );
   }
 
   @media (min-width: 900px) {
     .nav {
       position: absolute;
+    }
+    /*
+     * The canon's 900-high frame, but never taller than the window, so the
+     * copy along the foot is in the first screen on any window 720 or more
+     * tall; and never shorter than 800, below which the headline would meet
+     * the device's light.
+     */
+    .hero {
+      aspect-ratio: auto;
+      height: clamp(
+        calc(min(100vw, 1440px) * 800 / 1440),
+        100svh,
+        calc(min(100vw, 1440px) * 900 / 1440)
+      );
+    }
+    /* One line across the block; below 900px it breaks after the comma. */
+    h1 {
+      white-space: nowrap;
+    }
+    .break {
+      display: none;
+    }
+    .copy {
+      position: absolute;
+      left: calc(160 * var(--u));
+      right: calc(160 * var(--u));
+      bottom: calc(80 * var(--u));
     }
   }
 
@@ -159,14 +194,11 @@ import { links } from './links'
     .links {
       gap: 20px;
     }
-    /* Room below for the render's desk to fade out, which brings its own
-       warm light, so the pool isn't needed here. */
+    /* The device first, then the copy under it; room below the device for
+       its light to fade out. */
     .scene {
       position: relative;
-      margin: 64px 0 30%;
-    }
-    .pool {
-      display: none;
+      margin: 24px 0 20%;
     }
   }
 </style>
