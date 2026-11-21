@@ -37,12 +37,11 @@ import calm from '@mosaic/assets/renders/calm.avif'
 </section>
 
 <style>
-  .copy {
-    text-align: center;
-  }
+  /* The heading and its line hold the top-right of the block, over the
+     photo, set against the waits section's top-left heading before it. */
   .lede {
     max-width: 560px;
-    margin: 16px auto 0;
+    margin-top: 16px;
   }
 
   /* A crisp window onto the device; the scene crops to the same rectangle. */
@@ -67,9 +66,13 @@ import calm from '@mosaic/assets/renders/calm.avif'
   @media (min-width: 900px) {
     .copy {
       position: absolute;
-      left: 0;
-      right: 0;
+      left: calc(160 * var(--u));
+      right: calc(160 * var(--u));
       top: calc(100 * var(--u));
+      text-align: right;
+    }
+    .copy .lede {
+      margin-left: auto;
     }
     .promises {
       position: absolute;
